@@ -8,7 +8,7 @@ Aventus is only available on the Visual Studio Code IDE
 
 ## Configuration
 
-All aventus project is defined by his file : aventus.conf.json
+All aventus project are defined by a file : aventus.conf.json
 
 ```json
 {  
