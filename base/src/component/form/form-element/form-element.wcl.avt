@@ -1,0 +1,55 @@
+import { MutableAction } from "../../../data/MutableAction.data.avt";
+import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.avt";
+
+@Debugger({
+    writeCompiled: true
+})
+export class AvFormElement<T> extends WebComponent implements DefaultComponent {
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    /**
+     * If true, the checkbox will be required
+     */
+    @attribute()
+    required: boolean = false;
+
+    @attribute()
+    name: string = "";
+
+    @attribute()
+    nullable: boolean = false;
+
+    value: T = null;
+    //#endregion
+
+
+    //#region variables
+
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    onValueChanged() {
+        this.dispatchEvent(new CustomEvent("change", {
+            detail: {
+                value: this.value
+            }
+        }));
+    }
+	 //#endregion
+
+}

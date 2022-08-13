@@ -1,0 +1,59 @@
+
+export interface SocketMessage {
+    channel: string;
+    data?: any;
+}
+export interface SocketRoute {
+    channel: string;
+    callback: (data: any) => void;
+}
+export interface SocketOptions {
+    log?: boolean,
+    ip?: string,
+    port?: number,
+    useHttps?: boolean,
+    routes?: { [key: string]: SocketRoute[]; };
+    socketName?: string,
+    onOpen?: () => void,
+    onError?: () => void,
+    onClose?: () => void,
+}
+
+export interface ISocket {
+    
+    init(options: SocketOptions);
+
+    addRoute(newRoute: SocketRoute);
+    /**
+     * The route to remove
+     * @param route - The route to remove
+     */
+    removeRoute(route: SocketRoute) ;
+
+    open(done: () => void, error: () => void);
+
+    /**
+     * 
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param options the options to add to the message (typically the uid)
+     */
+    sendMessage<T>(channelName: string, data: T, options);
+
+    /**
+     *
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWait<T>(channelName: string, data: T, callbacks: { [key: string]: (data: any) => void; });
+    /**
+     * 
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {});
+
+    isReady(): boolean;
+}

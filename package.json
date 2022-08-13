@@ -1,0 +1,175 @@
+{
+	"name": "aventus",
+	"displayName": "Aventus",
+	"description": "This extension allow compilation of Avenuts Framework",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.68.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onLanguage:aventus",
+		"workspaceContains:**/aventus.conf.json",
+		"workspaceContains:**/*.avt"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "Aventus HTML",
+				"extensions": [
+					"wcv.avt"
+				],
+				"configuration": "./syntaxes/html-language-configuration.json",
+				"icon": {
+					"light": "./icons/aventus-view.png",
+					"dark": "./icons/aventus-view.png"
+				}
+			},
+			{
+				"id": "Aventus SCSS",
+				"extensions": [
+					"wcs.avt"
+				],
+				"configuration": "./syntaxes/scss-language-configuration.json",
+				"icon": {
+					"light": "./icons/aventus-style.png",
+					"dark": "./icons/aventus-style.png"
+				}
+			},
+			{
+				"id": "Aventus Ts",
+				"extensions": [
+					".wcl.avt",
+					".data.avt",
+					".lib.avt",
+					".ram.avt",
+					".static.avt",
+					".def.avt"
+				],
+				"configuration": "./syntaxes/ts-language-configuration.json",
+				"filenames": [
+					"aventus.conf.json"
+				],
+				"icon": {
+					"light": "./icons/icon.png",
+					"dark": "./icons/icon.png"
+				}
+			}
+		],
+		"grammars": [
+			{
+				"language": "Aventus Ts",
+				"scopeName": "source.js",
+				"path": "./syntaxes/javascript.tmLanguage.json"
+			},
+			{
+				"language": "Aventus HTML",
+				"scopeName": "text.html1.basic",
+				"path": "./syntaxes/html.tmLanguage.json"
+			},
+			{
+				"language": "Aventus SCSS",
+				"scopeName": "source.css.scss",
+				"path": "./syntaxes/scss.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "aventus",
+			"order": 20,
+			"properties": {
+				"aventus.suggest.completeJSDocs": {
+					"type": "boolean",
+					"default": true,
+					"description": "Complete the js docs",
+					"scope": "language-overridable"
+				},
+				"aventus.suggest.completeFunctionCalls": {
+					"type": "boolean",
+					"default": false,
+					"description": "Complete the fct calls",
+					"scope": "resource"
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "aventus.createComponent",
+				"title": "Aventus : Create Component"
+			},
+			{
+				"command": "aventus.convertComponent",
+				"title": "Aventus : Convert to Component"
+			},
+			{
+				"command": "aventus.restart",
+				"title": "Aventus : Restart"
+			},
+			{
+				"command": "aventus.preview",
+				"title": "Aventus : Show Preview",
+				"icon": {
+					"dark": "./icons/eye-white.svg",
+					"light": "./icons/eye.svg"
+				}
+			},
+			{
+				"command": "aventus.compile",
+				"title": "Aventus : Compile"
+			},
+			{
+				"command": "aventus.static",
+				"title": "Aventus : Copy static"
+			}
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "aventus.createComponent",
+					"group": "navigation@-50"
+				},
+				{
+					"when": "resourceFilename == script.js",
+					"command": "aventus.convertComponent",
+					"group": "navigation@-49"
+				}
+			],
+			"editor/title": [
+				{
+					"when": "resourceFilename =~ /^.*\\.wcl.avt/",
+					"command": "aventus.preview",
+					"group": "navigation@-50"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "cd client && npm install && cd .. && npm run compile",
+		"compile": "tsc -b ./client/ && tsc -b ./server/",
+		"watch": "tsc -b -w",
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js",
+		"package": "npx vsce package"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.1",
+		"@types/node": "16.x",
+		"@types/vscode": "^1.68.0",
+		"@vscode/test-electron": "^2.1.3",
+		"eslint": "^8.16.0",
+		"glob": "^8.0.3",
+		"mocha": "^10.0.0",
+		"typescript": "^4.7.2",
+		"vsce": "^2.9.2"
+	},
+	"dependencies": {
+		"vscode-css-languageservice": "^6.0.1",
+		"vscode-languageserver-textdocument": "^1.0.5"
+	}
+}

@@ -1,0 +1,172 @@
+
+export class PointerTracker {
+    private element;
+    private currentPointers;
+    private startCallback;
+    private moveCallback;
+    private endCallback;
+    private lastEvent;
+
+    constructor(element, callbacks) {
+        this.element = element;
+        this.currentPointers = [];
+        const {
+            start = () => true, move = () => {
+            }, end = () => {
+            }
+        } = callbacks;
+        this.startCallback = start;
+        this.moveCallback = move;
+        this.endCallback = end;
+        this.pointerStart = this.pointerStart.bind(this);
+        this.touchStart = this.touchStart.bind(this);
+        this.triggerPointerStart = this.triggerPointerStart.bind(this);
+        this.move = this.move.bind(this);
+        this.triggerPointerEnd = this.triggerPointerEnd.bind(this);
+        this.pointerEnd = this.pointerEnd.bind(this);
+        this.touchEnd = this.touchEnd.bind(this);
+        this.lastEvent = new Date();
+
+
+        this.element.addEventListener('mousedown', this.pointerStart);
+        this.element.addEventListener('touchstart', this.touchStart);
+    }
+
+    reset() {
+        this.currentPointers = [];
+        window.removeEventListener('mousemove', this.move);
+        window.removeEventListener('mouseup', this.pointerEnd);
+        window.removeEventListener('touchmove', this.move);
+        window.removeEventListener('touchend', this.touchEnd);
+    }
+
+    private createPointer(nativePointer: Touch | PointerEvent): { id: number; } {
+        let id = -1;
+        // this.nativePointer = nativePointer;
+        // this.pageX = nativePointer.pageX;
+        // this.pageY = nativePointer.pageY;
+        // this.clientX = nativePointer.clientX;
+        // this.clientY = nativePointer.clientY;
+
+        if(self.Touch && nativePointer instanceof Touch) {
+            id = nativePointer.identifier;
+        } else if(self.PointerEvent && nativePointer instanceof PointerEvent) {
+            id = nativePointer.pointerId;
+        }
+        return {
+            id: id
+        };
+    }
+
+    private triggerPointerStart(pointer, event) {
+        if(this.isTooOld()) {
+            this.currentPointers = [];
+        }
+
+        if(!this.startCallback(pointer, event))
+            return false;
+
+
+        this.currentPointers.push(pointer);
+        return true;
+    }
+
+    private pointerStart(event: PointerEvent) {
+        if(event.button !== 0)
+            return;
+
+        const oldPointersLength = this.currentPointers.length;
+        if(!this.triggerPointerStart(this.createPointer(event), event))
+            return;
+
+        event.preventDefault();
+
+        if(oldPointersLength === 0) {
+            window.addEventListener('mousemove', this.move);
+            window.addEventListener('mouseup', this.pointerEnd);
+        }
+    }
+
+    private touchStart(event: TouchEvent) {
+        const oldPointersLength = this.currentPointers.length;
+
+        let touch: Touch;
+        for(touch of Array.from(event.changedTouches)) {
+            this.triggerPointerStart(this.createPointer(touch), event);
+        }
+        event.preventDefault();
+
+        if(oldPointersLength === 0) {
+            window.removeEventListener('touchmove', this.move);
+            window.removeEventListener('touchend', this.touchEnd);
+
+            window.addEventListener('touchmove', this.move);
+            window.addEventListener('touchend', this.touchEnd);
+        }
+    }
+
+    private move(event) {
+        setTimeout(() => {
+            this.lastEvent = new Date();
+            const previousPointers = this.currentPointers.slice();
+            const changedPointers = ('changedTouches' in event) ? Array.from(event.changedTouches).map((t: Touch) => this.createPointer(t)) : [this.createPointer(event)];
+            const trackedChangedPointers = [];
+
+            for(let pointer of changedPointers) {
+                const index = this.currentPointers.findIndex(p => p.id === pointer.id);
+                if(index === -1)
+                    continue;
+
+                trackedChangedPointers.push(pointer);
+                this.currentPointers[index] = pointer;
+            }
+
+            if(trackedChangedPointers.length === 0)
+                return;
+
+            this.moveCallback(previousPointers, trackedChangedPointers, event);
+        });
+    }
+
+    private triggerPointerEnd(pointer, event) {
+        const index = this.currentPointers.findIndex(p => p.id === pointer.id);
+        if(index === -1)
+            return false;
+
+        this.currentPointers.splice(index, 1);
+        this.endCallback(pointer, event);
+        return true;
+    }
+
+    private pointerEnd(event) {
+        event.preventDefault();
+        if(this.currentPointers.length === 0) {
+            window.removeEventListener('mousemove', this.move);
+            window.removeEventListener('mouseup', this.pointerEnd);
+        }
+        if(!this.triggerPointerEnd(this.createPointer(event), event))
+            return;
+    }
+
+    private touchEnd(event: TouchEvent) {
+        for(const touch of Array.from(event.changedTouches)) {
+            this.triggerPointerEnd(this.createPointer(touch), event);
+        }
+
+        event.preventDefault();
+
+        if(this.currentPointers.length === 0) {
+            window.removeEventListener('touchmove', this.move);
+            window.removeEventListener('touchend', this.touchEnd);
+        }
+    }
+
+    private isTooOld() {
+        let d = new Date();
+        let diff = d.getTime() - this.lastEvent.getTime();
+        if(diff > 2000) {
+            return true;
+        }
+        return false;
+    }
+}

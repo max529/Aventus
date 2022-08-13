@@ -1,0 +1,40 @@
+Event.prototype.normalize = function () {
+    if (
+        this.type === "touchstart" ||
+        this.type === "touchmove" ||
+        this.type === "touchend"
+    ) {
+        const event = (typeof this.originalEvent === "undefined") ? this : this.originalEvent;
+        const touch = event.touches[0] || event.changedTouches[0];
+        this.pageX = touch.pageX;
+        this.pageY = touch.pageY;
+        this.clientX = touch.clientX;
+        this.clientY = touch.clientY;
+    }
+};
+Event.prototype.cancelEvent = function () {
+    this.preventDefault();
+    this.stopPropagation();
+    if (this.currentTarget != document.body) {
+        let cloneEvent = new this.constructor(this.type, this);
+        document.body.dispatchEvent(cloneEvent);
+    }
+}
+Event.prototype.realTarget = function(){
+    var _realTarget = (e, el = null, i = 0) => {
+        if (el == null) {
+            el = e.target;
+        }
+        if (i == 50) {
+            debugger;
+        }
+        if (el.shadowRoot) {
+            var newEl = el.shadowRoot.elementFromPoint(e.pageX, e.pageY);
+            if (newEl && newEl != el) {
+                return _realTarget(e, newEl, i + 1);
+            }
+        }
+        return el;
+    }
+    return _realTarget(this);
+}

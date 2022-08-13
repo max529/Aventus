@@ -1,0 +1,312 @@
+import { Coordinate } from "../data/Coordinate.data.avt";
+import { IData } from "../data/IData.data.avt";
+
+export interface Pointer {
+    id: number;
+    constructor(nativePointer: Touch | PointerEvent);
+}
+export interface PressManagerEvent extends MouseEvent {
+    details?: { element: Element, pointerEvent: PointerEvent; };
+}
+export interface InternalCustomFunction {
+    src?: PressManager,
+    onDrag?: (e: MouseEvent, self: PressManager) => void,
+    onDragEnd?: (e: MouseEvent, self: PressManager) => void,
+}
+export interface InternalPointerEvent extends Event {
+    detail: {
+        state: PressManagerState,
+        customFcts: InternalCustomFunction,
+        realEvent: PointerEvent;
+    };
+}
+export interface PressManagerOptions {
+    element: Element | Element[],
+    onPress?: (e: PressManagerEvent, self: PressManager) => void,
+    onLongPress?: (e: MouseEvent, self: PressManager) => void,
+    onDblPress?: (e: MouseEvent, self: PressManager) => void,
+    onDrag?: (e: MouseEvent, self: PressManager) => void,
+    onDragStart?: (e: MouseEvent, self: PressManager) => void,
+    onDragEnd?: (e: MouseEvent, self: PressManager) => void,
+    offsetDrag?: number,
+    delayDblPress?: number;
+    delayLongPress?: number;
+}
+export interface PressManagerState {
+    oneActionTriggered: boolean,
+    isMoving: boolean;
+}
+export class PressManager {
+    private options: PressManagerOptions;
+    private element: Element;
+    private subPressManager: PressManager[] = [];
+
+    private delayDblPress: number = 150;
+    private delayLongPress: number = 700;
+    private nbPress: number = 0;
+    private offsetDrag: number = 20;
+
+    private state: PressManagerState = {
+        oneActionTriggered: false,
+        isMoving: false,
+    };
+    private startPosition = { x: 0, y: 0 };
+    private customFcts: InternalCustomFunction = {};
+
+    private timeoutDblPress: number = 0;
+    private timeoutLongPress: number = 0;
+    private downEventSaved: PointerEvent;
+
+    private functionsBinded = {
+        downAction: (e: PointerEvent) => { },
+        upAction: (e: PointerEvent) => { },
+        moveAction: (e: PointerEvent) => { },
+        childPress: (e: InternalPointerEvent) => { },
+        childDblPress: (e: InternalPointerEvent) => { },
+        childLongPress: (e: InternalPointerEvent) => { },
+        childDragStart: (e: InternalPointerEvent) => { },
+    };
+    /**
+     * @param {*} options - The options
+     * @param {HTMLElement | HTMLElement[]} options.element - The element to manage
+     */
+    constructor(options: PressManagerOptions) {
+        if(options.element === void 0) {
+            throw 'You must provide an element';
+        }
+        if(Array.isArray(options.element)) {
+            for(let el of options.element) {
+                let cloneOpt = { ...options };
+                cloneOpt.element = el;
+                this.subPressManager.push(new PressManager(cloneOpt));
+            }
+        }
+        else {
+            this.element = options.element;
+            this.checkDragConstraint(options);
+            this.assignValueOption(options);
+            this.options = options;
+            this.init();
+        }
+
+    }
+    private checkDragConstraint(options: PressManagerOptions) {
+        if(options.onDrag !== void 0) {
+            if(options.onDragStart === void 0) {
+                options.onDragStart = (e) => { };
+            }
+            if(options.onDragEnd === void 0) {
+                options.onDragEnd = (e) => { };
+            }
+        }
+        if(options.onDragStart !== void 0) {
+            if(options.onDrag === void 0) {
+                options.onDrag = (e) => { };
+            }
+            if(options.onDragEnd === void 0) {
+                options.onDragEnd = (e) => { };
+            }
+        }
+        if(options.onDragEnd !== void 0) {
+            if(options.onDragStart === void 0) {
+                options.onDragStart = (e) => { };
+            }
+            if(options.onDrag === void 0) {
+                options.onDrag = (e) => { };
+            }
+        }
+    }
+    private assignValueOption(options: PressManagerOptions) {
+        if(options.delayDblPress !== undefined) {
+            this.delayDblPress = options.delayDblPress;
+        }
+        if(options.delayLongPress !== undefined) {
+            this.delayLongPress = options.delayLongPress;
+        }
+        if(options.offsetDrag !== undefined) {
+            this.offsetDrag = options.offsetDrag;
+        }
+    }
+    private bindAllFunction() {
+        this.functionsBinded.downAction = this.downAction.bind(this);
+        this.functionsBinded.moveAction = this.moveAction.bind(this);
+        this.functionsBinded.upAction = this.upAction.bind(this);
+        this.functionsBinded.childDblPress = this.childDblPress.bind(this);
+        this.functionsBinded.childDragStart = this.childDragStart.bind(this);
+        this.functionsBinded.childLongPress = this.childLongPress.bind(this);
+        this.functionsBinded.childPress = this.childPress.bind(this);
+    }
+    private init() {
+        this.bindAllFunction();
+        this.element.addEventListener("pointerdown", this.functionsBinded.downAction);
+        this.element.addEventListener("trigger_pointer_press", this.functionsBinded.childPress);
+        this.element.addEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);
+        this.element.addEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);
+        this.element.addEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);
+    }
+
+    // #region current Event
+    private downAction(e: PointerEvent) {
+        this.downEventSaved = e;
+        e.stopPropagation();
+        this.customFcts = {};
+        if(this.nbPress == 0) {
+            this.state.oneActionTriggered = false;
+            clearTimeout(this.timeoutDblPress);
+        }
+        this.startPosition = { x: e.pageX, y: e.pageY };
+        document.addEventListener("pointerup", this.functionsBinded.upAction);
+        document.addEventListener("pointermove", this.functionsBinded.moveAction);
+
+        this.timeoutLongPress = setTimeout(() => {
+            if(!this.state.oneActionTriggered) {
+                if(this.options.onLongPress) {
+                    this.state.oneActionTriggered = true;
+                    this.options.onLongPress(e, this);
+                }
+                else {
+                    this.emitTriggerFunction("longpress", e);
+                }
+            }
+
+        }, this.delayLongPress);
+    }
+    private upAction(e: PointerEvent) {
+        e.stopPropagation();
+        document.removeEventListener("pointerup", this.functionsBinded.downAction);
+        document.removeEventListener("pointermove", this.functionsBinded.moveAction);
+
+        clearTimeout(this.timeoutLongPress);
+
+
+
+        this.nbPress++;
+        if(this.nbPress == 2) {
+            if(!this.state.oneActionTriggered) {
+                this.state.oneActionTriggered = true;
+                this.nbPress = 0;
+                if(this.options.onDblPress) {
+                    this.options.onDblPress(e, this);
+                }
+                else {
+                    this.emitTriggerFunction("dblpress", e);
+                }
+            }
+        }
+        else if(this.nbPress == 1) {
+            this.timeoutDblPress = setTimeout(() => {
+                this.nbPress = 0;
+                if(!this.state.oneActionTriggered) {
+                    if(this.options.onPress) {
+                        this.state.oneActionTriggered = true;
+                        this.options.onPress(e, this);
+                    }
+                    else {
+                        this.emitTriggerFunction("press", e);
+                    }
+                }
+            }, this.delayDblPress);
+        }
+
+
+        if(this.state.isMoving) {
+            this.state.isMoving = false;
+            if(this.options.onDragEnd) {
+                this.options.onDragEnd(e, this);
+            }
+            else if(this.customFcts.src && this.customFcts.onDragEnd) {
+                this.customFcts.onDragEnd(e, this.customFcts.src);
+            }
+        }
+    }
+    private moveAction(e: PointerEvent) {
+        if(!this.state.isMoving && !this.state.oneActionTriggered) {
+            e.stopPropagation();
+            let xDist = e.pageX - this.startPosition.x;
+            let yDist = e.pageY - this.startPosition.y;
+            let distance = Math.sqrt(xDist * xDist + yDist * yDist);
+            if(distance > this.offsetDrag) {
+                this.state.oneActionTriggered = true;
+                if(this.options.onDragStart) {
+                    this.state.isMoving = true;
+                    if(this.options.onDragStart) {
+                        this.options.onDragStart(this.downEventSaved, this);
+                    }
+                    else {
+                        this.emitTriggerFunction("dragstart", this.downEventSaved);
+                    }
+                }
+            }
+        }
+        else if(this.state.isMoving) {
+            if(this.options.onDrag) {
+                this.options.onDrag(e, this);
+            }
+            else if(this.customFcts.src && this.customFcts.onDrag) {
+                this.customFcts.onDrag(e, this.customFcts.src);
+            }
+        }
+    }
+    // #endregion
+
+    // #region custom Event
+    private childPress(e: InternalPointerEvent) {
+        if(this.options.onPress) {
+            e.stopPropagation();
+            e.detail.state.oneActionTriggered = true;
+            this.options.onPress(e.detail.realEvent, this);
+        }
+    }
+    private childDblPress(e: InternalPointerEvent) {
+        if(this.options.onDblPress) {
+            e.stopPropagation();
+            if(e.detail.state) {
+                e.detail.state.oneActionTriggered = true;
+            }
+            this.options.onDblPress(e.detail.realEvent, this);
+        }
+    }
+    private childLongPress(e: InternalPointerEvent) {
+        if(this.options.onLongPress) {
+            e.stopPropagation();
+            e.detail.state.oneActionTriggered = true;
+            this.options.onLongPress(e.detail.realEvent, this);
+        }
+    }
+    private childDragStart(e: InternalPointerEvent) {
+        if(this.options.onDragStart) {
+            e.stopPropagation();
+            e.detail.state.isMoving = true;
+            e.detail.customFcts.src = this;
+            e.detail.customFcts.onDrag = this.options.onDrag;
+            e.detail.customFcts.onDragEnd = this.options.onDragEnd;
+            this.options.onDragStart(e.detail.realEvent, this);
+        }
+    }
+    // #endregion
+
+    private emitTriggerFunction(action: string, e: PointerEvent) {
+        this.element.dispatchEvent(new CustomEvent("trigger_pointer_" + action, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            detail: {
+                state: this.state,
+                customFcts: this.customFcts,
+                realEvent: e,
+            }
+        }));
+    }
+    destroy() {
+        for(let sub of this.subPressManager){
+            sub.destroy();
+        }
+        if(this.element){
+            this.element.removeEventListener("pointerdown", this.functionsBinded.downAction);
+            this.element.removeEventListener("trigger_pointer_press", this.functionsBinded.childPress);
+            this.element.removeEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);
+            this.element.removeEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);
+            this.element.removeEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);
+        }
+    }
+}

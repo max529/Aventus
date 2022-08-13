@@ -1,0 +1,5 @@
+import { IData } from "../data/IData.data.avt";
+
+export interface AvAttributes extends IData {
+    
+}

@@ -1,0 +1,10 @@
+.vscode
+node_modules
+base/test
+base/*.js
+base/*.html
+cli/out
+client/out
+server/out
+*package-lock.json
+*.vsix

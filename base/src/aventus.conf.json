@@ -1,0 +1,29 @@
+{
+    "identifier": "Av",
+    "data": {
+        "disableIdentifier": true
+    },
+    "components": {
+        "disableIdentifier": true
+    },
+    "libs": {
+        "disableIdentifier": true
+    },
+    "build": [
+        {
+            "name": "base",
+            "inputPath": [
+                "./"
+            ],
+            "compileOnSave": true,
+            "includeBase": false,
+            "generateDefinition": true,
+            "outputFile": "../../server/lib/aventus.base.js",
+            "include": [
+                {
+                    "definition": "./definition/custom.def.avt"
+                }
+            ]
+        }
+    ]
+}

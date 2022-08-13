@@ -1,0 +1,119 @@
+import { AvFormElement } from "../../../component/form/form-element/form-element.wcl.avt";
+import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.avt";
+import { HttpRequest } from "../../../lib/HttpRequest.lib.avt";
+
+export class AvForm extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    /**
+    * Show/Hide the loading animation
+    */
+    @attribute()
+    loading: boolean;
+
+    @attribute()
+    method: string = 'get';
+
+    @attribute()
+    action: string = '';
+
+    @attribute()
+    use_event: boolean = false;
+    //#endregion
+
+
+    //#region variables
+    _fields: { [key: string]: AvFormElement<any>; } = {};
+    _fieldEnter: AvFormElement<any>;
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    private submitLastChild(e) {
+        if(e.keyCode == 13) {
+            this.submit();
+        }
+    }
+
+    public async submit() {
+        var form = new FormData();
+        for(var key in this._fields) {
+            const input = this._fields[key];
+            if(!input.nullable) {
+                if(input.value) {
+                    form.append(key, input.value);
+                }
+            }
+            else {
+                form.append(key, input.value);
+            }
+        }
+        if(this.use_event) {
+            var customEvent = new CustomEvent('submit', {
+                detail: {
+                    form: form,
+                    action: this.action,
+                    method: this.method
+                },
+                bubbles: true,
+                composed: true
+            });
+            this.dispatchEvent(customEvent);
+        }
+        else {
+            let request = new HttpRequest(
+                {
+                    url: this.action,
+                    method: HttpRequest.getMethod(this.method),
+                    data: form,
+                }
+            );
+            this.addEventListener("custom", () => {
+                
+            })
+            // _ajax({
+            //     url: this.action,
+            //     method: this.method,
+            //     fenetre: rkWindow,
+            //     data: form,
+            //     enctype: 'multipart/form-data',
+            //     processData: false,
+            //     contentType: false,
+            //     success: (res, status, request) => {
+            //         rkWindow._navigateSuccess(res, status, request, this.action, null, null, false);
+            //     }
+            // });
+        }
+    }
+    public subsribe(fieldHTML: AvFormElement<any>) {
+        this._fields[fieldHTML.name] = fieldHTML;
+        if(this._fieldEnter) {
+            this._fieldEnter.removeEventListener('keypress', this.submitLastChild);
+        }
+        // if(!(this._fieldEnter instanceof RkTextarea)) {
+        //     fieldHTML.addEventListener('keypress', this.submitLastChild);
+        // }
+        this._fieldEnter = fieldHTML;
+    }
+    protected override postCreation(): void {
+
+    };
+
+	//#endregion
+
+}

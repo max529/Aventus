@@ -1,0 +1,11 @@
+declare interface Element {
+    findParentByTag<T>(tagname:string|string[], untilNode?:Element) => T | null;
+    findParents<T>(tagname:string|string[], untilNode?:Element) => T[];
+    findParentByClass<T>(classname:string|string[]) => T | null;
+    containsChild(el:Element) => boolean;
+    getPositionOnScreen:(untilEl?:HTMLElement) => {
+        top: top,
+        left: left
+    };
+    getElementsInSlot<T>:() => T[];
+}

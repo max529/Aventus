@@ -1,0 +1,5 @@
+Date.prototype.clone = function () {
+    var newDate = new Date();
+    newDate.setTime(this.getTime());
+    return newDate;
+}

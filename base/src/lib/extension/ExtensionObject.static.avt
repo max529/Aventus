@@ -1,0 +1,245 @@
+Object.transformIntoWatcher = function (obj, onDataChanged) {
+    if(obj == undefined){
+        console.error("You must define an objet / array for your proxy");
+        return;
+    }
+    if(obj.__isProxy){
+        obj.__subscribe(onDataChanged);
+        return obj;
+    }
+    const callbacks = [onDataChanged];
+    const trigger = (type, path, element) => {
+        [...callbacks].forEach((cb) => {
+            cb(MutableAction[type], path, element)
+        })
+    }
+    let proxyData = {
+		avoidUpdate:[],
+        getProxyObject(target, element, prop) {
+            let newProxy = new Proxy(element, this);
+            let newPath = '';
+            if (Array.isArray(target)) {
+                if (prop != "length") {
+                    if (target.__path) {
+                        newPath = target.__path;
+                    }
+                    newProxy.__path = newPath + "[" + prop + "]";
+                }
+            }
+            else if (element instanceof Date) {
+                return element;
+            }
+            else {
+                if (target.__path) {
+                    newPath = target.__path + '.';
+                }
+                newProxy.__path = newPath + prop;
+            }
+            return newProxy;
+
+        },
+        get(target, prop, receiver) {
+            if(prop == "__isProxy"){
+                return true;
+            }
+            else if(prop == "__subscribe"){
+                return (cb) => {
+                    callbacks.push(cb);
+                }
+            }
+            else if(prop == "__unsubscribe"){
+                return (cb) => {
+                    let index = callbacks.indexOf(cb);
+                    if(index > -1){
+                        callbacks.splice(index,1);
+                    }
+                }
+            }
+            let element = target[prop];
+            if (typeof (element) == 'object') {
+                return this.getProxyObject(target, element, prop);
+            }
+            else if (typeof (element) == 'function') {
+                if (Array.isArray(target)) {
+                    let result;
+                    if (prop == 'push') {
+                        result = (el) => {
+                            let index = target.push(el);
+							let path = target.__path?target.__path:'';
+                            trigger('CREATED', path + "[" + (index - 1) + "]", el);
+                            return index;
+                        }
+                    }
+                    else if (prop == 'splice') {
+                        result = (index, nbRemove, ...insert) => {
+                            let res = target.splice(index, nbRemove, ...insert);
+							let path = target.__path?target.__path:'';
+                            for (let i = 0; i < res.length; i++) {
+                                trigger('DELETED', path + "[" + (index) + "]", res[i]);
+                            }
+                            for (let i = 0; i < insert.length; i++) {
+                                trigger('CREATED', path + "[" + (index + i) + "]", insert[i]);
+                            }
+
+                            return res;
+                        }
+                    }
+                    else if (prop == 'pop') {
+                        result = () => {
+                            let index = target.length - 1;
+                            let res = target.pop();
+							let path = target.__path?target.__path:'';
+                            trigger('DELETED', path + "[" + index + "]", res);
+                            return res;
+                        }
+                    }
+                    else {
+                        result = element.bind(target);
+                    }
+                    return result;
+                }
+                return element.bind(target)
+            }
+            return Reflect.get(target, prop, receiver);
+        },
+        set(target, prop, value, receiver) {
+            let triggerChange = false;
+            let newPath = '';
+            if (prop != "__path") {
+                if (Array.isArray(target)) {
+                    if (prop != "length") {
+                        if (target.__path) {
+                            newPath = target.__path;
+                        }
+                        newPath += "[" + prop + "]";
+                        triggerChange = true;
+                    }
+                }
+                else {
+                    let oldValue = Reflect.get(target, prop, receiver);
+                    if (oldValue !== value) {
+                        if (target.__path) {
+                            newPath = target.__path + '.';
+                        }
+                        newPath += prop;
+                        triggerChange = true;
+                    }
+                }
+            }
+            let result = Reflect.set(target, prop, value, receiver);
+            if (triggerChange) {
+				let index = this.avoidUpdate.indexOf(newPath);
+				if(index == -1){
+                	trigger('UPDATED', newPath, value);
+				}
+				else{
+					this.avoidUpdate.splice(index, 1);
+				}
+            }
+            return result;
+        },
+        deleteProperty(target, prop, receiver) {
+            let triggerChange = false;
+            let newPath = '';
+            if (prop != "__path") {
+                if (Array.isArray(target)) {
+                    if (prop != "length") {
+                        if (target.__path) {
+                            newPath = target.__path;
+                        }
+                        newPath += "[" + prop + "]";
+                        triggerChange = true;
+                    }
+                }
+                else {
+                    if (target.__path) {
+                        newPath = target.__path + '.';
+                    }
+                    newPath += prop;
+                    triggerChange = true;
+                }
+            }
+            if (target.hasOwnProperty(prop)) {
+                let oldValue = target[prop];
+                delete target[prop];
+                if (triggerChange) {
+                    trigger('DELETED', newPath, oldValue);
+                }
+                return true;
+            }
+            return false;
+        },
+        defineProperty(target, prop, descriptor) {
+            let triggerChange = false;
+            let newPath = '';
+            if (prop != "__path") {
+                if (Array.isArray(target)) {
+                    if (prop != "length") {
+                        if (target.__path) {
+                            newPath = target.__path;
+                        }
+                        newPath += "[" + prop + "]";
+                        if(!target.hasOwnProperty(prop)){
+                            triggerChange = true;
+                        }
+                    }
+                }
+                else {
+                    if (target.__path) {
+                        newPath = target.__path + '.';
+                    }
+                    newPath += prop;
+                    if(!target.hasOwnProperty(prop)){
+                        triggerChange = true;
+                    }
+                }
+            }
+            let result = Reflect.defineProperty(target, prop, descriptor);
+            if (triggerChange) {
+				this.avoidUpdate.push(newPath);
+                trigger('CREATED', newPath, descriptor.value);
+            }
+            return result;
+        }
+    }
+    
+    let proxy = new Proxy(obj, proxyData);
+    return proxy
+}
+Object.prepareByPath = function(obj, path, currentPath = ""){
+    let objToApply = obj;
+    let canApply = true;
+    if(path.startsWith(currentPath)){
+        let missingPath = path.replace(currentPath, "");
+        if(missingPath.startsWith(".")){ missingPath = missingPath.slice(1); }
+        
+        let splited = missingPath.split(".");
+        for(let part of splited){
+            if(part == ""){
+                continue;
+            }
+            if(part.startsWith("[")){
+                part = part.substring(1, part.length - 1)
+            }
+            if(objToApply.hasOwnProperty(part)){
+                objToApply = objToApply[part];
+            }
+            else{
+                canApply = false;
+                break;
+            }
+        }
+    }
+    else{
+        canApply = false;
+    }
+    return {
+        canApply:canApply,
+        objToApply:objToApply
+    }
+}
+Object.isPathMatching = function(p1, p2){
+    p1 = p1.replace(/\[\d*?\]/g, '[]');
+    p2 = p2.replace(/\[\d*?\]/g, '[]');
+    return p1 == p2;
+}

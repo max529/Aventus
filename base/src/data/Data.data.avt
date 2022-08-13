@@ -1,0 +1,5 @@
+import { IData } from "./IData.data.avt";
+
+export interface Data extends IData {
+
+}

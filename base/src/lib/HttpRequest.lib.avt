@@ -1,0 +1,89 @@
+/**
+ * List of HTTP Method allowed
+ */
+export enum HttpRequestMethod {
+    GET,
+    POST,
+    DELETE,
+    PUT,
+    OPTION
+}
+export interface HttpRequestOptions {
+    url: string;
+    method?: HttpRequestMethod,
+    data?: { [key: string]: any; } | FormData;
+}
+export class DefaultHttpRequestOptions implements HttpRequestOptions {
+    url: string = "";
+    method: HttpRequestMethod = HttpRequestMethod.GET;
+    
+}
+
+
+export class HttpRequest {
+    private _options: RequestInit = {};
+    private _url: string = '';
+
+    public static getMethod(method: string): HttpRequestMethod {
+        let genericMethod = method.toLowerCase().trim();
+        if(genericMethod == "get") {
+            return HttpRequestMethod.GET;
+        }
+        if(genericMethod == "post") {
+            return HttpRequestMethod.POST;
+        }
+        if(genericMethod == "delete") {
+            return HttpRequestMethod.DELETE;
+        }
+        if(genericMethod == "put") {
+            return HttpRequestMethod.PUT;
+        }
+        if(genericMethod == "option") {
+            return HttpRequestMethod.OPTION;
+        }
+        console.error("unknow type " + method + ". I ll return GET by default");
+        return HttpRequestMethod.GET;
+    }
+
+    private getMethod(method: HttpRequestMethod): string {
+        if(method == HttpRequestMethod.GET) return "GET";
+        if(method == HttpRequestMethod.POST) return "POST";
+        if(method == HttpRequestMethod.DELETE) return "DELETE";
+        if(method == HttpRequestMethod.OPTION) return "OPTION";
+        if(method == HttpRequestMethod.PUT) return "PUT";
+        return "GET";
+    }
+
+    constructor(options: HttpRequestOptions) {
+        options = {
+            ...new DefaultHttpRequestOptions(),
+            ...options
+        };
+
+        let optionsToSend: RequestInit = {
+            method: this.getMethod(options.method),
+        };
+        if(options.data) {
+            if(options.data instanceof FormData) {
+                optionsToSend.body = options.data;
+            }
+            else {
+                let formData = new FormData();
+                for(let key in options.data) {
+                    formData.append(key, options.data[key]);
+                }
+                optionsToSend.body = formData;
+            }
+        }
+
+        this._options = optionsToSend;
+        this._url = options.url;
+    }
+
+    async send() {
+        let result = await fetch(this._url, this._options);
+        if(result.ok) {
+            
+        }
+    }
+}

@@ -1,0 +1,60 @@
+import { WebComponent, DefaultComponent } from "../../lib/WebComponent.lib.avt";
+import { Data } from "../../data/Data.data.avt";
+import { SocketRAMManagerObject } from "../../lib/SocketRAMManager.lib.avt";
+
+export abstract class DisplayElement<T extends Data> extends WebComponent implements DefaultComponent {
+	//#region variables
+	currentInstance: T & SocketRAMManagerObject;
+	eventsFunctions: { [key:string]: (data:T & SocketRAMManagerObject) => void } = {
+		"onUpdate": (data:T & SocketRAMManagerObject) => {
+			this.currentInstance = data;
+			this.displayInfos(data);
+			this.onUpdateFunction(data);
+		},
+		"onDelete": (data:T & SocketRAMManagerObject) => {
+			this.onDeleteFunction(data);
+			this.destroy();
+		}
+	};
+	//#endregion
+	
+	//#region methods
+	protected abstract displayInfos(newData: T & SocketRAMManagerObject);
+
+	protected onDeleteFunction(data: T & SocketRAMManagerObject) {
+
+	}
+	protected onUpdateFunction(data: T & SocketRAMManagerObject) {
+		
+	}
+
+	protected destroy(): void {
+		if(this.currentInstance) {
+			this.unsubscribeFromInstance();
+		}
+	}
+
+	protected subscribeToInstance() {
+
+	}
+
+	protected unsubscribeFromInstance() {
+		this.currentInstance.offUpdate(this.eventsFunctions["onUpdate"]);
+		this.currentInstance.offDelete(this.eventsFunctions["onDelete"]);
+	}
+
+	/**
+	 * Assign a new instance to the component
+	 * @param {T & SocketRAMManagerObject} newInstance - The new instance to display
+	 */
+	protected switchInstance(newInstance: T & SocketRAMManagerObject) {
+		if (this.currentInstance) {
+			this.unsubscribeFromInstance();
+		}
+		this.currentInstance = newInstance;
+		this.subscribeToInstance();
+		this.displayInfos(newInstance);
+	}
+	//#endregion
+			
+}

@@ -1,0 +1,251 @@
+import { StateManager, States } from "./StateManager.lib.avt";
+
+
+export interface DebuggerConfig {
+    writeCompiled?: boolean;
+}
+
+export interface DefaultComponent {
+    states?: States;
+    [key: string]: any; // index signature to remove error
+    getStateManagerName?(): string | undefined;
+}
+
+export class WebComponent extends HTMLElement implements DefaultComponent {
+    static get observedAttributes() {
+        return [];
+    }
+
+    private _first: boolean;
+    private _isReady: boolean;
+    public get isReady(): boolean {
+        return this._isReady;
+    }
+
+    private _translations: { [key: string]: { [key: string]: string; }; };
+    private currentState: string = "";
+    private statesList: States;
+
+    private _components: { [key: string]: HTMLBaseElement[]; };
+    private __onChangeFct: { [key: string]: ((path: string) => void)[]; } = {};
+    private getSlugFct: { [key: string]: () => string; };
+
+    private __mutable: [];
+    private __mutableActions: [] = [];
+    private __prepareForCreate: [] = [];
+    private __prepareForUpdate: [] = [];
+    private __loopTemplate: { [key: string]: () => string; } = {};
+    private __mutableActionsCb: { [key: string]: () => void; } = {};
+
+    constructor() {
+        super();
+        if(this.constructor == WebComponent) {
+            throw "can't instanciate an abstract class";
+        }
+        this._first = true;
+        this._isReady = false;
+        this.__prepareVariables();
+        this.__prepareTranslations();
+        this.__prepareTemplate();
+        this.__selectElementNeeded();
+        this.__registerOnChange();
+        this.__prepareMutables();
+        this.__createStates();
+        this.__prepareForLoop();
+        this.__endConstructor();
+    }
+    private __prepareVariables() { }
+    private __prepareMutables() { }
+    private __prepareForLoop() { }
+    //#region translation
+    private __getLangTranslations() {
+        return [];
+    }
+    private __prepareTranslations() {
+        this._translations = {};
+        let langs = this.__getLangTranslations();
+        for(let i = 0; i < langs.length; i++) {
+            this._translations[langs[i]] = {};
+        }
+        this.__setTranslations();
+    }
+    private __setTranslations() {
+
+    }
+    //#endregion
+
+    //#region template
+    private __getStyle() {
+        return [":host{display:inline-block;box-sizing:border-box}:host *{box-sizing:border-box}"];
+    }
+    private __getHtml() {
+        return {
+            html: '<slot></slot>',
+            slots: {
+                default: '<slot></slot>'
+            }
+        };
+    }
+    private __prepareTemplate() {
+        let tmpl = document.createElement('template');
+        tmpl.innerHTML = `
+        <style>
+            ${this.__getStyle().join("\r\n")}
+        </style>${this.__getHtml().html}`;
+        let shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.appendChild(tmpl.content.cloneNode(true));
+    }
+    //#endregion
+
+    private __createStates() {
+        this.currentState = "default";
+        this.statesList = {
+            "default": {
+                active() { },
+                inactive() { }
+            }
+        };
+        this.getSlugFct = {};
+    }
+
+    //#region select element
+
+    private __getMaxId() {
+        return [];
+    }
+    private __selectElementNeeded(ids = null) {
+        if(ids == null) {
+            var _maxId = this.__getMaxId();
+            this._components = {};
+            for(var i = 0; i < _maxId.length; i++) {
+                for(let j = 0; j < _maxId[i][1]; j++) {
+                    let key = _maxId[i][0].toLowerCase() + "_" + j;
+                    this._components[key] = Array.from(this.shadowRoot.querySelectorAll('[_id="' + key + '"]'));
+                }
+            }
+        }
+        else {
+
+            for(let i = 0; i < ids.length; i++) {
+                //this._components[ids[i]] = this.shadowRoot.querySelectorAll('[_id="component' + ids[i] + '"]');
+            }
+        }
+
+        this.__mapSelectedElement();
+    }
+    private __mapSelectedElement() {
+
+    }
+    //#endregion
+    private __registerOnChange() {
+
+    }
+    private __endConstructor() { }
+
+    private connectedCallback() {
+        this.__defaultValue();
+        this.__upgradeAttributes();
+        this.__addEvents();
+
+        if(this._first) {
+            this._first = false;
+            this.__applyTranslations();
+            setTimeout(() => {
+                this.__subscribeState();
+                this.postCreation();
+                this._isReady = true;
+                this.dispatchEvent(new CustomEvent('ready'));
+            });
+        }
+    }
+    private __defaultValue() { }
+    private __upgradeAttributes() { }
+    private __listBoolProps() {
+        return [];
+    }
+    private __upgradeProperty(prop) {
+        let boolProps = this.__listBoolProps();
+        if(boolProps.indexOf(prop) != -1) {
+            if(this.hasAttribute(prop) && (this.getAttribute(prop) === "true" || this.getAttribute(prop) === "")) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+            else {
+                this.removeAttribute(prop);
+                this[prop] = false;
+            }
+        }
+        else {
+            if(this.hasAttribute(prop)) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+        }
+    }
+    private __addEvents() { }
+    private __applyTranslations() { }
+    private __getTranslation(key) {
+        if(!this._translations) return;
+
+        var lang = localStorage.getItem('lang');
+        if(lang === null) {
+            lang = 'en';
+        }
+
+        if(key.indexOf('lang.') === 0) {
+            key = key.substring(5);
+        }
+
+
+        if(this._translations[lang] !== undefined) {
+            return this._translations[lang][key];
+        }
+
+        return key;
+    }
+
+    public getStateManagerName(): string | undefined {
+        return undefined;
+    }
+    private __subscribeState() {
+        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
+        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
+        var stateSlugged = currentState.replace("*", currentSlug);
+        if(this.statesList.hasOwnProperty(stateSlugged)) {
+            this.statesList[stateSlugged].active(stateSlugged);
+        }
+        else {
+            this.statesList["default"].active("default");
+        }
+
+        for(let route in this.statesList) {
+            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
+        }
+    }
+
+
+
+    private attributeChangedCallback(name, oldValue, newValue) {
+        if(oldValue !== newValue) {
+            if(this.__onChangeFct.hasOwnProperty(name)) {
+                for(let fct of this.__onChangeFct[name]) {
+                    fct('');
+                }
+            }
+        }
+    }
+
+    protected postCreation() { }
+
+    private _unsubscribeState() {
+        if(this.statesList) {
+            for(let key in this.statesList) {
+                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
+            }
+        }
+    }
+
+}
+

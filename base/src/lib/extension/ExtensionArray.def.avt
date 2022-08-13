@@ -1,0 +1,4 @@
+declare interface Array<T> {
+    unique: () => Array<T>;
+	last:() => T; 
+}

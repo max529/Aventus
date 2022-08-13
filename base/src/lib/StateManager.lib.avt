@@ -1,0 +1,403 @@
+export interface State {
+    active?: (activeState: string) => void;
+    inactive?: (oldState: string, nextState: string) => void;
+    askChange?: (activeState: string, nextState: string) => boolean;
+    getSlug?: () => string;
+}
+export interface States {
+    [key: string]: State;
+}
+
+export class StateManager {
+    logLevel: number = 0; // 0 = error only / 1 = errors and warning / 2 = error, warning and logs (not implemented)
+    _activeState = undefined;
+    _activeParams = undefined;
+    _activeSlug = undefined;
+    _callbackList = {};
+    _subscribersMutliple = {};
+    _subscribers = {};
+    _isNumberRegex = /^-?\d+$/;
+    _callbackFunctions = {};
+
+    private constructor() {
+
+    }
+    private static __instances: { [key: string]: StateManager; } = {};
+
+    public static getInstance(name?: string) {
+        if(!name) {
+            name = "";
+        }
+        if(!this.__instances.hasOwnProperty(name)) {
+            this.__instances[name] = new StateManager();
+        }
+        return this.__instances[name];
+    }
+
+    subscribe(state: string | string[], callbacks: State) {
+        if(!callbacks.hasOwnProperty("active") && !callbacks.hasOwnProperty("inactive") && callbacks.hasOwnProperty("askChange")) {
+            this._log(`Trying to subscribe to state : ${state} with no callbacks !`, "warning");
+            return;
+        }
+        if(!Array.isArray(state)) {
+            state = [state];
+        }
+        for(let i = 0; i < state.length; i++) {
+            let _state = state[i];
+            let res = this._prepareStateString(_state);
+            _state = res["state"];
+
+            // We have test that the state is present in the state list
+            if(!this._subscribers.hasOwnProperty(_state)) {
+                // The route doesn't exist, so we create the default architecture
+                let regex = new RegExp(_state);
+                let isActive = this._activeState !== undefined && regex.test(this._activeState);
+                this._subscribers[_state] = {
+                    "regex": regex,
+                    "callbacks": {
+                        "active": [],
+                        "inactive": [],
+                        "askChange": [],
+                    },
+                    "isActive": isActive,
+                    "testRegex": (string) => {
+                        if(!string) {
+                            string = this.getActiveState();
+                        }
+                        return this._subscribers[_state].regex.test(string);
+                    }
+                };
+            }
+            // Now, we're sure the route exist so we can add the callbacks
+            if(callbacks.hasOwnProperty("active")) {
+                this._subscribers[_state].callbacks.active.push(callbacks.active);
+                if(this._subscribers[_state].isActive) {
+                    callbacks.active(this._activeState);
+                }
+            }
+            if(callbacks.hasOwnProperty("inactive")) {
+                this._subscribers[_state].callbacks.inactive.push(callbacks.inactive);
+            }
+            if(callbacks.hasOwnProperty("askChange")) {
+                this._subscribers[_state].callbacks.askChange.push(callbacks.askChange);
+            }
+
+        }
+    }
+    /**
+     *
+     * @param {string|Array} state - The state(s) to unsubscribe from
+     * @param {Object} callbacks
+     * @param {activeCallback} [callbacks.active]
+     * @param {incativeCallback} [callbacks.inactive]
+     * @param {askChangeCallback} [callbacks.askChange]
+     */
+    unsubscribe(state, callbacks) {
+        if(!Array.isArray(state)) {
+            state = [state];
+        }
+        for(let i = 0; i < state.length; i++) {
+            let _state = state[i];
+            let res = this._prepareStateString(_state);
+            _state = res["state"];
+            // We can unsubscribe
+            if(this._subscribers.hasOwnProperty(_state)) {
+                // There is an object for this route
+                let modifications = false;
+                if(callbacks.hasOwnProperty("active")) {
+                    let index = this._subscribers[_state].callbacks.active.indexOf(callbacks["active"]);
+                    if(index !== -1) {
+                        this._subscribers[_state].callbacks.active.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if(callbacks.hasOwnProperty("inactive")) {
+                    let index = this._subscribers[_state].callbacks.inactive.indexOf(callbacks["inactive"]);
+                    if(index !== -1) {
+                        this._subscribers[_state].callbacks.inactive.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if(callbacks.hasOwnProperty("askChange")) {
+                    let index = this._subscribers[_state].callbacks.askChange.indexOf(callbacks["askChange"]);
+                    if(index !== -1) {
+                        this._subscribers[_state].callbacks.askChange.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if(
+                    modifications &&
+                    this._subscribers[_state].callbacks.active.length === 0 &&
+                    this._subscribers[_state].callbacks.inactive.length === 0 &&
+                    this._subscribers[_state].callbacks.askChange.length === 0
+                ) {
+                    // There is no more callbacks linked to this route, we need to remove it
+                    delete this._subscribers[_state];
+                }
+            }
+
+            return;
+        }
+    }
+    /**
+     * Format a state and return if you need to bypass the test or not
+     * @param {string} string - The state to format
+     * @returns {Object} - The state, the formated state and if it's a regex state or not
+     */
+    _prepareStateString(string) {
+        let _state = string;
+        let stateToTest = _state; //Here we keep the state before escaping it to test it with the states list we have and maybe throw an error
+        let bypassTest = false;
+        if(_state.startsWith("^") && _state.endsWith("$")) {
+            // We're with a regex subscribe
+            bypassTest = true;
+        } else {
+            // We're with a regular subscribe
+            if(_state.endsWith("/*")) {
+                // We need to replace the star with a regex that matches all numbers
+                _state = "^" + this._escapeRegExp(_state).replace("\*", "-?\\d+$"); // We replace the escaped star with the regex that matches all number
+            } else {
+                let splittedState = _state.split("/");
+                let slug = splittedState.pop();
+                if(this._isNumberRegex.test(slug)) {
+                    stateToTest = splittedState.join("/") + "/*";
+                }
+                // We can escape the whole string
+                _state = "^" + this._escapeRegExp(_state) + "$";
+            }
+        }
+        return { "state": _state, "stateToTest": stateToTest, "bypassTest": bypassTest };
+    }
+    /**
+     * Escape a string to be regex-compatible ()
+     * @param {string} string The string to escape
+     * @returns An escaped string
+     */
+    _escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); // $& means the whole matched string
+    }
+    /**
+     * Get the slug from a state string
+     * @param {string} state The state to extract the slug from
+     * @returns {string|undefined} The slug of the state or undefined if the state don't have one
+     */
+    _getSlugFromState(state) {
+        let slug = state.split("/").pop();
+        if(this._isNumberRegex.test(slug)) {
+            return parseInt(slug);
+        } else {
+            return undefined;
+        }
+    }
+    /**
+     * Save the current info (state/params) in cache
+     */
+    _saveDataInCache() {
+
+        if(!this._activeParams || Object.keys(this._activeParams).length == 0) {
+            if(localStorage["disableStorage"] == null) {
+                localStorage["state"] = this._activeState;
+            }
+        }
+    }
+
+    /**
+     * Add a callback to a key
+     * @param {string} key - The key to trigger to trigger the function
+     * @param {function} callback - The function to trigger
+     */
+    addFunction(key, callback) {
+        if(!this._callbackFunctions.hasOwnProperty(key)) {
+            this._callbackFunctions[key] = [];
+        }
+        this._callbackFunctions[key].push(callback);
+    }
+    /**
+     * Remove a function from a key
+     * @param {string} key - The key to remove the function from
+     * @param {function} callback - The function to remove
+     */
+    removeFunction(key, callback) {
+        if(this._callbackFunctions.hasOwnProperty(key)) {
+            const index = this._callbackFunctions[key].indexOf(callback);
+            if(index !== -1) {
+                this._callbackFunctions[key].splice(index, 1);
+                if(this._callbackFunctions[key].length === 0) {
+                    delete this._callbackFunctions[key];
+                }
+            } else {
+                console.warn("Couldn't find callback in list " + key);
+            }
+        } else {
+            console.warn("Couldn't find " + key + " in callback array");
+        }
+    }
+    /**
+     * Trigger all the functions added under a key
+     * @param {string} key - The key to trigger
+     * @param {*} [params] - The params to pass to the functions (optional)
+     */
+    triggerFunction(key, params = {}) {
+        if(this._callbackFunctions.hasOwnProperty(key)) {
+            const copy = [...this._callbackFunctions[key]];
+            copy.forEach(callback => {
+                callback(params);
+            });
+        } else {
+            console.warn("Trying to trigger non existent key : " + key);
+        }
+    }
+    /**
+     * Remove all the function added under all keys
+     */
+    clearFunctions() {
+        this._callbackFunctions = {};
+    }
+    /**
+     * Set the current active state
+     * @param {string} state - The state to set to active
+     * @param {number} slug - The slug of the active state (Only work if the state ends with "*")
+     * @param {Object} params - The params of the active state
+     */
+    setActiveState(state, params = {}) {
+        //We format the state in order to check if it's present in the state list
+
+        if(this._activeState !== undefined && state === this._activeState) {
+            this._log("Trying to set a state that was already active. state : " + state + " activeState : " + this._activeState, "warning");
+            return;
+        }
+        let canChange = true;
+        if(this._activeState) {
+            // We need to ask before change and trigger inactive callbacks
+            let activeToInactive = [];
+            let inactiveToActive = [];
+            let triggerActive = [];
+            // We loop through all the subscribers of the state manager
+            for(let key in this._subscribers) {
+                let current = this._subscribers[key];
+                // If the subscriber is already active
+                if(current.isActive) {
+                    // And the subscriber does not match on the next state
+                    if(!current.regex.test(state)) {
+                        // We need to pass it from active to inactive -> trigger the askChange callback before
+                        // We clone all the callbacks
+                        let clone = [...current.callbacks["askChange"]];
+                        for(let i = 0; i < clone.length; i++) {
+                            let callback = clone[i];
+                            // If the askChange callback returns false, we can't change, but we continue to call all the others askChange callbacks
+                            if(!callback(this._activeState, state)) {
+                                canChange = false;
+                            }
+                        }
+                        // We push the current subscriber to the list to trigger
+                        activeToInactive.push(current);
+                    } else {
+                        // If it's already active and it will match on the next state. We want to trigger the activeCallback
+                        triggerActive.push(current);
+                    }
+                } else {
+                    // If the state is not active and it will match on the next state, we want to trigger the activeCallback
+                    if(current.regex.test(state)) {
+                        // We need to pass it from inactive to active
+                        inactiveToActive.push(current);
+                    }
+                }
+            }
+            if(canChange) {
+                // We can change -> reset active params / slug, then triggers all inactive callbacks and then triggers all active callbacks
+                const oldState = this._activeState;
+                this._activeState = state;
+                this._activeSlug = this._getSlugFromState(state);
+                this._activeParams = params;
+                activeToInactive.forEach(route => {
+                    // We pass the subscriber to inactive
+                    route.isActive = false;
+                    // We clone all the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.inactive].forEach(callback => {
+                        callback(oldState, state);
+                    });
+                });
+                // We clear the function list
+                this.clearFunctions();
+                // Now we trigger all the subscriber that were already active -> so no need to modify active property
+                triggerActive.forEach(route => {
+                    // We clone the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                });
+                // We trigger all the inactive to active callbacks
+                inactiveToActive.forEach(route => {
+                    // we set the subscriber to active
+                    route.isActive = true;
+                    // We clone the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                });
+            }
+        } else {
+            // If there was no active state before, we can change -> reset active params / slug, then triggers all active callbacks
+            this._activeState = state;
+            this._activeSlug = this._getSlugFromState(state);
+            this._activeParams = params;
+            this.clearFunctions();
+            for(let key in this._subscribers) {
+                // If the subscriber match on the next state, we want to trigger the activeCallback
+                if(this._subscribers[key].regex.test(state)) {
+                    // As we have no old state, we can pass all the matches to active without further tests
+                    this._subscribers[key].isActive = true;
+                    [...this._subscribers[key].callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                }
+            }
+        }
+        // We save the new state in cache
+        this._saveDataInCache();
+        return;
+    }
+    /**
+     * Get the active state
+     * @returns {string} - The active state
+     */
+    getActiveState() {
+        return this._activeState;
+    }
+    /**
+     * Get the active params
+     * @returns {Object} - The active params
+     */
+    getActiveParams() {
+        return this._activeParams;
+    }
+    /**
+     * Get the active slug
+     * @returns {int} - The active slug
+     */
+    getActiveSlug() {
+        return this._activeSlug;
+    }
+    /**
+     * Check if a state is in the subscribers and active, return true if it is, false otherwise
+     * @param {string} state - The state to test
+     * @returns {boolean} - True if the state is in the subscription list and active, false otherwise
+     */
+    isStateActive(state) {
+        state = this._prepareStateString(state).state;
+        if(this._subscribers[state] && this._subscribers[state].isActive) {
+            return true;
+        }
+        return false;
+    }
+    _log(logMessage, type) {
+        if(type === "error") {
+            console.error(logMessage);
+        } else if(type === "warning" && this.logLevel > 0) {
+            console.warn(logMessage);
+        } else if(type === "info" && this.logLevel > 1) {
+            console.log(logMessage);
+        }
+
+    }
+}

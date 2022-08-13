@@ -1,0 +1,264 @@
+import { SocketOptions, SocketMessage, SocketRoute } from './ISocket.lib.avt';
+
+export class Socket {
+    private options: SocketOptions;
+    private waitingList = {};
+    private multipltWaitingList = {};
+    private onDone: Function;
+    private timeoutError: number;
+    private memoryBeforeOpen = [];
+    private nbClose = 0;
+    private socket: WebSocket;
+
+    protected constructor() {
+    }
+
+    init(options: SocketOptions = {}) {
+        if(!options.port) {
+            options.port = parseInt(window.location.port);
+        }
+        if(!options.ip) {
+            options.ip = window.location.hostname;
+        }
+        if(!options.hasOwnProperty('useHttps')) {
+            options.useHttps = window.location.protocol == "https:";
+        }
+        if(!options.routes) {
+            options.routes = {};
+        }
+        if(!options.socketName) {
+            options.socketName = "";
+        }
+
+        this.options = options;
+    }
+
+    private static __instances: { [key: string]: Socket; } = {};
+
+    public static getInstance(name?: string): Socket {
+        if(!name) {
+            name = "";
+        }
+        if(!this.__instances.hasOwnProperty(name)) {
+            this.__instances[name] = new Socket();
+            this.__instances[name].init({ log: true });
+        }
+        return this.__instances[name];
+    }
+
+    addRoute(newRoute: SocketRoute) {
+        if(!this.options.routes.hasOwnProperty(newRoute.channel)) {
+            this.options.routes[newRoute.channel] = [];
+        }
+        this.options.routes[newRoute.channel].push(newRoute);
+    }
+
+    /**
+     * The route to remove
+     * @param route - The route to remove
+     */
+    removeRoute(route: SocketRoute) {
+        let index = this.options.routes[route.channel].indexOf(route);
+        if(index != -1) {
+            this.options.routes[route.channel].splice(index, 1);
+        }
+    }
+
+    open(done: Function = () => { }, error: Function = () => { }) {
+        if(this.socket) {
+            this.socket.close();
+        }
+        let protocol = "ws";
+        if(this.options.useHttps) {
+            protocol = "wss";
+        }
+        let url = protocol + "://" + this.options.ip + ":" + this.options.port + "/ws/" + this.options.socketName;
+        this.log(url);
+        this.socket = new WebSocket(url);
+
+        this.timeoutError = setTimeout(() => {
+            if(
+                this.socket &&
+                this.socket.readyState != 1
+            ) {
+                delete this.socket;
+                this.socket = null;
+                console.error('Timeout on socket open');
+                error();
+            }
+        }, 3000);
+        this.socket.onopen = this.onOpen.bind(this);
+        this.socket.onclose = this.onClose.bind(this);
+        this.socket.onerror = this.onError.bind(this);
+        this.socket.onmessage = this.onMessage.bind(this);
+        this.onDone = done;
+    }
+
+    /**
+     * 
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param options the options to add to the message (typically the uid)
+     */
+    sendMessage<T>(channelName: string, data: T = null, options = {}) {
+        if(this.socket && this.socket.readyState == 1) {
+            let message: SocketMessage = {
+                channel: channelName,
+            };
+            for(let key in options) {
+                message[key] = options[key];
+            }
+            if(data) {
+                message.data = data;
+                this.log(message);
+                message.data = JSON.stringify(data);
+            } else {
+                this.log(message);
+            }
+
+            this.socket.send(JSON.stringify(message));
+        } else {
+            this.log('Socket not ready ! Please ensure that it is open and ready to send message');
+            this.memoryBeforeOpen.push({
+                channelName: channelName,
+                data: data,
+                options: options
+            });
+        }
+    }
+
+    /**
+     *
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWait<T>(channelName: string, data: T, callbacks: { [key: string]: (data: any) => void; }) {
+        let uid = '_' + Math.random().toString(36).substr(2, 9);
+        this.waitingList[uid] = callbacks;
+        this.sendMessage(channelName, data, {
+            uid: uid
+        });
+    };
+
+    /**
+     * 
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {}) {
+        let uid = '_' + Math.random().toString(36).substr(2, 9);
+        this.multipltWaitingList[uid] = callbacks;
+        this.sendMessage(channelName, data, {
+            uid: uid
+        });
+    }
+
+    public isReady(): boolean {
+        if(this.socket && this.socket.readyState == 1) {
+            return true;
+        }
+        return false;
+    }
+
+    private onOpen() {
+        if(this.socket && this.socket.readyState == 1) {
+            this.log('Connection successfully established !' + this.options.ip + ":" + this.options.port);
+            window.clearTimeout(this.timeoutError);
+            this.onDone();
+            if(this.options.hasOwnProperty("onOpen")) {
+                this.options.onOpen();
+            }
+
+            for(let i = 0; i < this.memoryBeforeOpen.length; i++) {
+                this.sendMessage(this.memoryBeforeOpen[i].channelName, this.memoryBeforeOpen[i].data, this.memoryBeforeOpen[i].options);
+            }
+            this.memoryBeforeOpen = [];
+        }
+        else {
+            console.error("open with error " + this.options.ip + ":" + this.options.port + "(" + (this.socket ? this.socket.readyState : "unknown") + ")");
+            setTimeout(() => this.open(), 2000);
+        }
+    }
+
+    private onError(event) {
+        this.log('An error has occured');
+        if(this.options.hasOwnProperty("onError")) {
+            this.options.onError();
+        }
+    }
+
+    private onClose(event) {
+        this.log('Closing connection');
+        if(this.options.hasOwnProperty("onClose")) {
+            this.options.onClose();
+        } else {
+            if(window.location.pathname == '/') {
+                this.nbClose++;
+                if(this.nbClose == 2) {
+                    window.location.href = '/login/logout';
+                }
+                else {
+                    console.warn("try reopen socket ");
+                    let reopenInterval = setTimeout(() => {
+                        this.open(() => {
+                            clearInterval(reopenInterval);
+                        }, () => { });
+                    }, 5000);
+                }
+            }
+            else {
+                console.warn("try reopen socket ");
+                let reopenInterval = setTimeout(() => {
+                    this.open(() => {
+                        clearInterval(reopenInterval);
+                    }, () => { });
+                }, 5000);
+            }
+        }
+    }
+
+    private onMessage(event) {
+        let response = JSON.parse(event.data);
+        this.log(response);
+        response.data = JSON.parse(response.data);
+        if(this.options.routes.hasOwnProperty(response.channel)) {
+            this.options.routes[response.channel].forEach(element => {
+                element.callback(response.data);
+            });
+        }
+        if(response.uid) {
+            if(this.waitingList.hasOwnProperty(response.uid)) {
+                let group = this.waitingList[response.uid];
+                if(group.hasOwnProperty(response.channel)) {
+                    group[response.channel](response.data);
+                }
+                delete this.waitingList[response.uid];
+            } else if(this.multipltWaitingList.hasOwnProperty(response.uid)) {
+                let group = this.multipltWaitingList[response.uid];
+                if(group.hasOwnProperty(response.channel)) {
+                    try {
+                        if(!group[response.channel](response.data)) {
+                            delete this.multipltWaitingList[response.uid];
+                        }
+                    }
+                    catch(e) {
+                        console.error(e);
+                        delete this.multipltWaitingList[response.uid];
+                    }
+                }
+            }
+        }
+    }
+
+    private log(message) {
+        if(this.options.log) {
+            const now = new Date();
+            const hours = (now.getHours()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            const minutes = (now.getMinutes()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            const seconds = (now.getSeconds()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, JSON.parse(JSON.stringify(message)));
+        }
+    }
+}

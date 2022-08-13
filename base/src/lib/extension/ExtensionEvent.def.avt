@@ -1,0 +1,11 @@
+declare interface Event {
+    normalize: () => void;
+    /**
+     * Cancel event and create a clone trigger on body : used for popup etc
+     */
+    cancelEvent:() => void;
+    /**
+     * Real element target on an event
+     */
+    realTarget:() => Element;
+}

@@ -1,0 +1,173 @@
+Element.prototype.findParentByTag = function (tagname, untilNode = undefined) {
+    let el = this;
+    let checkFunc = (el) => {
+        return false;
+    }
+    if(typeof tagname == "function" && tagname.prototype.constructor) {
+        checkFunc = (el) => {
+            if(el instanceof tagname){
+                return true;
+            }
+            return false;
+        }
+        
+    }
+    else {
+        if(Array.isArray(tagname)) {
+            for(let i = 0; i < tagname.length; i++) {
+                tagname[i] = tagname[i].toLowerCase();
+            }
+        } else {
+            tagname = [tagname.toLowerCase()];
+        }
+        checkFunc = (el) => {
+            return tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1
+        }
+    }
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        if(checkFunc(el)) {
+            return el;
+        }
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+    return null;
+};
+Element.prototype.findParents = function (tagname, untilNode = undefined) {
+    let el = this;
+    if(Array.isArray(tagname)) {
+        for(let i = 0; i < tagname.length; i++) {
+            tagname[i] = tagname[i].toLowerCase();
+        }
+    } else {
+        tagname = [tagname.toLowerCase()];
+    }
+    let result = [];
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        if(tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1) {
+            result.push(el);
+        }
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+
+    return result;
+};
+Element.prototype.findParentByClass = function (classname, untilNode = undefined) {
+    let el = this;
+    if(!Array.isArray(classname)) {
+        classname = [classname];
+    }
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        for(let classnameTemp of classname) {
+            if(el.classList && el.classList.contains(classnameTemp)) {
+                return el;
+            }
+        }
+
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+
+    return null;
+};
+Element.prototype.containsChild = function (el) {
+    var rootScope = this.getRootNode();
+    var elScope = el.getRootNode();
+    while(elScope != rootScope) {
+        if(!elScope.host) {
+            return false;
+        }
+        el = elScope.host;
+        elScope = elScope.host.getRootNode();
+    }
+
+    return this.contains(el);
+};
+Element.prototype.getPositionOnScreen = function (untilEl = undefined) {
+    let el = this;
+    let top = 0;
+    let left = 0;
+    while(el != untilEl) {
+        top += el.offsetTop || 0;
+        top -= el.scrollTop || 0;
+
+        left += el.offsetLeft || 0;
+        left -= el.scrollLeft || 0;
+        el = el.offsetParent;
+    }
+    top -= window.scrollY;
+    left -= window.scrollX;
+    return {
+        top: top,
+        left: left
+    };
+};
+Element.prototype.getElementsInSlot = function () {
+    if(this.shadowRoot) {
+        let slotEl = this.shadowRoot.querySelector("slot");
+        while(true) {
+            if(!slotEl) {
+                return [];
+            }
+            var listChild = Array.from(slotEl.assignedElements());
+            if(!listChild) {
+                return [];
+            }
+            let slotFound = false;
+            for(let i = 0; i < listChild.length; i++) {
+                if(listChild[i].nodeName == "SLOT") {
+                    slotEl = listChild[i];
+                    slotFound = true;
+                    break;
+                }
+            }
+            if(!slotFound) {
+                return listChild;
+            }
+        }
+    }
+    return [];
+}

@@ -1,0 +1,6 @@
+import { Data } from "./Data.data.avt";
+export class ColorData implements Data {
+    r: number = 0;
+    g: number = 0;
+    b: number = 0;
+}
