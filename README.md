@@ -1,6 +1,6 @@
 # Aventus
 
-![Aventus logo](https://raw.githubusercontent.com/aventus/master/icons/aventus.gif "Aventus")
+![Aventus logo](icons/aventus.gif "Aventus")
 
 Aventus is a framework for simplifying the creation and maintenance of a web application. It is based on web components for the design as well as creation patterns to manage data in the best possible way.
 
