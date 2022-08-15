@@ -1,2 +1,124 @@
+export interface IRAMManager { }
 
-export interface RAMManager { }
+export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManager {
+    private static allRams: { [key: string]: IRAMManager; } = {};
+
+    protected static _getInstance<T extends IRAMManager>(): T {
+        if(!this.allRams.hasOwnProperty(this.name)) {
+            let temp: any = { class: this };
+            this.allRams[this.name] = new temp["class"]();
+        }
+        return this.allRams[this.name] as T;
+    }
+
+    private records: { [key: number]: U; };
+
+    public abstract getPrimaryKey(): string;
+
+    private getId(item: U): string | undefined {
+        if(item[this.getPrimaryKey()] !== undefined) {
+            return item[this.getPrimaryKey()] + "";
+        }
+        console.error("can't found key " + this.getPrimaryKey() + " inside ", item);
+        return undefined;
+    }
+    protected constructor() {
+        if(this.constructor == RAMManager) {
+            throw "can't instanciate an abstract class";
+        }
+        this.records = {};
+    }
+
+    //#region add
+    addList(list: U[]) {
+        this.beforeAddList(list);
+        for(let item of list) {
+            this.add(item);
+        }
+        this.afterAddList(list);
+    }
+    add(item: U) {
+        let key = this.getId(item);
+        if(key) {
+            this.beforeAddItem(item);
+            this.records[key] = item;
+            this.afterAddItem(item);
+        }
+    }
+    beforeAddList(list: U[]) { }
+    beforeAddItem(item: U) { }
+    afterAddItem(item: U) { }
+    afterAddList(list: U[]) { }
+    //#endregion
+
+    //#region update
+    updateList(list: U[]) {
+        this.beforeUpdateList(list);
+        for(let item of list) {
+            this.update(item);
+        }
+        this.afterAddList(list);
+    }
+    update(item: U) {
+        let key = this.getId(item);
+        if(key) {
+            if(this.records[key]) {
+                this.beforeUpdateItem(item);
+                // TODO do this to found update field for Proxy element, but must find a better way to do that
+                // this.records[key] = {
+                //     ...this.records[key],
+                //     ...item
+                // };
+                this.records[key] = item;
+                this.afterUpdateItem(item);
+            }
+            else {
+                console.error("can't update the item " + key + " because it wasn't found inside ram");
+            }
+
+        }
+    }
+    beforeUpdateList(list: U[]) { }
+    beforeUpdateItem(item: U) { }
+    afterUpdateItem(item: U) { }
+    afterUpdateList(list: U[]) { }
+    //#endregion
+
+    //#region delete
+    deleteList(list: U[]) {
+        this.beforeDeleteList(list);
+        for(let item of list) {
+            this.delete(item);
+        }
+        this.afterDeleteList(list);
+    }
+    delete(item: U) {
+        let key = this.getId(item);
+        if(key && this.records[key]) {
+            let oldItem = this.records[key];
+            this.beforeDeleteItem(oldItem);
+            delete this.records[key];
+            this.afterDeleteItem(oldItem);
+        }
+    }
+    beforeDeleteList(list: U[]) { }
+    beforeDeleteItem(item: U) { }
+    afterDeleteItem(item: U) { }
+    afterDeleteList(list: U[]) { }
+    //#endregion
+
+    //#region get
+    getById(id: number) {
+        if(this.records[id]) {
+            return this.records[id];
+        }
+        return undefined;
+    }
+    getAll(): { [primaryKey: number]: U; } {
+        return this.records;
+    }
+    getList(): U[] {
+        return Object.values(this.records);
+    }
+    //#endregion
+}

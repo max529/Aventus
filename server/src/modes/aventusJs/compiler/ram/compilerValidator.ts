@@ -32,14 +32,14 @@ export function compileValidatorRAM(document: TextDocument, config: AventusConfi
 
 		let foundData = false;
 		for (let implement of classTemp.implements) {
-			if (implement.typeName == 'RAMManager') {
+			if (implement.typeName == 'IRAMManager') {
 				foundData = true;
 				break;
 			}
 		}
 
 		if (!foundData) {
-			diagnostics.push(createErrorTsPos(document, 'Class must implement RAMManager', classTemp.start, classTemp.end));
+			diagnostics.push(createErrorTsPos(document, 'Class must implement IRAMManager', classTemp.start, classTemp.end));
 		}
 	}
 	return diagnostics;

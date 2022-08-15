@@ -73,7 +73,21 @@ export interface ExampleInterface extends IData {}
 
 ### RAM
 
-A *.ram.avt file is a class extending RAMManager. It's a store for your data
+A *.ram.avt file is a class extending IRAMManager. It's a store for your data
+
+Your ram can extend RAMManager for a default store logic
+
+```ts
+export class ExampleRAM extends RAMManager<ExampleRAM, ExampleData> implements IRAMManager 
+{
+    public static getInstance(): ExampleRAM {
+        return ExampleRAM._getInstance<ExampleRAM>();
+    }
+    getPrimaryKey(): string {
+        return 'id';
+    }
+}
+```
 
 ### Library
 

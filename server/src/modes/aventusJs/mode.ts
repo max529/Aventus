@@ -1,8 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import * as ts from 'typescript';
 import {
-    Diagnostic,
-    DiagnosticSeverity,
     CompletionItem,
     Range,
     Position,
@@ -22,13 +20,12 @@ import {
     FoldingRange,
     FoldingRangeKind,
     WorkspaceEdit,
-    WorkspaceFolder,
     _,
     _Connection,
     CodeAction
 } from 'vscode-languageserver/node';
 import { convertKind, convertRange, convertSymbolKind, generateIndent, getWordAtText, isWhitespaceOnly, JS_WORD_REGEX, pathToUri, simplifyPath, uriToPath } from './utils';
-import { compilerOptions, completionOptions, formatingOptions } from './config';
+import { completionOptions, formatingOptions } from './config';
 import { AventusJSProgramManager } from './program';
 import { languageIdJs } from '../../config';
 
@@ -379,7 +376,7 @@ export class AventusJSMode {
         delete this.listFiles[document.uri];
     }
     compile(document: TextDocument) {
-        this.programManager.getProgram(document).compile(document.uri);
+        this.programManager.getProgram(document).compile(document);
     }
     dispose() {
         this.programManager.dispose();

@@ -1,0 +1,12 @@
+export enum AvTodoState {
+    Waiting,
+    InProgress,
+    Done
+}
+export class AvTodoData implements Data {
+    public id: number = 0;
+    public name: string = "";
+    public state: AvTodoState = AvTodoState.Waiting;
+
+    
+}

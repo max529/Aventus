@@ -19,36 +19,36 @@ export class CreateComponent {
 				mkdirSync(newFolderPath);
 				let newScriptPath = newFolderPath + "/" + params.arguments[2];
 				writeFileSync(newScriptPath + aventusExtension.ComponentLogic, `export class ${className} extends WebComponent implements DefaultComponent {
-	
+
 	//#region static
-			
+
 	//#endregion
-			
-			
+
+
 	//#region props
-			
+
 	//#endregion
-			
-			
+
+
 	//#region variables
-			
+
 	//#endregion
-			
-			
+
+
 	//#region states
-			
+
 	//#endregion
 			
 			
 	//#region constructor
-			
+
 	//#endregion
-			
-			
+
+
 	//#region methods
-			
+
 	//#endregion
-			
+	
 }`);
 				writeFileSync(newScriptPath + aventusExtension.ComponentStyle, ":host{\r\n\t\r\n}");
 				writeFileSync(newScriptPath + aventusExtension.ComponentView, "<slot></slot>");

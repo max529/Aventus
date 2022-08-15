@@ -583,10 +583,11 @@ export class AventusJSProgram {
 			}
 		}
 	}
-	public compile(uri: string) {
+	public async compile(document: TextDocument) {
 		let config = this.getConfig();
 		if (config) {
-			this.filesLoaded[uri]?.compile(config)
+			await this.doValidation(document);
+			this.filesLoaded[document.uri]?.compile(config)
 		}
 	}
 	public removeDocument(document: TextDocument) {

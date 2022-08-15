@@ -141,7 +141,11 @@ export class AventusHTMLMode {
 	}
 	compile(document: TextDocument) {
 		let uriLogic = document.uri.replace(aventusExtension.ComponentView, aventusExtension.ComponentLogic);
-		jsMode.programManager.getProgram(uriLogic).compile(uriLogic);
+		let program = jsMode.programManager.getProgram(uriLogic, false)
+		let doc = program.getDocument(uriLogic);
+		if (doc) {
+			jsMode.programManager.getProgram(uriLogic).compile(doc.document);
+		}
 	}
 
 	async doResolve(item: CompletionItem): Promise<CompletionItem> {

@@ -1,0 +1,25 @@
+{
+    "identifier": "Av",
+    "build": [
+        {
+            "name": "Only Aventus script",
+            "inputPath": [],
+            "outputFile": "./aventus.js",
+            "includeBase": true
+        },
+        {
+            "name": "Todo list",
+            "inputPath": [
+                "./Complexe/TodoList/"
+            ],
+            "outputFile": "./Complexe/TodoList/out/todo.js"
+        },
+        {
+            "name": "Web component - Hello world",
+            "inputPath": [
+                "./WebComponent/HelloWorld/"
+            ],
+            "outputFile": "./WebComponent/HelloWorld/helloworld.js"
+        }
+    ]
+}

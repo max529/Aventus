@@ -1,0 +1,55 @@
+@Debugger({
+    writeCompiled: true
+})
+export class AvHelloWorld extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    @attribute()
+    hello_clicked: number = 0;
+
+    @attribute((target: AvHelloWorld) => {
+        target.worldEl.innerHTML = "world " + target.word_clicked;
+    })
+    word_clicked: number = 0;
+    //#endregion
+
+
+    //#region variables
+    helloEl: HTMLSpanElement;
+    worldEl: HTMLSpanElement;
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+    constructor() {
+        super();
+        new PressManager({
+            element: this.worldEl,
+            onPress: () => {
+                this.word_clicked++;
+            }
+        });
+    }
+    //#endregion
+
+
+    //#region methods
+    public onHelloClicked() {
+        this.hello_clicked++;
+    }
+    protected override postCreation(): void {
+
+    }
+	//#endregion
+
+}

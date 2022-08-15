@@ -1,0 +1,3 @@
+<av-for in="items" item="item" index="i">
+    <av-todo-item item="{{item}}"></av-todo-item>
+</av-for>

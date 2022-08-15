@@ -1,5 +1,5 @@
 import { Data } from "../data/Data.data.avt";
-import { RAMManager } from "./RAMManager.lib.avt";
+import { IRAMManager } from "./RAMManager.lib.avt";
 import { Socket } from "./Socket.lib.avt";
 
 export interface SocketRAMManagerObject {
@@ -16,7 +16,7 @@ export interface SocketRAMManagerObject {
     };
 }
 
-export abstract class SocketRAMManager<T extends Data> implements RAMManager {
+export abstract class SocketRAMManager<T extends Data> implements IRAMManager {
 	public types: { [key: string]: string } = {};
 	public options: { definition?: { [key: string]: string } } = {};
 

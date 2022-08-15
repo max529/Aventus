@@ -1,0 +1,2 @@
+<div class="state">{{item.state}}</div>
+<div class="name">{{item.name}}</div>

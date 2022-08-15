@@ -86,14 +86,22 @@ export class AventusSCSSMode {
 			for (let uri of this.reverseDependancesFile[document.uri]) {
 				let uriLogic = uri.replace(aventusExtension.ComponentStyle, aventusExtension.ComponentLogic);
 				if (existsSync(uriToPath(uriLogic))) {
-					jsMode.programManager.getProgram(uriLogic).compile(uriLogic);
+					let program = jsMode.programManager.getProgram(uriLogic, false)
+					let doc = program.getDocument(uriLogic);
+					if (doc) {
+						jsMode.programManager.getProgram(uriLogic).compile(doc.document);
+					}
 				}
 			}
 		}
 		else {
 			let uriLogic = document.uri.replace(aventusExtension.ComponentStyle, aventusExtension.ComponentLogic);
 			if (existsSync(uriToPath(uriLogic))) {
-				jsMode.programManager.getProgram(uriLogic).compile(uriLogic);
+				let program = jsMode.programManager.getProgram(uriLogic, false)
+				let doc = program.getDocument(uriLogic);
+				if (doc) {
+					jsMode.programManager.getProgram(uriLogic).compile(doc.document);
+				}
 			}
 		}
 
