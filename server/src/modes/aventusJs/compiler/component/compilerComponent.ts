@@ -1309,14 +1309,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 						}
 						if (current.isProperty) {
 							let txtCreate = ""
-							let checkRawValue = variables.length == 1 && !variables[0].name.startsWith("$index$_") && value == '""+this.__values["' + variables[0].name + '"]+""';
+							let checkRawValue = variables.length == 1 && !variables[0].name.startsWith("$index$_") && value == '""+element.__values["' + variables[0].name + '"]+""';
 							for (let varTemp of variables) {
 								if (variablesForItems[componentId].indexOf(varTemp.name) == -1) {
 									forActionsCreateSelector[componentId] = forActionsCreateSelector[componentId].replace("/**replaceValue*/", _createVariable(varTemp) + "/**replaceValue*/");
 								}
 								if (checkRawValue) {
 									txtCreate += `item.__templates["${varTemp.name}"].push(((element) => {
-										let varToCheck = this.__values["${varTemp.name}"];
+										let varToCheck = element.__values["${varTemp.name}"];
 										if(varToCheck instanceof Object && !(varToCheck instanceof Date)){
 											element["${current.propName}"] = varToCheck;
 										}
