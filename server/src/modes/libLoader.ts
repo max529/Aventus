@@ -11,7 +11,7 @@ const contents: { [name: string]: string } = {};
 
 
 const serverFolder = getServerFolder();
-const TYPESCRIPT_LIB_SOURCE = join(serverFolder, '/node_modules/typescript/lib');
+const TYPESCRIPT_LIB_SOURCE = join(serverFolder, 'node_modules/typescript/lib');
 export const AVENTUS_DEF_BASE_PATH = join(serverFolder, 'lib/aventus.base.def.avt');
 const AVENTUS_BASE_PATH = join(serverFolder, 'lib/aventus.base.js');
 const NODE_MODULES = join(serverFolder, 'node_modules');
@@ -24,7 +24,7 @@ export function loadLibrary(name: string): string {
 	if (name == "aventus.def" || name == "aventus.def.ts") {
 		libPath = AVENTUS_DEF_BASE_PATH;
 	}
-	else if(name.startsWith("custom://@types")){
+	else if (name.startsWith("custom://@types")) {
 		libPath = join(NODE_MODULES, name.replace("custom://@types", "@types"));
 		showError = false;
 	}
@@ -34,10 +34,10 @@ export function loadLibrary(name: string): string {
 	else if (name.startsWith("file:///")) {
 		libPath = decodeURIComponent(name.replace("file:///", ""));
 		if (libPath.indexOf("/node_modules/@typescript") != -1) {
-			showError = false;
+			//showError = false;
 		}
 		else if (libPath.indexOf("/node_modules/@types/typescript__") != -1) {
-			showError = false;
+			//showError = false;
 		}
 		else if (libPath.endsWith(".ts")) {
 			libPath = libPath.replace(".ts", "");
@@ -76,5 +76,10 @@ function getServerFolder() {
 	if (process.env["aventus_server_folder"]) {
 		return process.env["aventus_server_folder"];
 	}
-	return basename(__dirname) === 'dist' ? dirname(__dirname) : dirname(dirname(__dirname))
+	if (__dirname.endsWith("modes")) {
+		// dev
+		return dirname(dirname(dirname(__dirname)));
+	}
+	// prod
+	return dirname(dirname(__dirname));
 }

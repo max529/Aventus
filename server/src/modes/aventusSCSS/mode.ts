@@ -1,14 +1,14 @@
-import { CodeAction, CodeActionContext, CompletionItem, CompletionList, Definition, Diagnostic, DocumentFormattingParams, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeActionContext, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { connectionVs, jsMode } from '../../server';
 import { CSSFormatConfiguration, getSCSSLanguageService, LanguageService } from 'vscode-css-languageservice'
 import { aventusExtension } from '../aventusJs/aventusDoc';
 import * as nodes from './CSSNode';
-import { convertRange, pathToUri, uriToPath } from '../aventusJs/utils';
+import { pathToUri, uriToPath } from '../aventusJs/utils';
 import { compileScss } from './compiler/compileScss';
 import { existsSync } from 'fs';
 import { customCssProperty } from './CSSNode';
-import { SCSSDoc } from '../aventusJs/compiler/component/compilerComponent';
+import { SCSSDoc } from '../aventusJs/compiler/component/def';
+import { connectionWithClient, jsMode } from '../../mode';
 
 export class AventusSCSSMode {
 	public customLanguageService: LanguageService | undefined = undefined;
@@ -75,8 +75,8 @@ export class AventusSCSSMode {
 				}
 			}
 		}
-		if (connectionVs) {
-			connectionVs.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
+		if (connectionWithClient) {
+			connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
 		}
 		return diagnostics;
 	}

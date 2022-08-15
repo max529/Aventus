@@ -1,195 +1,94 @@
-import { extension, scssMode } from '../../../../server';
+import { scssMode } from '../../../../mode';
 import { ArrayType, ClassModel, DefaultClassModel, FieldModel, ImportNode, Module, parseStruct, TypeKind } from '../../../../ts-file-parser';
 import { AventusConfig } from '../../config';
-import { compileDocTs, removeDecoratorFromClassContent, removeWhiteSpaceLines, replaceFirstExport } from '../utils';
+import { compileDocTs, createErrorTs, createErrorTsPos, removeDecoratorFromClassContent, removeWhiteSpaceLines, replaceFirstExport } from '../utils';
 import { compilerTemplate } from './compilerTemplate';
 import * as cheerio from 'cheerio';
-import { getFolder, uriToPath } from '../../utils';
-import { basename, dirname, join, normalize } from 'path';
 import { aventusExtension } from '../../aventusDoc';
-import { compileScss } from '../../../aventusSCSS/compiler/compileScss';
-import { customCssProperty } from '../../../aventusSCSS/CSSNode';
+import { compileScss, ScssCompilerResult } from '../../../aventusSCSS/compiler/compileScss';
 import { AVENTUS_DEF_BASE_PATH } from '../../../libLoader';
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { CompileComponentResult, configTS, CustomClassInfo, HTMLDoc, ItoPrepare, SCSSDoc, TYPES } from './def';
+import { loadFields, transpileMethod, transpileMethodNoRun } from './utils';
+import { Diagnostic } from 'vscode-languageserver';
+import { TextDocument } from 'vscode-languageserver-textdocument';
+import { uriToPath } from '../../utils';
 
-const fs = require("fs");
-const path = require('path');
 const ts = require("typescript");
-const minify = require("babel-minify");
 
-declare type FieldType = 'attribute' | 'mutable' | 'state' | 'simple';
-interface CustomFieldModel extends FieldModel {
-	propType: FieldType,
-	inParent: boolean,
-}
-declare interface DebuggerConfig {
-	writeCompiled?: boolean
-}
-export declare interface CustomClassInfo {
-	debuggerOption: DebuggerConfig,
-	overrideView?: boolean
-}
-export declare interface ItoPrepare {
-	variablesPerso: {},
-	eventsPerso: toPrepareEventPerson[],
-	pressEvents: {},
-	allFields: { [key: string]: CustomFieldModel },
-	loop: {},
-	actionByComponent: { [key: string]: toPrepareActionByComponent[] },
-	idElement: 0,
-	style: string,
-	script: ClassModel & CustomClassInfo,
-	view: string,
 
-}
-export declare interface toPrepareActionByComponent {
-	componentId: string,
-	prop?: string,
-	value: string
-}
-export declare interface toPrepareEventPerson {
-	componentId: string,
-	value: string,
-	event: string
-}
-export declare interface HTMLDoc {
-	[key: string]: {
-		name: string,
-		description: string,
-		attributes: {
-			[key: string]: {
-				name: string,
-				description: string,
-				values: {
-					name: string,
-					description: string,
-				}[]
-			}
-		}
-	}
-}
-export declare interface SCSSDoc {
-	[key: string]: customCssProperty[],
-}
-
-/** @type {ts.CompilerOptions} */
-const configTS = {
-	"noImplicitOverride": false,
-	"target": "ES6"
-}
-export const TYPES = {
-	date: 'date',
-	datetime: 'datetime',
-	string: 'string',
-	number: 'number',
-	boolean: 'boolean',
-}
-
-function prepareMethodToTranspile(methodTxt) {
-	methodTxt = methodTxt.trim();
-	if (methodTxt.startsWith("function")) {
-		methodTxt = methodTxt.replace("function", "");
-		methodTxt = methodTxt.trim();
-	}
-	if (!methodTxt.match(/^\(.*?\)( *?)=>/g) && !methodTxt.match(/^\S*?( *?)=>/g)) {
-		methodTxt = methodTxt.replace(/^.*?\(/g, "(");
-		let match = methodTxt.match(/^\(.*?\)/g);
-		methodTxt = methodTxt.replace(match[0], match[0] + " => ");
-	}
-	return methodTxt;
-}
-function transpileMethod(methodTxt, paramsName: any[] = []) {
-	methodTxt = prepareMethodToTranspile(methodTxt);
-	let method = ts.transpile(methodTxt, configTS).trim();
-	method = method.substring(0, method.length - 1);
-	method = "(" + method + ")(" + paramsName.join(",") + ")";
-	// method = minify(method, { mangle: false }).code;
-	return method;
-}
-function transpileMethodNoRun(methodTxt) {
-	methodTxt = prepareMethodToTranspile(methodTxt);
-	let method = ts.transpile(methodTxt, configTS).trim();
-	method = method.substring(0, method.length - 1);
-	method = "(" + method + ")";
-	// method = minify(method, { mangle: false }).code;
-	return method;
-}
-function loadFields(classInfo: ClassModel, isBase: boolean): { [key: string]: CustomFieldModel } {
-	let result: { [key: string]: CustomFieldModel } = {};
-	for (let field of classInfo.fields) {
-		let found = false;
-		if (field.name == "states") {
-			result[field.name] = {
-				...field,
-				propType: 'state',
-				inParent: !isBase,
-			}
-			found = true;
-		}
-		for (let decorator of field.decorators) {
-			if (decorator.name == "attribute") {
-				result[field.name] = {
-					...field,
-					propType: 'attribute',
-					inParent: !isBase,
-				}
-				found = true;
-				break;
-			}
-			else if (decorator.name == "mutable") {
-				result[field.name] = {
-					...field,
-					propType: 'mutable',
-					inParent: !isBase,
-				}
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			result[field.name] = {
-				...field,
-				propType: 'simple',
-				inParent: !isBase,
-			}
-		}
-	}
-	return result;
-}
-
-export function compileComponent(componentPath, config: AventusConfig) {
+export function compileComponent(document: TextDocument, config: AventusConfig): CompileComponentResult {
 	let specialTag = config.identifier;
 	let specialTagLower = specialTag.toLowerCase();
 	let baliseName = "";
+	let componentPath = uriToPath(document.uri)
 	let folderTemp = componentPath.split("/");
-	let scriptName = folderTemp.pop();
+	let scriptName = folderTemp.pop() || '';
 	let folderPath = folderTemp.join("/");
+	let result: CompileComponentResult = {
+		success: false,
+		diagnostics: [],
+		result: {
+			nameCompiled: '',
+			nameDoc: '',
+			src: '',
+			doc: '',
+			dependances: [],
+			htmlDoc: {},
+			scssVars: {}
+		}
+	}
 
 	const getView = () => {
 		let htmlName = scriptName.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentView);
-		if (fs.existsSync(folderPath + '/' + htmlName)) {
-			return fs.readFileSync(folderPath + '/' + htmlName, 'utf8')
+		if (existsSync(folderPath + '/' + htmlName)) {
+			return readFileSync(folderPath + '/' + htmlName, 'utf8')
 		}
-		throw "Can't find a view inside " + folderPath + " for " + scriptName;
+		result.diagnostics.push(createErrorTs(document, "Can't find a view inside " + folderPath + " for " + scriptName));
+		return "";
 	}
 	const getStylePath = () => {
 		let styleName = scriptName.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle);
-		if (fs.existsSync(folderPath + '/' + styleName)) {
+		if (existsSync(folderPath + '/' + styleName)) {
 			return folderPath + '/' + styleName
 		}
-		throw "Can't find a style file for " + folderPath + " for " + scriptName;
+		result.diagnostics.push(createErrorTs(document, "Can't find a style file for " + folderPath + " for " + scriptName));
+		return "";
 	}
 	let view = getView().replace(/<!--[\s\S]*?-->/g, '').trim();
-	let realScriptContent = fs.readFileSync(componentPath, 'utf8');
+	let realScriptContent = readFileSync(componentPath, 'utf8');
 	let script = realScriptContent.trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
-	let style = compileScss(getStylePath());
-
-	if (!style.success) {
-		throw style.errorInfo;
+	let stylePath = getStylePath();
+	let style: ScssCompilerResult;
+	if (stylePath != "") {
+		style = compileScss(getStylePath());
+		if (!style.success) {
+			result.diagnostics.push(createErrorTs(document, style.errorInfo));
+		}
 	}
+	else {
+		style = {
+			success: true,
+			content: "",
+			rawContent: "",
+			errorInfo: "",
+			importedPath: []
+		}
+	}
+
 	let template = compilerTemplate;
 
 	let jsonStructure = parseStruct(realScriptContent, {}, componentPath);
-
+	if (jsonStructure.functions.length > 0) {
+		for (let fct of jsonStructure.functions) {
+			result.diagnostics.push(createErrorTsPos(document, "You can't declare function outside of your class", fct.start, fct.end))
+		}
+	}
+	if (jsonStructure.variables.length > 0) {
+		for (let variable of jsonStructure.variables) {
+			result.diagnostics.push(createErrorTsPos(document, "You can't declare variable outside of your class", variable.start, variable.end))
+		}
+	}
 	let customClassInfo: CustomClassInfo = {
 		debuggerOption: {},
 	}
@@ -214,18 +113,18 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					}
 				}
 				else {
-					throw "Only one class is allowed inside a file. Get " + classInfo.name + " and " + jsonStructure.classes[i].name;
+					result.diagnostics.push(createErrorTs(document, "Only one class is allowed inside a file. Get " + classInfo.name + " and " + jsonStructure.classes[i].name));
 				}
 			}
 			else {
-				throw "Only class that implements DefaultComponent can be used";
+				result.diagnostics.push(createErrorTs(document, "Only class that implements DefaultComponent can be used"));
 			}
 		}
 
 	}
 	if (classInfo.name == "") {
-		throw "Can't found a class to compile inside";
-		return;
+		result.diagnostics.push(createErrorTs(document, "Can't found a class to compile inside"))
+		return result;
 	}
 	let dependances: string[] = [];
 	let toPrepare: ItoPrepare = {
@@ -278,7 +177,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 			const baseAventusEndPath = "/aventus/base/src";
 			const test_path = join(serverFolder, baseAventusEndPath);
 			console.log(test_path);*/
-			let testStruct = parseStruct(fs.readFileSync(AVENTUS_DEF_BASE_PATH, 'utf8'), {}, AVENTUS_DEF_BASE_PATH);
+			let testStruct = parseStruct(readFileSync(AVENTUS_DEF_BASE_PATH, 'utf8'), {}, AVENTUS_DEF_BASE_PATH);
 			testStruct.classes.forEach(classInfo => {
 				// Check if classInfo implements DefaultComponent
 				let foundDefaultComponent = false;
@@ -311,7 +210,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					for (let name of importTemp.clauses) {
 						if (name == jsonStruct.classes[0].extends[0].typeName) {
 							let newPath = importTemp.absPathString;
-							let parentScript = fs.readFileSync(newPath, 'utf8').trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+							let parentScript = readFileSync(newPath, 'utf8').trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
 							newPath = newPath.replace(/\\/g, "/");
 							let parentStructure = parseStruct(parentScript, {}, newPath);
 							console.log(name)
@@ -320,7 +219,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 						}
 					}
 				}
-				//throw "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName;
+				result.diagnostics.push(createErrorTs(document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
 			}
 		}
 
@@ -332,7 +231,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 		if (splitted) {
 			const specialTagClassName = config.components?.disableIdentifier ? "" : specialTag;
 			if (specialTagClassName.length > 0 && splitted[0].toLowerCase() != specialTagClassName.toLowerCase()) {
-				throw "Your class must start with " + specialTagClassName;
+				result.diagnostics.push(createErrorTs(document, "Your class must start with " + specialTagClassName))
 			}
 			baliseName = splitted.join("-").toLowerCase();
 			template = template.replace(/\$classname/g, classInfo.name);
@@ -525,7 +424,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					if (key === 'item') {
 						itemFound = true;
 						if (["__itemName", "__template", "__inName"].indexOf(key) != -1) {
-							throw "You can't use __template, __itemName or __inName as name for item";
+							result.diagnostics.push(createErrorTs(document, "You can't use __template, __itemName or __inName as name for item inside av-for"));
 						}
 						itemName = el.attribs[key];
 					}
@@ -541,7 +440,8 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					}
 				}
 				if (!inFound || !itemFound) {
-					throw "Your loop must have an attribute item and an attribute in";
+					result.diagnostics.push(createErrorTs(document, "Your loop must have an attribute item and an attribute in"));
+					return;
 				}
 
 				let idTemp = _getId($(el));
@@ -653,9 +553,9 @@ export function compileComponent(componentPath, config: AventusConfig) {
 			var recuSelectedEl = (current, root) => {
 				for (var key in current) {
 					if (typeof (current[key]) == 'object') {
-						throw 'dont know when to use this kind'
-						selectedElTxt += root + '.' + key + ' = {};\r\n';
-						recuSelectedEl(current[key], root + '.' + key);
+						result.diagnostics.push(createErrorTs(document, 'dont know when to use this kind'));
+						// selectedElTxt += root + '.' + key + ' = {};\r\n';
+						// recuSelectedEl(current[key], root + '.' + key);
 					} else {
 						selectedElTxt += root + '.' + key + ' = ' + current[key] + ';\r\n';
 					}
@@ -703,10 +603,10 @@ export function compileComponent(componentPath, config: AventusConfig) {
 				}
 				let type = field.type.typeName.toLowerCase();
 				if (!TYPES.hasOwnProperty(type)) {
-					throw "can't use the the type " + type + " as property";
+					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as property", field.start, field.end));
 				}
 				if (field.name.toLowerCase() != field.name) {
-					throw "an attribute must be in lower case";
+					result.diagnostics.push(createErrorTsPos(document, "an attribute must be in lower case", field.start, field.end));
 				}
 				var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
 					key = key.toLowerCase();
@@ -852,7 +752,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					}
 					let value = "";
 					if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
-						throw 'A mutable prop must be initialized';
+						result.diagnostics.push(createErrorTsPos(document, "A mutable prop must be initialized", field.start, field.end));
 					}
 					else {
 						if (field.type.typeName.toLowerCase() === TYPES.string) {
@@ -1118,7 +1018,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 					}
 
 					else {
-						throw realKey + ' can\'t be found';
+						result.diagnostics.push(createErrorTs(document, realKey + ' can\'t be found'));
 					}
 				}
 			}
@@ -1129,7 +1029,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 			}
 
 			for (let missingVar of listToCheck) {
-				console.info("missing variable " + missingVar);
+				result.diagnostics.push(createErrorTs(document, "missing variable " + missingVar));
 			}
 
 			//#region writing into template
@@ -1319,7 +1219,7 @@ export function compileComponent(componentPath, config: AventusConfig) {
 						}
 					}
 					if (!found) {
-						throw 'variable ' + firstInNamePart + ' inside in of for loop must be mutable';
+						result.diagnostics.push(createErrorTs(document, 'variable ' + firstInNamePart + ' inside in of for loop must be mutable'));
 					}
 				}
 				loopTxt += `this.__loopTemplate['${key}'] = \`${item.__template}\`;\r\n`;
@@ -1464,14 +1364,14 @@ export function compileComponent(componentPath, config: AventusConfig) {
 			var allTranslations = "";
 			let allLangs: string[] = [];
 
-			if (fs.existsSync(folderPath + '/_lang')) {
+			if (existsSync(folderPath + '/_lang')) {
 				var translationsKey: string[] = [];
-				fs.readdirSync(folderPath + '/_lang').forEach(file => {
+				readdirSync(folderPath + '/_lang').forEach(file => {
 					if (file.indexOf('.json') !== -1) {
 						var lang = file.replace('.json', '');
 						allLangs.push(lang);
 
-						var translations = JSON.parse(fs.readFileSync(folderPath + '/_lang/' + file, 'utf8'));
+						var translations = JSON.parse(readFileSync(folderPath + '/_lang/' + file, 'utf8'));
 
 						const processTranslationsObject = (object, parentKey) => {
 							for (let key in object) {
@@ -1563,10 +1463,10 @@ export function compileComponent(componentPath, config: AventusConfig) {
 	template = removeWhiteSpaceLines(template)
 	// fs.writeFileSync(folderPath + '/compiled.js', template);
 	if (classInfo.debuggerOption.writeCompiled) {
-		fs.writeFileSync(folderPath + '/compiled.js', template);
+		writeFileSync(folderPath + '/compiled.js', template);
 	}
-	else if (fs.existsSync(folderPath + '/compiled.js')) {
-		fs.unlinkSync(folderPath + '/compiled.js')
+	else if (existsSync(folderPath + '/compiled.js')) {
+		unlinkSync(folderPath + '/compiled.js')
 	}
 	let struct = parseStruct(realScriptContent, {}, componentPath);
 	let doc = "";
@@ -1578,14 +1478,14 @@ export function compileComponent(componentPath, config: AventusConfig) {
 	let customCssProperties: SCSSDoc = {
 		[baliseName]: scssMode.getCustomProperty(style.rawContent)
 	}
-	return {
-		nameCompiled: classInfo.name,
-		nameDoc: classInfo.name,
-		src: template,
-		doc: doc,
-		dependances: dependances,
-		htmlDoc: htmlDoc,
-		scssVars: customCssProperties
-	};
+	result.result.nameCompiled = classInfo.name;
+	result.result.nameDoc = classInfo.name;
+	result.result.src = template;
+	result.result.doc = doc;
+	result.result.dependances = dependances;
+	result.result.htmlDoc = htmlDoc;
+	result.result.scssVars = customCssProperties;
+	result.success = result.diagnostics.length == 0;
+	return result;
 
 }

@@ -1,21 +1,20 @@
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { normalize } from 'path';
+import { normalize, sep } from 'path';
 import * as ts from 'typescript';
 import { CodeAction, DiagnosticSeverity, WorkspaceEdit, Diagnostic, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument'
-import { connectionVs, htmlMode, jsMode, jsonMode, languageIdJs, scssMode } from '../../server';
+import * as aventusConfig from '../../config';
+import * as modes from '../../mode';
 import { AventusDoc, aventusExtension, AventusType } from './aventusDoc';
 import { AventusConfig, compilerOptions, completionOptions, formatingOptions } from './config';
 import { convertRange, getFolder, pathToUri, simplifyPath, uriToPath } from './utils';
 import {
 	Range,
 } from 'vscode-languageserver/node';
-import path = require('path');
 import { AVENTUS_DEF_BASE_PATH, loadLibrary } from '../libLoader';
 const nodeSass = require('sass');
 import * as cheerio from 'cheerio';
-import { getLanguageService as getHTMLLanguageService } from 'vscode-html-languageservice'
-import { HTMLDoc, SCSSDoc } from './compiler/component/compilerComponent';
+import { HTMLDoc, SCSSDoc } from './compiler/component/def';
 
 
 const baseAventusEndPath = "/aventus/base/src";
@@ -50,10 +49,10 @@ export class AventusJSProgramManager {
 				uriFile = pathToUri(uriFile);
 			}
 			if (existsSync(pathFile)) {
-				document = TextDocument.create(uriFile, languageIdJs, 0, readFileSync(pathFile, 'utf8'))
+				document = TextDocument.create(uriFile, aventusConfig.languageIdJs, 0, readFileSync(pathFile, 'utf8'))
 			}
 			else {
-				document = TextDocument.create(uriFile, languageIdJs, 0, '')
+				document = TextDocument.create(uriFile, aventusConfig.languageIdJs, 0, '')
 			}
 		}
 		uri = document.uri;
@@ -85,11 +84,11 @@ export class AventusJSProgramManager {
 		this.unknowProgram = new AventusJSProgram();
 		this.unknowProgram.init(undefined);
 
-		let configs = jsonMode.getConfigFiles();
+		let configs = modes.jsonMode.getConfigFiles();
 		for (let config in configs) {
 			await this.createProgram(configs[config]);
 		}
-		let files = jsMode.getFiles();
+		let files = modes.jsMode.getFiles();
 		for (let file in files) {
 			await this.getProgram(files[file]);
 		}
@@ -298,7 +297,7 @@ export class AventusJSProgram {
 						docPath = docPath.replace(aventusExtension[key], aventusExtension.Definition);
 					}
 					if (docPath.endsWith(aventusExtension.Definition) && existsSync(docPath)) {
-						this.isInsideProgram(TextDocument.create(pathToUri(docPath), languageIdJs, 0, readFileSync(docPath, 'utf8')), store, false);
+						this.isInsideProgram(TextDocument.create(pathToUri(docPath), aventusConfig.languageIdJs, 0, readFileSync(docPath, 'utf8')), store, false);
 					}
 				}
 			}
@@ -356,9 +355,9 @@ export class AventusJSProgram {
 				}
 				const copyFile = (pathFile, pathOut) => {
 					pathOut = normalize(pathOut);
-					let splitted = pathOut.split(path.sep);
+					let splitted = pathOut.split(sep);
 					let filename = splitted.pop();
-					let folder = splitted.join(path.sep);
+					let folder = splitted.join(sep);
 
 
 					if (filename.endsWith(".scss")) {
@@ -426,11 +425,11 @@ export class AventusJSProgram {
 				}
 				if (JSON.stringify(newHTMLDoc) != JSON.stringify(this.HTMLDoc)) {
 					this.HTMLDoc = newHTMLDoc;
-					htmlMode.reload();
+					modes.htmlMode.reload();
 				}
 				if (JSON.stringify(newSCSSDoc) != JSON.stringify(this.SCSSDoc)) {
 					this.SCSSDoc = newSCSSDoc;
-					scssMode.reload();
+					modes.scssMode.reload();
 				}
 				for (let build of config.build) {
 					if (buildName != "") {
@@ -579,7 +578,7 @@ export class AventusJSProgram {
 						writeFileSync(build.outputFile.replace(".js", ".def.avt"), finalDtxt);
 					}
 
-					connectionVs?.sendNotification("aventus/compiled", build.name);
+					modes.connectionWithClient?.sendNotification("aventus/compiled", build.name);
 				}
 			}
 		}
@@ -597,14 +596,14 @@ export class AventusJSProgram {
 			this.filesLoaded[document.uri].remove();
 		}
 		delete this.filesLoaded[document.uri];
-		connectionVs?.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+		modes.connectionWithClient?.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 	}
 
 	public async generalRebuild(): Promise<boolean> {
 		this.enableBuild = false;
 		let nb = 0;
 		let uri = this.configFile?.uri || '';
-		let config = jsonMode.getConfig(uri);
+		let config = modes.jsonMode.getConfig(uri);
 		this.loadInclude();
 		for (let file in this.filesLoaded) {
 			nb += (await this.doValidation(this.filesLoaded[file].document)).length;
@@ -618,7 +617,7 @@ export class AventusJSProgram {
 	}
 	public getConfig(): AventusConfig | undefined {
 		let uri = this.configFile?.uri || '';
-		let config = jsonMode.getConfig(uri);
+		let config = modes.jsonMode.getConfig(uri);
 		return config;
 	}
 
@@ -644,7 +643,7 @@ export class AventusJSProgram {
 						diagnostics.push({
 							range: Range.create(document.positionAt(0), document.positionAt(document.getText().length)),
 							severity: DiagnosticSeverity.Error,
-							source: languageIdJs,
+							source: aventusConfig.languageIdJs,
 							message: ts.flattenDiagnosticMessageText("No config file found for this component", '\n'),
 						})
 
@@ -660,7 +659,7 @@ export class AventusJSProgram {
 							return {
 								range: convertRange(document, diag),
 								severity: DiagnosticSeverity.Error,
-								source: languageIdJs,
+								source: aventusConfig.languageIdJs,
 								message: ts.flattenDiagnosticMessageText(diag.messageText, '\n'),
 							};
 						});
@@ -675,8 +674,8 @@ export class AventusJSProgram {
 							doc.hasError = true;
 						}
 					}
-					if (connectionVs) {
-						connectionVs.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
+					if (modes.connectionWithClient) {
+						modes.connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
 					}
 					else if (diagnostics.length > 0) {
 						console.log("---- Erreur ----");
@@ -774,7 +773,7 @@ export class AventusJSProgram {
 			let txtToImport = readFileSync(pathToImport, 'utf8')
 			let jsToImport = /\/\/ region js \/\/((\s|\S)*)\/\/ end region js \/\//g.exec(txtToImport);
 			if (jsToImport) {
-				let document = TextDocument.create(uriToImport, languageIdJs, 0, jsToImport[1]);
+				let document = TextDocument.create(uriToImport, aventusConfig.languageIdJs, 0, jsToImport[1]);
 				if (this.filesNeeded.indexOf(document.uri) == -1) {
 					this.filesNeeded.push(document.uri);
 					this.filesLoaded[document.uri] = new AventusDoc(document, this);
@@ -784,13 +783,13 @@ export class AventusJSProgram {
 			let cssToImport = /\/\/ region css \/\/((\s|\S)*)\/\/ end region css \/\//g.exec(txtToImport);
 			if (cssToImport) {
 				let cssContent = JSON.parse(cssToImport[1]);
-				scssMode.addDefinition(pathToImport, cssContent)
+				modes.scssMode.addDefinition(pathToImport, cssContent)
 			}
 
 			let htmlToImport = /\/\/ region html \/\/((\s|\S)*)\/\/ end region html \/\//g.exec(txtToImport);
 			if (htmlToImport) {
 				let htmlContent = JSON.parse(htmlToImport[1]);
-				htmlMode.addDefinition(pathToImport, htmlContent)
+				modes.htmlMode.addDefinition(pathToImport, htmlContent)
 			}
 		}
 	}

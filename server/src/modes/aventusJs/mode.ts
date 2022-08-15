@@ -27,11 +27,10 @@ import {
     _Connection,
     CodeAction
 } from 'vscode-languageserver/node';
-import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
-import { aventusConfigFile, extension, jsonMode, languageIdJs } from '../../server';
 import { convertKind, convertRange, convertSymbolKind, generateIndent, getWordAtText, isWhitespaceOnly, JS_WORD_REGEX, pathToUri, simplifyPath, uriToPath } from './utils';
 import { compilerOptions, completionOptions, formatingOptions } from './config';
 import { AventusJSProgramManager } from './program';
+import { languageIdJs } from '../../config';
 
 
 

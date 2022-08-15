@@ -18,7 +18,7 @@
             "compileOnSave": true,
             "includeBase": false,
             "generateDefinition": true,
-            "outputFile": "../../server/lib/aventus.base.js",
+            "outputFile": "../../lib/aventus.base.js",
             "include": [
                 {
                     "definition": "./definition/custom.def.avt"

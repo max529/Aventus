@@ -1,11 +1,11 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { compileComponent, HTMLDoc, SCSSDoc } from './compiler/component/compilerComponent';
+import { compileComponent } from './compiler/component/compilerComponent';
+import { CompileComponentResult, HTMLDoc, SCSSDoc } from './compiler/component/def';
 import { AventusConfig } from './config';
 import { AventusJSProgram } from './program';
 import { uriToPath } from './utils';
 import { compileLib } from './compiler/lib/compilerLib';
 import { Diagnostic } from 'vscode-languageserver';
-import { compileValidatorComponent } from './compiler/component/compilerValidator';
 import { compileValidatorLib } from './compiler/lib/compilerValidator';
 import { compileData } from './compiler/data/compilerData';
 import { compileValidatorData } from './compiler/data/compilerValidator';
@@ -47,21 +47,17 @@ export class AventusDoc {
 	public classNamesDoc: string[];
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
-	// private watcher: chokidar.FSWatcher;
+	private lastCompiledWebComponent : CompileComponentResult | undefined = undefined;
 	constructor(document: TextDocument, program: AventusJSProgram) {
 		this.document = document;
 		this.program = program;
 		this.path = uriToPath(document.uri);
 		this.type = this.prepareType();
-		// this.watcher = this.enableWatchFile(document.uri);
 		this.compiledTxt = "";
 		this.docTxt = "";
 		this.classNamesScript = [];
 		this.classNamesDoc = [];
 		this.dependances = [];
-		// watch pattern
-		// chokidar.
-
 	}
 
 
@@ -93,7 +89,13 @@ export class AventusDoc {
 		let compileError: Diagnostic[] = [];
 
 		if (this.type == AventusType.Component) {
-			compileError = compileValidatorComponent(this.document, config);
+			let compiled = compileComponent(this.document, config);
+			if(compiled.success){
+				this.lastCompiledWebComponent = compiled;
+			}
+			else{
+				compileError = compiled.diagnostics;
+			}
 		} else if (this.type == AventusType.Lib) {
 			compileError = compileValidatorLib(this.document, config);
 		} else if (this.type == AventusType.Data) {
@@ -109,12 +111,12 @@ export class AventusDoc {
 			try {
 
 				let newCompiledTxt: { nameCompiled: string | string[], nameDoc: string | string[], src: string, doc: string, dependances: string[], htmlDoc?: HTMLDoc, scssVars?:SCSSDoc } | undefined;
-				if (this.type == AventusType.Component) {
-					newCompiledTxt = compileComponent(this.path, config);
-					if (newCompiledTxt && newCompiledTxt.htmlDoc) {
+				if (this.type == AventusType.Component && this.lastCompiledWebComponent) {
+					newCompiledTxt = this.lastCompiledWebComponent.result;
+					if (newCompiledTxt.htmlDoc) {
 						this.HTMLDoc = newCompiledTxt.htmlDoc;
 					}
-					if (newCompiledTxt && newCompiledTxt.scssVars) {
+					if (newCompiledTxt.scssVars) {
 						this.SCSSDoc = newCompiledTxt.scssVars;
 					}
 				} else if (this.type == AventusType.Lib) {

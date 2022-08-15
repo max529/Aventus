@@ -1,11 +1,11 @@
-import { existsSync, readFileSync } from 'fs';
 import { normalize } from 'path';
 import { CompletionItem, CompletionList, Diagnostic, getLanguageService, Hover, JSONDocument, JSONSchema, LanguageService, Position, TextDocument } from "vscode-json-languageservice";
 import { CodeAction, Definition, FormattingOptions, Range, TextEdit, _, _Connection } from "vscode-languageserver";
-import { aventusConfigFile, connectionVs, extension, jsMode } from '../../server';
+import { jsMode, connectionWithClient } from '../../mode';
 import { createErrorTs } from '../aventusJs/compiler/utils';
 import { AventusConfig } from '../aventusJs/config';
 import { getFolder, uriToPath } from '../aventusJs/utils';
+import { configFileName } from '../../config';
 
 export class AventusJSONMode {
 	schema: JSONSchema
@@ -94,9 +94,9 @@ export class AventusJSONMode {
 							"name": { type: "string" },
 							"inputPath": { type: "string" },
 							"outputPath": { type: "string" },
-							"colorsMap" : {
+							"colorsMap": {
 								type: "object",
-								description:"Color to map when transpile svg"
+								description: "Color to map when transpile svg"
 							}
 						},
 						required: ["name", "inputPath", "outputPath"]
@@ -110,7 +110,7 @@ export class AventusJSONMode {
 				return JSON.stringify(this.schema);
 			}
 		})
-		this.languageService.configure({ allowComments: false, schemas: [{ fileMatch: [aventusConfigFile], uri: this.jsonSchemaUri }] });
+		this.languageService.configure({ allowComments: false, schemas: [{ fileMatch: [configFileName], uri: this.jsonSchemaUri }] });
 	}
 	async init(files: TextDocument[]) {
 		for (let file of files) {
@@ -123,7 +123,7 @@ export class AventusJSONMode {
 	async doValidation(document: TextDocument): Promise<Diagnostic[]> {
 		let jsonDoc = this.languageService.parseJSONDocument(document);
 		let result = await this.languageService.doValidation(document, jsonDoc, undefined, this.schema);
-		connectionVs?.sendDiagnostics({ uri: document.uri, diagnostics: result });
+		connectionWithClient?.sendDiagnostics({ uri: document.uri, diagnostics: result });
 		return result;
 	}
 	async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
@@ -206,7 +206,7 @@ export class AventusJSONMode {
 		for (let build of config.build) {
 			builds.push(build.name);
 			let regexs: string[] = [];
-			if(!build.hasOwnProperty("compileOnSave")){
+			if (!build.hasOwnProperty("compileOnSave")) {
 				build.compileOnSave = true;
 			}
 			for (let inputPath of build.inputPath) {
@@ -248,8 +248,8 @@ export class AventusJSONMode {
 				_static.outputPathFolder = _static.outputPathFolder.replace(/\\/g, '/')
 			}
 		}
-		connectionVs?.sendNotification("aventus/registerBuild", [builds, uriToPath(uri)]);
-		connectionVs?.sendNotification("aventus/registerStatic", [statics, uriToPath(uri)]);
+		connectionWithClient?.sendNotification("aventus/registerBuild", [builds, uriToPath(uri)]);
+		connectionWithClient?.sendNotification("aventus/registerStatic", [statics, uriToPath(uri)]);
 
 	}
 }

@@ -1,4 +1,4 @@
-import ts = require("typescript");
+import * as ts from "typescript";
 /***
  * This module is designed to match simple patterns on Typescript AST Tree
  * it functionality mirrors jsASTMatchers which allows you to match on jsAST

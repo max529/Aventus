@@ -10,6 +10,6 @@
 		"rootDir": "src",
 		"noImplicitAny": false,
 	},
-	"include": ["src", "lib"],
-	"exclude": ["node_modules", ".vscode-test"]
+	"include": ["src"],
+	"exclude": ["../node_modules", ".vscode-test"]
 }

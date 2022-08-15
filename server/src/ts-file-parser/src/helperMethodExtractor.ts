@@ -1,10 +1,9 @@
-import ts = require("typescript");
-import tsm = require("./tsASTMatchers");
+import * as ts from "typescript";
+import * as tsm from "./tsASTMatchers";
 import * as path from "path";
 import * as fs from "fs";
 
-import index = require("../index");
-import tsStructureParser = require("./tsStructureParser");
+import * as tsStructureParser from "./tsStructureParser";
 import { HelperMethod } from "./helpers";
 import { Meta } from "./helpers";
 import { Arg } from "./helpers";

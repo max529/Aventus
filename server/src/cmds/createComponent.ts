@@ -1,8 +1,8 @@
 import { fstat, mkdirSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
+import { connectionWithClient, jsMode } from '../mode';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
 import { pathToUri, uriToPath } from '../modes/aventusJs/utils';
-import { aventusConfigFile, connectionVs, jsMode } from '../server';
 
 
 export class CreateComponent {
@@ -54,10 +54,10 @@ export class CreateComponent {
 				writeFileSync(newScriptPath + aventusExtension.ComponentView, "<slot></slot>");
 
 				jsMode.programManager.getProgram(newScriptPath + aventusExtension.ComponentLogic);
-				connectionVs?.sendNotification("aventus/openfile", pathToUri(newScriptPath + aventusExtension.ComponentLogic))
+				connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath + aventusExtension.ComponentLogic))
 			}
 			else {
-				connectionVs?.window.showErrorMessage("Can't found a config file");
+				connectionWithClient?.window.showErrorMessage("Can't found a config file");
 			}
 
 

@@ -1,6 +1,6 @@
 import { ExecuteCommandParams } from 'vscode-languageserver';
+import { jsMode } from '../mode';
 import { pathToUri } from '../modes/aventusJs/utils';
-import { connectionVs, jsMode, jsonMode } from '../server';
 
 export class BuildProject {
 	static cmd: string = "aventus.compile";

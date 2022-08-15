@@ -1,10 +1,11 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { getLanguageService as getHTMLLanguageService, IAttributeData, ITagData, IValueData, LanguageService } from 'vscode-html-languageservice'
 import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, FormattingOptions, Hover, Position, TextEdit } from 'vscode-languageserver';
-import { HTMLDoc } from '../aventusJs/compiler/component/compilerComponent';
-import { connectionVs, jsMode, languageIdHTML } from '../../server';
+import { HTMLDoc } from '../aventusJs/compiler/component/def';
 import { Range } from 'vscode-languageserver/node'
 import { aventusExtension } from '../aventusJs/aventusDoc';
+import { languageIdHTML } from '../../config';
+import { connectionWithClient, jsMode } from '../../mode';
 
 
 export class AventusHTMLMode {
@@ -134,8 +135,8 @@ export class AventusHTMLMode {
 		return null;
 	}
 	async doValidation(document: TextDocument) {
-		if (connectionVs) {
-			connectionVs.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+		if (connectionWithClient) {
+			connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 		}
 	}
 	compile(document: TextDocument) {

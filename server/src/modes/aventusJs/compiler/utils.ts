@@ -1,8 +1,8 @@
 import { existsSync, unlink, unlinkSync, writeFileSync } from 'fs'
-import ts = require('typescript')
+import * as ts from 'typescript'
 import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
-import { extension, languageIdJs } from '../../../server'
+import * as aventusConfig from '../../../config'
 import { ClassModel, EnumDeclaration, parseStruct } from '../../../ts-file-parser'
 import { getFolder, uriToPath } from '../utils'
 
@@ -10,7 +10,7 @@ export function createErrorTs(currentDoc: TextDocument, msg: string): Diagnostic
 	return {
 		range: Range.create(currentDoc.positionAt(0), currentDoc.positionAt(currentDoc.getText().length)),
 		severity: DiagnosticSeverity.Error,
-		source: languageIdJs,
+		source: aventusConfig.languageIdJs,
 		message: ts.flattenDiagnosticMessageText(msg, '\n')
 	}
 }
@@ -19,7 +19,7 @@ export function createErrorTsPos(currentDoc: TextDocument, msg: string, start: n
 	return {
 		range: Range.create(currentDoc.positionAt(start), currentDoc.positionAt(end)),
 		severity: DiagnosticSeverity.Error,
-		source: languageIdJs,
+		source: aventusConfig.languageIdJs,
 		message: ts.flattenDiagnosticMessageText(msg, '\n')
 	}
 }

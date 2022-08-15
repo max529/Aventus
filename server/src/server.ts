@@ -4,22 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 
 import {
-	CodeAction,
 	CodeActionKind,
-	Command,
-	CompletionItem,
-	CompletionList,
-	createConnection,
-	Diagnostic,
-	FileChangeType,
 	InitializeParams,
-	Position,
-	ProposedFeatures,
-	Range,
-	TextDocumentEdit,
 	TextDocuments,
 	TextDocumentSyncKind,
-	TextEdit,
 	WorkspaceFolder,
 	_,
 	_Connection
@@ -34,33 +22,16 @@ import { pathToUri, uriToPath } from './modes/aventusJs/utils';
 import { ConvertComponent } from './cmds/convertComponent';
 import { PreviewComponent } from './cmds/previewComponent';
 import { BuildProject } from './cmds/buildProject';
-import { StaticExport } from './cmds/StaticExport';
+import { StaticExport } from './cmds/staticExport';
 import { aventusExtension } from './modes/aventusJs/aventusDoc';
 import { AventusHTMLMode } from './modes/aventusHTML/mode';
 import { AventusSCSSMode } from './modes/aventusSCSS/mode';
+import * as aventusConfig from './config';
+import * as modes from './mode';
 
-// Create a connection for the server. The connection uses Node's IPC as a transport.
-// Also include all preview / proposed LSP features.
-let ConnetionWithExtension: _Connection<_, _, _, _, _, _, _> | undefined = undefined;
-if (!process.env["AVENTUS_CLI"]) {
-	ConnetionWithExtension = createConnection(ProposedFeatures.all);
-}
-export const connectionVs: _Connection<_, _, _, _, _, _, _> | undefined = ConnetionWithExtension;
-// Create a simple text document manager. The text document manager
-// supports full document sync only
+
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-export const aventusConfigFile = "aventus.conf.json";
-export const languageIdBase = "Aventus";
-export const languageIdJs = "Aventus Ts";
-export const languageIdHTML = "Aventus HTML";
-export const languageIdSCSS = "Aventus SCSS";
-export const extension: string = "avt"
 
-
-export let jsMode: AventusJSMode = new AventusJSMode();
-export let jsonMode: AventusJSONMode = new AventusJSONMode();
-export let htmlMode: AventusHTMLMode = new AventusHTMLMode();
-export let scssMode: AventusSCSSMode = new AventusSCSSMode();
 
 export async function init(uris: string[]) {
 	let configFiles: TextDocument[] = [];
@@ -78,17 +49,17 @@ export async function init(uris: string[]) {
 						readWorkspace(currentPath);
 					}
 				} else {
-					if (folderContent[i] == aventusConfigFile) {
-						configFiles.push(TextDocument.create(pathToUri(currentPath), languageIdJs, 0, readFileSync(currentPath, 'utf8')));
+					if (folderContent[i] == aventusConfig.configFileName) {
+						configFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdJs, 0, readFileSync(currentPath, 'utf8')));
 					}
 					else if(folderContent[i].endsWith(aventusExtension.ComponentView)){
-						viewFiles.push(TextDocument.create(pathToUri(currentPath), languageIdHTML, 0, readFileSync(currentPath, 'utf8')));
+						viewFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdHTML, 0, readFileSync(currentPath, 'utf8')));
 					}
 					else if(folderContent[i].endsWith(aventusExtension.ComponentStyle)){
-						styleFiles.push(TextDocument.create(pathToUri(currentPath), languageIdSCSS, 0, readFileSync(currentPath, 'utf8')));
+						styleFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdSCSS, 0, readFileSync(currentPath, 'utf8')));
 					}
-					else if (folderContent[i].endsWith("." + extension)) {
-						scriptFiles.push(TextDocument.create(pathToUri(currentPath), languageIdJs, 0, readFileSync(currentPath, 'utf8')));
+					else if (folderContent[i].endsWith("." + aventusConfig.extension)) {
+						scriptFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdJs, 0, readFileSync(currentPath, 'utf8')));
 					}
 				}
 			}
@@ -96,11 +67,11 @@ export async function init(uris: string[]) {
 		readWorkspace(workspacePath);
 	}
 	// check all config
-	await jsonMode.init(configFiles);
-	await jsMode.init(scriptFiles);
-	htmlMode.init(viewFiles);
-	await scssMode.init(styleFiles);
-	await jsMode.programManager.resetProgram();
+	await modes.jsonMode.init(configFiles);
+	await modes.jsMode.init(scriptFiles);
+	modes.htmlMode.init(viewFiles);
+	await modes.scssMode.init(styleFiles);
+	await modes.jsMode.programManager.resetProgram();
 }
 
 let Workspaces: WorkspaceFolder[] = [];
@@ -112,7 +83,7 @@ export async function restart() {
 	init(workspaces);
 }
 
-connectionVs?.onInitialize((_params: InitializeParams) => {
+modes.connectionWithClient?.onInitialize((_params: InitializeParams) => {
 	if (_params.workspaceFolders) {
 		Workspaces = _params.workspaceFolders;
 	}
@@ -125,8 +96,8 @@ connectionVs?.onInitialize((_params: InitializeParams) => {
 		}
 	});
 
-	connectionVs.onShutdown(() => {
-		jsMode.dispose();
+	modes.connectionWithClient?.onShutdown(() => {
+		modes.jsMode.dispose();
 	});
 
 	return {
@@ -162,7 +133,7 @@ connectionVs?.onInitialize((_params: InitializeParams) => {
 	};
 });
 
-connectionVs?.onDidChangeConfiguration(_change => {
+modes.connectionWithClient?.onDidChangeConfiguration(_change => {
 	// Revalidate all open text documents
 	documents.all().forEach(validateTextDocument);
 });
@@ -177,17 +148,17 @@ documents.onDidSave((change) => {
 
 
 function selectRightMode(textDocument: TextDocument): AventusJSMode | AventusJSONMode | AventusHTMLMode | AventusSCSSMode | undefined {
-	if (textDocument.uri.endsWith(aventusConfigFile)) {
-		return jsonMode;
+	if (textDocument.uri.endsWith(aventusConfig.configFileName)) {
+		return modes.jsonMode;
 	}
-	else if(textDocument.languageId == languageIdHTML){
-		return htmlMode;
+	else if(textDocument.languageId == aventusConfig.languageIdHTML){
+		return modes.htmlMode;
 	}
-	else if(textDocument.languageId == languageIdSCSS){
-		return scssMode;
+	else if(textDocument.languageId == aventusConfig.languageIdSCSS){
+		return modes.scssMode;
 	}
-	else if (textDocument.languageId == languageIdJs && !textDocument.uri.endsWith(aventusExtension.Definition)) {
-		return jsMode;
+	else if (textDocument.languageId == aventusConfig.languageIdJs && !textDocument.uri.endsWith(aventusExtension.Definition)) {
+		return modes.jsMode;
 	}
 	return undefined;
 }
@@ -204,7 +175,7 @@ function validateTextDocumentTimer(textDocument: TextDocument) {
 async function validateTextDocument(textDocument: TextDocument) {
 	try {
 		const version = textDocument.version;
-		if (textDocument.languageId.startsWith(languageIdBase)) {
+		if (textDocument.languageId.startsWith(aventusConfig.languageIdBase)) {
 			const latestTextDocument = documents.get(textDocument.uri);
 			if (latestTextDocument && latestTextDocument.version === version) {
 				// check no new version has come in after in after the async op
@@ -218,14 +189,14 @@ async function validateTextDocument(textDocument: TextDocument) {
 		}
 
 	} catch (e) {
-		connectionVs?.console.error(`Error while validating ${textDocument.uri}`);
-		connectionVs?.console.error(String(e));
+		modes.connectionWithClient?.console.error(`Error while validating ${textDocument.uri}`);
+		modes.connectionWithClient?.console.error(String(e));
 	}
 }
 async function doCompilation(textDocument: TextDocument) {
 	try {
 		const version = textDocument.version;
-		if (textDocument.languageId.startsWith(languageIdBase)) {
+		if (textDocument.languageId.startsWith(aventusConfig.languageIdBase)) {
 			const latestTextDocument = documents.get(textDocument.uri);
 			if (latestTextDocument && latestTextDocument.version === version) {
 				// check no new version has come in after in after the async op
@@ -234,27 +205,27 @@ async function doCompilation(textDocument: TextDocument) {
 			}
 		}
 	} catch (e) {
-		connectionVs?.console.error(`Error while validating ${textDocument.uri}`);
-		connectionVs?.console.error(String(e));
+		modes.connectionWithClient?.console.error(`Error while validating ${textDocument.uri}`);
+		modes.connectionWithClient?.console.error(String(e));
 	}
 }
 
-connectionVs?.onCompletion(async (textDocumentPosition, token) => {
+modes.connectionWithClient?.onCompletion(async (textDocumentPosition, token) => {
 	const document = documents.get(textDocumentPosition.textDocument.uri);
 	if (!document) {
 		return null;
 	}
-	if (document.languageId.startsWith(languageIdBase)) {
+	if (document.languageId.startsWith(aventusConfig.languageIdBase)) {
 		const mode = selectRightMode(document);
 		if (mode) {
 			return mode.doComplete(document, textDocumentPosition.position);
 		}
 	}
 	else if(document.languageId == "html"){
-		return htmlMode.doComplete(document, textDocumentPosition.position);
+		return modes.htmlMode.doComplete(document, textDocumentPosition.position);
 	}
 });
-connectionVs?.onCompletionResolve(async (completionItem, token) => {
+modes.connectionWithClient?.onCompletionResolve(async (completionItem, token) => {
 	if (completionItem.data?.uri) {
 		const document = documents.get(completionItem.data.uri);
 		if (document) {
@@ -266,7 +237,7 @@ connectionVs?.onCompletionResolve(async (completionItem, token) => {
 	}
 	return completionItem;
 });
-connectionVs?.onHover(async (textDocumentPosition, token) => {
+modes.connectionWithClient?.onHover(async (textDocumentPosition, token) => {
 	const document = documents.get(textDocumentPosition.textDocument.uri);
 	if (!document) {
 		return null;
@@ -276,11 +247,11 @@ connectionVs?.onHover(async (textDocumentPosition, token) => {
 		return mode.doHover(document, textDocumentPosition.position);
 	}
 	else if(document.languageId == "html"){
-		return htmlMode.doHover(document, textDocumentPosition.position);
+		return modes.htmlMode.doHover(document, textDocumentPosition.position);
 	}
 })
 
-connectionVs?.onDefinition(async (textDocumentPosition, token) => {
+modes.connectionWithClient?.onDefinition(async (textDocumentPosition, token) => {
 	const document = documents.get(textDocumentPosition.textDocument.uri);
 	if (!document) {
 		return null;
@@ -292,7 +263,7 @@ connectionVs?.onDefinition(async (textDocumentPosition, token) => {
 
 })
 
-connectionVs?.onDocumentFormatting(async (textDocumentPosition, token) => {
+modes.connectionWithClient?.onDocumentFormatting(async (textDocumentPosition, token) => {
 	const document = documents.get(textDocumentPosition.textDocument.uri);
 	if (!document) {
 		return null;
@@ -307,7 +278,7 @@ connectionVs?.onDocumentFormatting(async (textDocumentPosition, token) => {
 	}
 	return null;
 })
-connectionVs?.onExecuteCommand(async (params) => {
+modes.connectionWithClient?.onExecuteCommand(async (params) => {
 	if (params.command == CreateComponent.cmd) {
 		new CreateComponent(params);
 	}
@@ -327,7 +298,7 @@ connectionVs?.onExecuteCommand(async (params) => {
 		restart();
 	}
 })
-connectionVs?.onCodeAction((params, token) => {
+modes.connectionWithClient?.onCodeAction((params, token) => {
 	const document = documents.get(params.textDocument.uri);
 	if (!document) {
 		return [];
@@ -339,11 +310,11 @@ connectionVs?.onCodeAction((params, token) => {
 	return [];
 })
 
-if (connectionVs) {
+if (modes.connectionWithClient) {
 	// Make the text document manager listen on the connection
 	// for open, change and close text document events
-	documents.listen(connectionVs);
+	documents.listen(modes.connectionWithClient);
 
 	// Listen on the connection
-	connectionVs.listen();
+	modes.connectionWithClient.listen();
 }

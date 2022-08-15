@@ -2,10 +2,11 @@
  * Created by kor on 08/05/15.
  */
 
-import ts = require("typescript");
-export import tsm = require("./tsASTMatchers");
-export import helperMethodExtractor = require("./helperMethodExtractor");
-import fsUtil = require("./fsUtils");
+import * as ts from "typescript";
+import * as tsm from "./tsASTMatchers";
+export * as tsm from "./tsASTMatchers";
+export * as helperMethodExtractor from "./helperMethodExtractor";
+import * as fsUtil from "./fsUtils";
 import { EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
 import { TypeKind } from "../index";
 import { ArrayType } from "../index";
@@ -13,7 +14,7 @@ import { Annotation } from "../index";
 import { Decorator } from "../index";
 import { Constraint } from "../index";
 import { FieldModel } from "../index";
-import { Module, FunctionDeclaration } from "../index";
+import { Module } from "../index";
 import { MethodModel } from "../index";
 import { ParameterModel } from "../index";
 import { UnionType } from "../index";
