@@ -1,5 +1,8 @@
 import { AvTodoData } from "../../Data/TodoData.data.avt";
 
+@Debugger({
+	writeCompiled: true
+})
 export class AvTodoList extends WebComponent implements DefaultComponent {
 
 	//#region static

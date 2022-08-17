@@ -594,6 +594,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 			let listBool: string[] = [];
 			let statesTxt = "";
 			let variableProxyTxt = "";
+			let variableProxyInit = "";
 			let variableProxy = {};
 
 
@@ -761,6 +762,8 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 							value = `luxon.DateTime.fromJSDate(${field.valueConstraint.value})`;
 						} else if (TYPES[field.type.typeName.toLowerCase()]) {
 							value = field.valueConstraint.value
+						} else if (field.valueConstraint.value.startsWith && field.valueConstraint.value.startsWith("new")) {
+							value = field.valueConstraint.value;
 						} else {
 							value = JSON.stringify(field.valueConstraint.value);
 						}
@@ -805,8 +808,8 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 							//this.__mutable["${field.name}"] = undefined;
 						}
 					}\r\n`;
-					variableProxy[field.name] = `${mutableAction}
-					this["${field.name}"] = ${value}`;
+					variableProxy[field.name] = `${mutableAction}`;
+					variableProxyInit += `this["${field.name}"] = ${value};`;
 					foundedMutable.push(field.name);
 				}
 			}
@@ -1078,16 +1081,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 			}
 
 			if (variableProxyTxt.length > 0) {
-				variableProxyTxt = `__prepareMutables() {
-					super.__prepareMutables();
-					if (!this.__mutable) {
-						this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
-							console.log("mutable", type, path, element);
-							let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
-							action(type, path, element);
-						});
-					}
+				variableProxyTxt = `__prepareMutablesActions() {
 					${variableProxyTxt}
+					super.__prepareMutablesActions();
+				}`
+
+				variableProxyTxt += `\r\n__initMutables() {
+					super.__initMutables();
+					${variableProxyInit}
 				}`
 			}
 			template = template.replace(/\$mutables/g, variableProxyTxt);
@@ -1315,13 +1316,21 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 									forActionsCreateSelector[componentId] = forActionsCreateSelector[componentId].replace("/**replaceValue*/", _createVariable(varTemp) + "/**replaceValue*/");
 								}
 								if (checkRawValue) {
-									txtCreate += `item.__templates["${varTemp.name}"].push(((element) => {
+									txtCreate += `item.__templates["${varTemp.name}"].push(((element, forceRefreshView = false) => {
 										let varToCheck = element.__values["${varTemp.name}"];
 										if(varToCheck instanceof Object && !(varToCheck instanceof Date)){
 											element["${current.propName}"] = varToCheck;
 										}
 										else{
 											element.setAttribute("${current.propName}", ${value});
+										}
+
+										if (forceRefreshView) {
+											if(element.__onChangeFct && element.__onChangeFct["${current.propName}"]){
+												for(let fct of element.__onChangeFct["${current.propName}"]){
+													fct("${current.propName}")
+												}
+											}
 										}
 									}));\r\n`
 								}

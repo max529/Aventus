@@ -1,0 +1,6 @@
+export class AvLight implements Data {
+    name: string = "";
+    value: number = 0;
+    color: string = "";
+    values:number[] = [];
+}

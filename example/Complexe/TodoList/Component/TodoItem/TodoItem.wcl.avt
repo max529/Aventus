@@ -1,5 +1,8 @@
 import { AvTodoData } from "../../Data/TodoData.data.avt";
 
+@Debugger({
+    writeCompiled: true
+})
 export class AvTodoItem extends WebComponent implements DefaultComponent {
 
     //#region static
@@ -13,7 +16,9 @@ export class AvTodoItem extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-    @mutable()
+    @mutable(() => {
+        console.log("Changed");
+    })
     item: AvTodoData = new AvTodoData();
 	//#endregion
 
