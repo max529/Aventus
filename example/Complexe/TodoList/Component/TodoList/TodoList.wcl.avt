@@ -32,7 +32,14 @@ export class AvTodoList extends WebComponent implements DefaultComponent {
 
 
 	//#region methods
-
+	public addItem(){
+		let data = new AvTodoData();
+		data.name =Date.now().toString()
+		this.items.push(data);
+	}
+	 protected override postCreation(): void {
+		window["temp1"] = this;
+	}
 	//#endregion
 
 }

@@ -31,7 +31,7 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     private __onChangeFct: { [key: string]: ((path: string) => void)[]; } = {};
     private getSlugFct: { [key: string]: () => string; };
 
-    private __mutable: [];
+    private __mutable: any;
     private __mutableActions: {} = {};
     private __prepareForCreate: [] = [];
     private __prepareForUpdate: [] = [];
@@ -61,7 +61,7 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
         if (Object.keys(this.__mutableActions).length > 0) {
             if (!this.__mutable) {
                 this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
-                    console.log("mutable", type, path, element, this);
+                    console.log("mutation for "+this.nodeName, type, path, element, this);
                     let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
                     action(type, path, element);
                 });

@@ -54,7 +54,7 @@ export class AvForm extends WebComponent implements DefaultComponent {
         var form = new FormData();
         for(var key in this._fields) {
             const input = this._fields[key];
-            if(!input.nullable) {
+            if(!input.required) {
                 if(input.value) {
                     form.append(key, input.value);
                 }

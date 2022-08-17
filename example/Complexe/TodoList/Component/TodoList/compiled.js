@@ -96,5 +96,5 @@ class AvTodoList extends WebComponent {
     getClassName() {
         return "AvTodoList";
     }
-}
+     addItem(){let data = new AvTodoData();data.name = Date.now().toString();this.items.push(data);} postCreation(){window["temp1"] = this;}}
 window.customElements.define('av-todo-list', AvTodoList);
