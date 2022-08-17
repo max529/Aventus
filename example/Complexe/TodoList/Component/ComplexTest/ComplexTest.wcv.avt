@@ -1,0 +1,12 @@
+<h2 av-element="salut">{{testvariable}}</h2>
+<av-for item="light" in="data" index="i">
+    <div class="btn-{{light.color}}" name="{{light.name}}">
+        {{i}}) {{light.name}} is {{light.color}}
+    </div>
+    <div av-element="valueTest">
+        {{light.value}}%
+    </div>
+    <av-for item="value" in="light.values" class="values" index="j">
+        <div nb="{{value}}">({{i}}.{{j}}) {{value}}</div>
+    </av-for>
+</av-for>

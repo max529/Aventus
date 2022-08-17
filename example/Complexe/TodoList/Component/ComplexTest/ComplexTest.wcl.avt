@@ -1,0 +1,62 @@
+import { AvLight } from "../../Data/Light.data.avt";
+
+@Debugger({
+    writeCompiled: true
+})
+export class AvComplexTest extends WebComponent implements DefaultComponent {
+
+	//#region static
+
+	//#endregion
+
+
+	//#region props
+    @attribute()
+    testvariable: string = "test";
+	//#endregion
+
+
+	//#region variables
+	@mutable()
+	data: AvLight[] = [];
+
+	salut: HTMLElement;
+	valueTest: HTMLElement;
+	//#endregion
+
+
+	//#region states
+
+	//#endregion
+			
+			
+	//#region constructor
+
+	//#endregion
+
+
+	//#region methods
+	protected override postCreation(): void {
+        let i = 0;
+        let interval = setInterval(() => {
+            i++;
+            let light = new AvLight();
+            light.name = "light " + i;
+            light.value = 80;
+            light.color = "red";
+            let nb: number[] = [];
+            for(let j = 0; j < 3; j++) {
+                nb.push(0);
+            }
+            light.values = nb;
+            this.data.push(light);
+            // this.data.splice(0, 0, light);
+            if(i == 10) {
+                console.log(JSON.parse(JSON.stringify(this.data)))
+                clearInterval(interval);
+            }
+        }, 0);   
+    }
+	//#endregion
+	
+}

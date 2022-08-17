@@ -229,10 +229,14 @@ export class AvFor extends WebComponent implements DefaultComponent {
         if(key.startsWith(".")) { key = key.slice(1); }
         if(this.elementsByPath[index]) {
             for(let pathName in this.elementsByPath[index]) {
-                if(pathName.startsWith(key)) {
+                //if(pathName.startsWith(key)) {
                     for(let element of this.elementsByPath[index][pathName]) {
                         for(let valueName in element["__values"]) {
-                            if(valueName == key) {
+                            if (valueName == "") {
+                                element["__templates"][valueName].forEach((cb) => {
+                                    cb(element, true); 
+                                });
+                            } else if(valueName == key) {
                                 element["__values"][valueName] = data;
                                 element["__templates"][valueName].forEach((cb) => {
                                     cb(element); 
@@ -249,7 +253,7 @@ export class AvFor extends WebComponent implements DefaultComponent {
                             }
                         }
                     }
-                }
+                //}
             }
         }
         else {

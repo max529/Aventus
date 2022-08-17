@@ -1,3 +1,4 @@
+import { MutableAction } from "../data/MutableAction.data.avt";
 import { StateManager, States } from "./StateManager.lib.avt";
 
 
@@ -31,11 +32,11 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     private getSlugFct: { [key: string]: () => string; };
 
     private __mutable: [];
-    private __mutableActions: [] = [];
+    private __mutableActions: {} = {};
     private __prepareForCreate: [] = [];
     private __prepareForUpdate: [] = [];
     private __loopTemplate: { [key: string]: () => string; } = {};
-    private __mutableActionsCb: { [key: string]: () => void; } = {};
+    private __mutableActionsCb: { [key: string]: (type: MutableAction, path: string, element: any) => void; } = {};
 
     constructor() {
         super();
@@ -49,13 +50,25 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
         this.__prepareTemplate();
         this.__selectElementNeeded();
         this.__registerOnChange();
-        this.__prepareMutables();
+        this.__prepareMutablesActions();
+        this.__initMutables();
         this.__createStates();
         this.__prepareForLoop();
         this.__endConstructor();
     }
     private __prepareVariables() { }
-    private __prepareMutables() { }
+    private __prepareMutablesActions() {
+        if (Object.keys(this.__mutableActions).length > 0) {
+            if (!this.__mutable) {
+                this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
+                    console.log("mutable", type, path, element, this);
+                    let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
+                    action(type, path, element);
+                });
+            }
+        }
+    }
+    private __initMutables() { }
     private __prepareForLoop() { }
     //#region translation
     private __getLangTranslations() {

@@ -1,0 +1,25 @@
+:host {
+    av-for {
+        width: 400px;
+
+        div {
+            float: left;
+            width: 50%;
+            border: 1px solid black;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        div.btn-red {
+            background-color: red;
+        }
+        div.btn-blue {
+            background-color: blue;
+        }
+        div.btn-green {
+            background-color: green;
+        }
+        .values{
+            margin-top: 10px;
+        }
+    }
+}
