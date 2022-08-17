@@ -70,7 +70,15 @@ class AvTodoList extends WebComponent {
 								item.__values[""] = data;
 							result[""].push(item);
 							item.__templates[""] = [];/**replaceValue*/
-								item.__templates[""].push(((element) => element.setAttribute("item", ""+element.__values[""]+"")));/**replaceTemplate*/
+								item.__templates[""].push(((element) => {
+										let varToCheck = element.__values[""];
+										if(varToCheck instanceof Object && !(varToCheck instanceof Date)){
+											element["item"] = varToCheck;
+										}
+										else{
+											element.setAttribute("item", ""+element.__values[""]+"");
+										}
+									}));/**replaceTemplate*/
 								for(let propName in item.__templates){
 									for(let callback of item.__templates[propName]){
 										callback(item);

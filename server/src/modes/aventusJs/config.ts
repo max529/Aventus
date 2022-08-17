@@ -13,6 +13,7 @@ export const compilerOptions: ts.CompilerOptions = {
 	experimentalDecorators: true,
 	noImplicitOverride: true,
 	strictPropertyInitialization: true,
+	noImplicitReturns:true,
 };
 export const completionOptions: ts.GetCompletionsAtPositionOptions = {
 	includeExternalModuleExports: true,
@@ -34,7 +35,6 @@ export const completionOptions: ts.GetCompletionsAtPositionOptions = {
 	useLabelDetailsInCompletionEntries: true,
 	importModuleSpecifierEnding: "index",
 	importModuleSpecifierPreference: "relative",
-
 }
 export const formatingOptions: ts.FormatCodeSettings = {
 	convertTabsToSpaces: true,

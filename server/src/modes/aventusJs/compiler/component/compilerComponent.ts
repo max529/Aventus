@@ -755,14 +755,20 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 						result.diagnostics.push(createErrorTsPos(document, "A mutable prop must be initialized", field.start, field.end));
 					}
 					else {
-						if (field.type.typeName.toLowerCase() === TYPES.string) {
-							value = `"${field.valueConstraint.value}"`;
-						} else if (field.type.typeName.toLowerCase() === TYPES.date) {
-							value = `luxon.DateTime.fromJSDate(${field.valueConstraint.value})`;
-						} else if (TYPES[field.type.typeName.toLowerCase()]) {
-							value = field.valueConstraint.value
-						} else {
-							value = JSON.stringify(field.valueConstraint.value);
+						// constraint is a function
+						if (field.valueConstraint.isCallConstraint) {
+							value = field.valueConstraint.value.name + `(${field.valueConstraint.value.arguments.join(", ")})`
+						}
+						else {
+							if (field.type.typeName.toLowerCase() === TYPES.string) {
+								value = `"${field.valueConstraint.value}"`;
+							} else if (field.type.typeName.toLowerCase() === TYPES.date) {
+								value = `luxon.DateTime.fromJSDate(${field.valueConstraint.value})`;
+							} else if (TYPES[field.type.typeName.toLowerCase()]) {
+								value = field.valueConstraint.value
+							} else {
+								value = JSON.stringify(field.valueConstraint.value);
+							}
 						}
 					}
 					if (value == '"undefined"') { value = "undefined" }
@@ -971,7 +977,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 			let listToCheck = Object.keys(toPrepare.variablesPerso);
 			for (let fieldName in toPrepare.allFields) {
 				let field = toPrepare.allFields[fieldName];
+				let index = listToCheck.indexOf(field.name);
+				if (index != -1) {
+					listToCheck.splice(index, 1);
+				}
 				if (field.inParent) {
+
 					continue;
 				}
 				if (field.propType == "state") {
@@ -996,11 +1007,6 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 				else if (field.propType == "simple") {
 					_createSimpleVariable(field);
 				}
-
-				let index = listToCheck.indexOf(field.name);
-				if (index != -1) {
-					listToCheck.splice(index, 1);
-				}
 			}
 			_updateTemplate();
 
@@ -1016,7 +1022,6 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 						}
 						attributesChangedTxt += `this.__onChangeFct['${realKey}'].push((path) => {${attributesChanged[key]}})\r\n`;
 					}
-
 					else {
 						result.diagnostics.push(createErrorTs(document, realKey + ' can\'t be found'));
 					}

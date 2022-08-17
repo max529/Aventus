@@ -2,9 +2,9 @@ import { MutableAction } from "../../../data/MutableAction.data.avt";
 import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.avt";
 
 @Debugger({
-    writeCompiled: true
+    writeCompiled:true
 })
-export class AvFormElement<T> extends WebComponent implements DefaultComponent {
+export abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
     //#region static
 
     //#endregion
@@ -12,20 +12,22 @@ export class AvFormElement<T> extends WebComponent implements DefaultComponent {
 
     //#region props
     /**
-     * If true, the checkbox will be required
+     * If true, the element will be required
      */
     @attribute()
     required: boolean = false;
-
+    /**
+     * Name to use inside your form
+     */
     @attribute()
     name: string = "";
 
-    @attribute()
-    nullable: boolean = false;
-
-    value: T = null;
+    /**
+     * Value to use inside your component
+     */
+    @mutable()
+    value: T = this.getDefaultValue();
     //#endregion
-
 
     //#region variables
 
@@ -43,6 +45,8 @@ export class AvFormElement<T> extends WebComponent implements DefaultComponent {
 
 
     //#region methods
+    public abstract getDefaultValue(): T;
+
     onValueChanged() {
         this.dispatchEvent(new CustomEvent("change", {
             detail: {

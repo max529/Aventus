@@ -607,6 +607,9 @@ function parseName(n: ts.Expression): string {
         var m: ts.PropertyAccessExpression = <ts.PropertyAccessExpression>n;
         return parseName(m.expression) + "." + parseName(m.name);
     }
+    if(n.kind == ts.SyntaxKind.ThisKeyword){
+        return "this";
+    }
     throw new Error("Only simple identifiers are supported now");
 }
 
