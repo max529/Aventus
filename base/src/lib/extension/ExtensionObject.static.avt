@@ -1,3 +1,4 @@
+Proxy.__maxProxyData = 0;
 Object.transformIntoWatcher = function (obj, onDataChanged) {
     if(obj == undefined) {
         console.error("You must define an objet / array for your proxy");
@@ -7,18 +8,70 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         obj.__subscribe(onDataChanged);
         return obj;
     }
+    Proxy.__maxProxyData++;
+    let setProxyPath = (newProxy, newPath) => {
+        if(newProxy instanceof Object && newProxy.__isProxy) {
+            newProxy.__path = newPath;
+            if(!newProxy.__proxyData) {
+                newProxy.__proxyData = {};
+            }
+            if(!newProxy.__proxyData[newPath]) {
+                newProxy.__proxyData[newPath] = [];
+            }
+            if(newProxy.__proxyData[newPath].indexOf(proxyData) == -1) {
+                newProxy.__proxyData[newPath].push(proxyData);
+            }
+        }
+    };
+    let removeProxyPath = (oldValue, pathToDelete, recursive = true) => {
+        if(oldValue instanceof Object && oldValue.__isProxy) {
+            let allProxies = oldValue.__proxyData;
+            for(let triggerPath in allProxies) {
+                if(triggerPath == pathToDelete) {
+                    for(let i = 0; i < allProxies[triggerPath].length; i++) {
+                        if(allProxies[triggerPath][i] == proxyData) {
+                            allProxies[triggerPath].splice(i, 1);
+                            i--;
+                        }
+                    }
+                    if(allProxies[triggerPath].length == 0) {
+                        delete allProxies[triggerPath];
+                        if(Object.keys(allProxies).length == 0) {
+                            delete oldValue.__proxyData;
+                        }
+                    }
+                }
+            }
+
+            // apply recursive delete
+        }
+    };
     let proxyData = {
+        id: Proxy.__maxProxyData,
         callbacks: [onDataChanged],
         avoidUpdate: [],
+        pathToRemove: [],
         getProxyObject(target, element, prop) {
-            let newProxy = new Proxy(element, this);
+            let newProxy;
+            if(element instanceof Object && element.__isProxy) {
+                newProxy = element;
+            }
+            else {
+                try {
+                    newProxy = new Proxy(element, this);
+                } catch {
+                    // it's not an array or object
+                    return element;
+                }
+            }
             let newPath = '';
             if(Array.isArray(target)) {
                 if(prop != "length") {
                     if(target.__path) {
                         newPath = target.__path;
                     }
-                    newProxy.__path = newPath + "[" + prop + "]";
+                    newPath += "[" + prop + "]";
+                    setProxyPath(newProxy, newPath);
                 }
             }
             else if(element instanceof Date) {
@@ -28,7 +81,8 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 if(target.__path) {
                     newPath = target.__path + '.';
                 }
-                newProxy.__path = newPath + prop;
+                newPath += prop;
+                setProxyPath(newProxy, newPath);
             }
             return newProxy;
 
@@ -50,27 +104,20 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                     }
                 };
             }
-            else if(prop == "__internalTrigger"){
-                return (type, path, element) => {
-                    trigger(type, path, element);
-                }
+            else if(prop == "__proxyId") {
+                return this.id;
             }
-            else if(prop == "__setItem"){
-                return (key, value, trigger) => {
-                    if(!trigger){
-                        this.avoidUpdate.push(key);
-                    }
-                    // make full recusrive  => item.[0].name
-                }
-            }
-            return undefined
+            return undefined;
         },
         get(target, prop, receiver) {
+            if(prop == "__proxyData") {
+                return target[prop];
+            }
             let customResult = this.tryCustomFunction(target, prop, receiver);
-            if(customResult !== undefined){
+            if(customResult !== undefined) {
                 return customResult;
             }
-            
+
             let element = target[prop];
             if(typeof (element) == 'object') {
                 return this.getProxyObject(target, element, prop);
@@ -79,38 +126,99 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 if(Array.isArray(target)) {
                     let result;
                     if(prop == 'push') {
-                        result = (el) => {
-                            let index = target.push(el);
-                            let path = target.__path ? target.__path : '';
-                            path += "[" + (index - 1) + "]";
-                            console.log(path);
-                            let proxyEl = this.getProxyObject(target, el, (index - 1));
-                            trigger('CREATED', path, proxyEl);
-                            return index;
+                        if(target.__isProxy) {
+                            result = (el) => {
+                                let index = target.push(el);
+                                return index;
+                            };
+                        }
+                        else {
+                            result = (el) => {
+                                let index = target.push(el);
+                                // get real objetct with proxy to have the correct subscription
+                                let proxyEl = this.getProxyObject(target, el, (index - 1));
+                                target.splice(target.length - 1, 1, proxyEl);
+                                trigger('CREATED', target, receiver, proxyEl, "[" + (index - 1) + "]");
+                                return index;
+                            };
                         };
                     }
                     else if(prop == 'splice') {
-                        result = (index, nbRemove, ...insert) => {
-                            let res = target.splice(index, nbRemove, ...insert);
-                            let path = target.__path ? target.__path : '';
-                            for(let i = 0; i < res.length; i++) {
-                                trigger('DELETED', path + "[" + (index) + "]", res[i]);
-                            }
-                            for(let i = 0; i < insert.length; i++) {
-                                trigger('CREATED', path + "[" + (index + i) + "]", insert[i]);
-                            }
+                        if(target.__isProxy) {
+                            result = (index, nbRemove, ...insert) => {
+                                let res = target.splice(index, nbRemove, ...insert);
+                                return res;
+                            };
+                        }
+                        else {
+                            result = (index, nbRemove, ...insert) => {
+                                let res = target.splice(index, nbRemove, ...insert);
+                                let path = target.__path ? target.__path : '';
+                                for(let i = 0; i < res.length; i++) {
+                                    trigger('DELETED', target, receiver, res[i], "[" + index + "]");
+                                    removeProxyPath(res[i], path + "[" + (index + i) + "]");
+                                }
+                                for(let i = 0; i < insert.length; i++) {
+                                    // get real objetct with proxy to have the correct subscription
+                                    let proxyEl = this.getProxyObject(target, insert[i], (index + i));
+                                    target.splice((index + i), 1, proxyEl);
+                                    trigger('CREATED', target, receiver, proxyEl, "[" + (index + i) + "]");
+                                }
+                                let fromIndex = index + insert.length;
+                                let baseDiff = index - insert.length + res.length + 1;
+                                // update path and subscription
+                                for(let i = fromIndex, j = 0; i < target.length; i++, j++) {
+                                    let oldPath = path + "[" + (j + baseDiff) + "]";
+                                    removeProxyPath(target[i], oldPath, false);
+                                    let proxyEl = this.getProxyObject(target, target[i], i);
 
-                            return res;
-                        };
+                                    let recuUpdate = (childEl) => {
+                                        if(Array.isArray(childEl)) {
+                                            for(let i = 0; i < childEl.length; i++) {
+                                                if(childEl[i] instanceof Object && childEl[i].__path) {
+                                                    let oldPathRecu = proxyEl[i].__path.replace(proxyEl.__path, oldPath);
+                                                    removeProxyPath(childEl[i], oldPathRecu, false);
+                                                    let newProxyEl = this.getProxyObject(childEl, childEl[i], i);
+                                                    recuUpdate(newProxyEl);
+                                                }
+                                            }
+                                        }
+                                        else if(childEl instanceof Object && !(childEl instanceof Date)) {
+                                            for(let key in childEl) {
+                                                if(childEl[key] instanceof Object && childEl[key].__path) {
+                                                    let oldPathRecu = proxyEl[key].__path.replace(proxyEl.__path, oldPath);
+                                                    removeProxyPath(childEl[key], oldPathRecu, false);
+                                                    let newProxyEl = this.getProxyObject(childEl, childEl[key], key);
+                                                    recuUpdate(newProxyEl);
+                                                }
+                                            }
+                                        }
+                                    };
+                                    recuUpdate(proxyEl);
+
+                                }
+                                return res;
+                            };
+                        }
+
                     }
                     else if(prop == 'pop') {
-                        result = () => {
-                            let index = target.length - 1;
-                            let res = target.pop();
-                            let path = target.__path ? target.__path : '';
-                            trigger('DELETED', path + "[" + index + "]", res);
-                            return res;
-                        };
+                        if(target.__isProxy) {
+                            result = () => {
+                                let res = target.pop();
+                                return res;
+                            };
+                        }
+                        else {
+                            result = () => {
+                                let index = target.length - 1;
+                                let res = target.pop();
+                                let path = target.__path ? target.__path : '';
+                                trigger('DELETED', target, receiver, res, "[" + index + "]");
+                                removeProxyPath(res, path + "[" + index + "]");
+                                return res;
+                            };
+                        }
                     }
                     else {
                         result = element.bind(target);
@@ -123,55 +231,28 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         },
         set(target, prop, value, receiver) {
             let triggerChange = false;
-            let newPath = '';
-            if(prop != "__path") {
-                
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
                 if(Array.isArray(target)) {
                     if(prop != "length") {
-                        if(target.__path) {
-                            newPath = target.__path;
-                        }
-                        newPath += "[" + prop + "]";
                         triggerChange = true;
                     }
                 }
                 else {
                     let oldValue = Reflect.get(target, prop, receiver);
                     if(oldValue !== value) {
-                        if(target.__path) {
-                            newPath = target.__path + '.';
-                        }
-                        newPath += prop;
                         triggerChange = true;
-
-                        if(value instanceof Object && value.__isProxy) {
-                            debugger;
-                            let valuePath = value.__path;
-                            value.__subscribe((type, path, element) => {
-                                if(path.startsWith(valuePath)){
-                                    // replace start path from other proxy with this one
-                                    let valuePathEscaped = valuePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                    let regex =new RegExp('^'+valuePathEscaped+'');
-                                    let pathToSend = path.replace(regex, newPath);
-                                    [...proxyData.callbacks].forEach((cb) => {
-                                        cb(type, pathToSend, element);
-                                    });
-                                }
-                            })
-                            let temp = value.__avoidUpdate()
-                            // trigger('SET', newPath, value)
-                            debugger
-                            triggerChange = false;
-                            console.log("we have a problem");
-                        }
                     }
                 }
+
             }
+
             let result = Reflect.set(target, prop, value, receiver);
+
             if(triggerChange) {
-                let index = this.avoidUpdate.indexOf(newPath);
+                let index = this.avoidUpdate.indexOf(prop);
+
                 if(index == -1) {
-                    trigger('UPDATED', newPath, value);
+                    trigger('UPDATED', target, receiver, value, prop);
                 }
                 else {
                     this.avoidUpdate.splice(index, 1);
@@ -179,24 +260,24 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
             }
             return result;
         },
-        deleteProperty(target, prop, receiver) {
+        deleteProperty(target, prop) {
             let triggerChange = false;
-            let newPath = '';
+            let pathToDelete = '';
             if(prop != "__path") {
                 if(Array.isArray(target)) {
                     if(prop != "length") {
                         if(target.__path) {
-                            newPath = target.__path;
+                            pathToDelete = target.__path;
                         }
-                        newPath += "[" + prop + "]";
+                        pathToDelete += "[" + prop + "]";
                         triggerChange = true;
                     }
                 }
                 else {
                     if(target.__path) {
-                        newPath = target.__path + '.';
+                        pathToDelete = target.__path + '.';
                     }
-                    newPath += prop;
+                    pathToDelete += prop;
                     triggerChange = true;
                 }
             }
@@ -204,7 +285,8 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 let oldValue = target[prop];
                 delete target[prop];
                 if(triggerChange) {
-                    trigger('DELETED', newPath, oldValue);
+                    trigger('DELETED', target, null, oldValue, prop);
+                    removeProxyPath(oldValue, pathToDelete);
                 }
                 return true;
             }
@@ -213,7 +295,7 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         defineProperty(target, prop, descriptor) {
             let triggerChange = false;
             let newPath = '';
-            if(prop != "__path") {
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
                 if(Array.isArray(target)) {
                     if(prop != "length") {
                         if(target.__path) {
@@ -237,20 +319,51 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
             }
             let result = Reflect.defineProperty(target, prop, descriptor);
             if(triggerChange) {
-                this.avoidUpdate.push(newPath);
-                trigger('CREATED', newPath, descriptor.value);
+                this.avoidUpdate.push(prop);
+                let proxyEl = this.getProxyObject(target, descriptor.value, prop);
+                target[prop] = proxyEl;
+                trigger('CREATED', target, null, proxyEl, prop);
             }
             return result;
         }
     };
-    const trigger = (type, path, element) => {
-        [...proxyData.callbacks].forEach((cb) => {
-            cb(MutableAction[type], path, element);
-        });
+    const trigger = (type, target, receiver, value, prop) => {
+        if(target.__isProxy) {
+            return;
+        }
+        let allProxies = target.__proxyData;
+        // trigger only if same id
+        let receiverId = 0;
+        if(receiver == null) {
+            receiverId = proxyData.id;
+        }
+        else {
+            receiverId = receiver.__proxyId;
+        }
+        if(proxyData.id == receiverId) {
+            for(let triggerPath in allProxies) {
+                for(let currentProxyData of allProxies[triggerPath]) {
+                    [...currentProxyData.callbacks].forEach((cb) => {
+                        let pathToSend = triggerPath;
+                        if(pathToSend != "") {
+                            if(!prop.startsWith("[")) {
+                                pathToSend += ".";
+                            }
+                            pathToSend += prop;
+                        }
+                        else {
+                            pathToSend = prop;
+                        }
+                        cb(MutableAction[type], pathToSend, value);
+                    });
+                }
+            }
+        }
     };
 
 
     let proxy = new Proxy(obj, proxyData);
+    setProxyPath(proxy, '');
     return proxy;
 };
 Object.prepareByPath = function (obj, path, currentPath = "") {

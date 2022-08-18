@@ -38,6 +38,12 @@ export class AvComplexTest extends WebComponent implements DefaultComponent {
 	//#region methods
 	protected override postCreation(): void {
         let i = 0;
+        let lightT = new AvLight();
+        lightT.name = "light test";
+        lightT.value = 80;
+        lightT.color = "red";
+        window["light"] = lightT;
+        window["temp1"] = this;
         let interval = setInterval(() => {
             i++;
             let light = new AvLight();
@@ -48,7 +54,7 @@ export class AvComplexTest extends WebComponent implements DefaultComponent {
             for(let j = 0; j < 3; j++) {
                 nb.push(0);
             }
-            light.values = nb;
+            //light.values = nb;
             this.data.push(light);
             // this.data.splice(0, 0, light);
             if(i == 10) {

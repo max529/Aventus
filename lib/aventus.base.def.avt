@@ -62,6 +62,22 @@ declare function IgnoreForceIdentifier();
 declare function overrideView(target: any);
 declare function Debugger(config: DebuggerConfig);
 
+declare abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
+    /**
+     * If true, the element will be required
+     */
+    required: boolean;
+    /**
+     * Name to use inside your form
+     */
+    name: string;
+    /**
+     * Value to use inside your component
+     */
+    value: T;
+    abstract getDefaultValue(): T;
+    onValueChanged(): void;
+}
 
 declare class AvForm extends WebComponent implements DefaultComponent {
     /**
@@ -148,8 +164,8 @@ declare abstract class DisplayElement<T extends Data> extends WebComponent imple
 
 // end region js //
 // region css //
-{"display-element":[],"av-for":[],"av-form":[]}
+{"display-element":[],"av-for":[],"av-form":[],"av-form-element":[]}
 // end region css //
 // region html //
-{"display-element":{"name":"display-element","description":"","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","values":[]},"in":{"name":"in","description":"Name of property to loop though","values":[]},"index":{"name":"index","description":"Name of your index","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","values":[]},"method":{"name":"method","description":"","values":[]},"action":{"name":"action","description":"","values":[]},"use_event":{"name":"use_event","description":"","values":[]}}}}
+{"display-element":{"name":"display-element","description":"","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","values":[]},"in":{"name":"in","description":"Name of property to loop though","values":[]},"index":{"name":"index","description":"Name of your index","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","values":[]},"method":{"name":"method","description":"","values":[]},"action":{"name":"action","description":"","values":[]},"use_event":{"name":"use_event","description":"","values":[]}}},"av-form-element":{"name":"av-form-element","description":"","attributes":{"required":{"name":"required","description":"If true, the element will be required","values":[]},"name":{"name":"name","description":"Name to use inside your form","values":[]}}}}
 // end region html //

@@ -193,5 +193,5 @@ class AvComplexTest extends WebComponent {
     }
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('testvariable')){ this['testvariable'] = 'test'; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('testvariable'); }
-     postCreation(){let i = 0;let interval = setInterval(() => {    i++;    let light = new AvLight();    light.name = "light " + i;    light.value = 80;    light.color = "red";    let nb = [];    for (let j = 0; j < 3; j++) {        nb.push(0);    }    light.values = nb;    this.data.push(light);    if (i == 10) {        console.log(JSON.parse(JSON.stringify(this.data)));        clearInterval(interval);    }}, 0);}}
+     postCreation(){let i = 0;let lightT = new AvLight();lightT.name = "light test";lightT.value = 80;lightT.color = "red";window["light"] = lightT;window["temp1"] = this;let interval = setInterval(() => {    i++;    let light = new AvLight();    light.name = "light " + i;    light.value = 80;    light.color = "red";    let nb = [];    for (let j = 0; j < 3; j++) {        nb.push(0);    }    this.data.push(light);    if (i == 10) {        console.log(JSON.parse(JSON.stringify(this.data)));        clearInterval(interval);    }}, 0);}}
 window.customElements.define('av-complex-test', AvComplexTest);
