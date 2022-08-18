@@ -173,25 +173,22 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 
 			let classParentStruct: ClassModel[] = [];
 
-			/*const serverFolder = getServerFolder();
-			const baseAventusEndPath = "/aventus/base/src";
-			const test_path = join(serverFolder, baseAventusEndPath);
-			console.log(test_path);*/
-			let testStruct = parseStruct(readFileSync(AVENTUS_DEF_BASE_PATH, 'utf8'), {}, AVENTUS_DEF_BASE_PATH);
-			testStruct.classes.forEach(classInfo => {
-				// Check if classInfo implements DefaultComponent
-				let foundDefaultComponent = false;
-				for (let implement of classInfo.implements) {
-					if (implement.typeName == 'DefaultComponent') {
-						foundDefaultComponent = true;
-						break;
-					}
-				}
+			// // TODO check err
+			// let testStruct = parseStruct(readFileSync(AVENTUS_DEF_BASE_PATH, 'utf8'), {}, AVENTUS_DEF_BASE_PATH);
+			// testStruct.classes.forEach(classInfo => {
+			// 	// Check if classInfo implements DefaultComponent
+			// 	let foundDefaultComponent = false;
+			// 	for (let implement of classInfo.implements) {
+			// 		if (implement.typeName == 'DefaultComponent') {
+			// 			foundDefaultComponent = true;
+			// 			break;
+			// 		}
+			// 	}
 
-				if (foundDefaultComponent) {
-					classParentStruct.push(classInfo);
-				}
-			});
+			// 	if (foundDefaultComponent) {
+			// 		classParentStruct.push(classInfo);
+			// 	}
+			// });
 
 
 			if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent") {

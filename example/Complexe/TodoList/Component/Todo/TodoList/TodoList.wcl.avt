@@ -1,0 +1,38 @@
+import { AvTodoData } from "../../../Data/TodoData.data.avt";
+
+export class AvTodoList extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+
+    //#endregion
+
+
+    //#region variables
+    @mutable()
+    items: AvTodoData[] = [];
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    public addItem(item: AvTodoData) {
+        this.items.push(item);
+    }
+    
+	//#endregion
+
+}

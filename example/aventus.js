@@ -8517,99 +8517,226 @@ var luxon = (function (exports) {
   })({});
 
 class DefaultHttpRequestOptions {    constructor() {        this.url = "";        this.method = HttpRequestMethod.GET;    }}var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }    return new (P || (P = Promise))(function (resolve, reject) {        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }        step((generator = generator.apply(thisArg, _arguments || [])).next());    });};class HttpRequest {    constructor(options) {        this._options = {};        this._url = '';        options = Object.assign(Object.assign({}, new DefaultHttpRequestOptions()), options);        let optionsToSend = {            method: this.getMethod(options.method),        };        if (options.data) {            if (options.data instanceof FormData) {                optionsToSend.body = options.data;            }            else {                let formData = new FormData();                for (let key in options.data) {                    formData.append(key, options.data[key]);                }                optionsToSend.body = formData;            }        }        this._options = optionsToSend;        this._url = options.url;    }    static getMethod(method) {        let genericMethod = method.toLowerCase().trim();        if (genericMethod == "get") {            return HttpRequestMethod.GET;        }        if (genericMethod == "post") {            return HttpRequestMethod.POST;        }        if (genericMethod == "delete") {            return HttpRequestMethod.DELETE;        }        if (genericMethod == "put") {            return HttpRequestMethod.PUT;        }        if (genericMethod == "option") {            return HttpRequestMethod.OPTION;        }        console.error("unknow type " + method + ". I ll return GET by default");        return HttpRequestMethod.GET;    }    getMethod(method) {        if (method == HttpRequestMethod.GET)            return "GET";        if (method == HttpRequestMethod.POST)            return "POST";        if (method == HttpRequestMethod.DELETE)            return "DELETE";        if (method == HttpRequestMethod.OPTION)            return "OPTION";        if (method == HttpRequestMethod.PUT)            return "PUT";        return "GET";    }    send() {        return __awaiter(this, void 0, void 0, function* () {            let result = yield fetch(this._url, this._options);            if (result.ok) {            }        });    }}var HttpRequestMethod;(function (HttpRequestMethod) {    HttpRequestMethod[HttpRequestMethod["GET"] = 0] = "GET";    HttpRequestMethod[HttpRequestMethod["POST"] = 1] = "POST";    HttpRequestMethod[HttpRequestMethod["DELETE"] = 2] = "DELETE";    HttpRequestMethod[HttpRequestMethod["PUT"] = 3] = "PUT";    HttpRequestMethod[HttpRequestMethod["OPTION"] = 4] = "OPTION";})(HttpRequestMethod || (HttpRequestMethod = {}));
+Proxy.__maxProxyData = 0;
 Object.transformIntoWatcher = function (obj, onDataChanged) {
-    if(obj == undefined){
+    if(obj == undefined) {
         console.error("You must define an objet / array for your proxy");
         return;
     }
-    if(obj.__isProxy){
+    if(obj.__isProxy) {
         obj.__subscribe(onDataChanged);
         return obj;
     }
-    const callbacks = [onDataChanged];
-    const trigger = (type, path, element) => {
-        [...callbacks].forEach((cb) => {
-            cb(MutableAction[type], path, element)
-        })
-    }
-    let proxyData = {
-		avoidUpdate:[],
-        getProxyObject(target, element, prop) {
-            let newProxy = new Proxy(element, this);
-            let newPath = '';
-            if (Array.isArray(target)) {
-                if (prop != "length") {
-                    if (target.__path) {
-                        newPath = target.__path;
+    Proxy.__maxProxyData++;
+    let setProxyPath = (newProxy, newPath) => {
+        if(newProxy instanceof Object && newProxy.__isProxy) {
+            newProxy.__path = newPath;
+            if(!newProxy.__proxyData) {
+                newProxy.__proxyData = {};
+            }
+            if(!newProxy.__proxyData[newPath]) {
+                newProxy.__proxyData[newPath] = [];
+            }
+            if(newProxy.__proxyData[newPath].indexOf(proxyData) == -1) {
+                newProxy.__proxyData[newPath].push(proxyData);
+            }
+        }
+    };
+    let removeProxyPath = (oldValue, pathToDelete, recursive = true) => {
+        if(oldValue instanceof Object && oldValue.__isProxy) {
+            let allProxies = oldValue.__proxyData;
+            for(let triggerPath in allProxies) {
+                if(triggerPath == pathToDelete) {
+                    for(let i = 0; i < allProxies[triggerPath].length; i++) {
+                        if(allProxies[triggerPath][i] == proxyData) {
+                            allProxies[triggerPath].splice(i, 1);
+                            i--;
+                        }
                     }
-                    newProxy.__path = newPath + "[" + prop + "]";
+                    if(allProxies[triggerPath].length == 0) {
+                        delete allProxies[triggerPath];
+                        if(Object.keys(allProxies).length == 0) {
+                            delete oldValue.__proxyData;
+                        }
+                    }
                 }
             }
-            else if (element instanceof Date) {
+
+            // apply recursive delete
+        }
+    };
+    let proxyData = {
+        id: Proxy.__maxProxyData,
+        callbacks: [onDataChanged],
+        avoidUpdate: [],
+        pathToRemove: [],
+        getProxyObject(target, element, prop) {
+            let newProxy;
+            if(element instanceof Object && element.__isProxy) {
+                newProxy = element;
+            }
+            else {
+                try {
+                    newProxy = new Proxy(element, this);
+                } catch {
+                    // it's not an array or object
+                    return element;
+                }
+            }
+            let newPath = '';
+            if(Array.isArray(target)) {
+                if(prop != "length") {
+                    if(target.__path) {
+                        newPath = target.__path;
+                    }
+                    newPath += "[" + prop + "]";
+                    setProxyPath(newProxy, newPath);
+                }
+            }
+            else if(element instanceof Date) {
                 return element;
             }
             else {
-                if (target.__path) {
+                if(target.__path) {
                     newPath = target.__path + '.';
                 }
-                newProxy.__path = newPath + prop;
+                newPath += prop;
+                setProxyPath(newProxy, newPath);
             }
             return newProxy;
 
         },
-        get(target, prop, receiver) {
-            if(prop == "__isProxy"){
+        tryCustomFunction(target, prop, receiver) {
+            if(prop == "__isProxy") {
                 return true;
             }
-            else if(prop == "__subscribe"){
+            else if(prop == "__subscribe") {
                 return (cb) => {
-                    callbacks.push(cb);
-                }
+                    this.callbacks.push(cb);
+                };
             }
-            else if(prop == "__unsubscribe"){
+            else if(prop == "__unsubscribe") {
                 return (cb) => {
-                    let index = callbacks.indexOf(cb);
-                    if(index > -1){
-                        callbacks.splice(index,1);
+                    let index = this.callbacks.indexOf(cb);
+                    if(index > -1) {
+                        this.callbacks.splice(index, 1);
                     }
-                }
+                };
             }
+            else if(prop == "__proxyId") {
+                return this.id;
+            }
+            return undefined;
+        },
+        get(target, prop, receiver) {
+            if(prop == "__proxyData") {
+                return target[prop];
+            }
+            let customResult = this.tryCustomFunction(target, prop, receiver);
+            if(customResult !== undefined) {
+                return customResult;
+            }
+
             let element = target[prop];
-            if (typeof (element) == 'object') {
+            if(typeof (element) == 'object') {
                 return this.getProxyObject(target, element, prop);
             }
-            else if (typeof (element) == 'function') {
-                if (Array.isArray(target)) {
+            else if(typeof (element) == 'function') {
+                if(Array.isArray(target)) {
                     let result;
-                    if (prop == 'push') {
-                        result = (el) => {
-                            let index = target.push(el);
-							let path = target.__path?target.__path:'';
-                            trigger('CREATED', path + "[" + (index - 1) + "]", el);
-                            return index;
+                    if(prop == 'push') {
+                        if(target.__isProxy) {
+                            result = (el) => {
+                                let index = target.push(el);
+                                return index;
+                            };
                         }
+                        else {
+                            result = (el) => {
+                                let index = target.push(el);
+                                // get real objetct with proxy to have the correct subscription
+                                let proxyEl = this.getProxyObject(target, el, (index - 1));
+                                target.splice(target.length - 1, 1, proxyEl);
+                                trigger('CREATED', target, receiver, proxyEl, "[" + (index - 1) + "]");
+                                return index;
+                            };
+                        };
                     }
-                    else if (prop == 'splice') {
-                        result = (index, nbRemove, ...insert) => {
-                            let res = target.splice(index, nbRemove, ...insert);
-							let path = target.__path?target.__path:'';
-                            for (let i = 0; i < res.length; i++) {
-                                trigger('DELETED', path + "[" + (index) + "]", res[i]);
-                            }
-                            for (let i = 0; i < insert.length; i++) {
-                                trigger('CREATED', path + "[" + (index + i) + "]", insert[i]);
-                            }
+                    else if(prop == 'splice') {
+                        if(target.__isProxy) {
+                            result = (index, nbRemove, ...insert) => {
+                                let res = target.splice(index, nbRemove, ...insert);
+                                return res;
+                            };
+                        }
+                        else {
+                            result = (index, nbRemove, ...insert) => {
+                                let res = target.splice(index, nbRemove, ...insert);
+                                let path = target.__path ? target.__path : '';
+                                for(let i = 0; i < res.length; i++) {
+                                    trigger('DELETED', target, receiver, res[i], "[" + index + "]");
+                                    removeProxyPath(res[i], path + "[" + (index + i) + "]");
+                                }
+                                for(let i = 0; i < insert.length; i++) {
+                                    // get real objetct with proxy to have the correct subscription
+                                    let proxyEl = this.getProxyObject(target, insert[i], (index + i));
+                                    target.splice((index + i), 1, proxyEl);
+                                    trigger('CREATED', target, receiver, proxyEl, "[" + (index + i) + "]");
+                                }
+                                let fromIndex = index + insert.length;
+                                let baseDiff = index - insert.length + res.length + 1;
+                                // update path and subscription
+                                for(let i = fromIndex, j = 0; i < target.length; i++, j++) {
+                                    let oldPath = path + "[" + (j + baseDiff) + "]";
+                                    removeProxyPath(target[i], oldPath, false);
+                                    let proxyEl = this.getProxyObject(target, target[i], i);
 
-                            return res;
+                                    let recuUpdate = (childEl) => {
+                                        if(Array.isArray(childEl)) {
+                                            for(let i = 0; i < childEl.length; i++) {
+                                                if(childEl[i] instanceof Object && childEl[i].__path) {
+                                                    let oldPathRecu = proxyEl[i].__path.replace(proxyEl.__path, oldPath);
+                                                    removeProxyPath(childEl[i], oldPathRecu, false);
+                                                    let newProxyEl = this.getProxyObject(childEl, childEl[i], i);
+                                                    recuUpdate(newProxyEl);
+                                                }
+                                            }
+                                        }
+                                        else if(childEl instanceof Object && !(childEl instanceof Date)) {
+                                            for(let key in childEl) {
+                                                if(childEl[key] instanceof Object && childEl[key].__path) {
+                                                    let oldPathRecu = proxyEl[key].__path.replace(proxyEl.__path, oldPath);
+                                                    removeProxyPath(childEl[key], oldPathRecu, false);
+                                                    let newProxyEl = this.getProxyObject(childEl, childEl[key], key);
+                                                    recuUpdate(newProxyEl);
+                                                }
+                                            }
+                                        }
+                                    };
+                                    recuUpdate(proxyEl);
+
+                                }
+                                return res;
+                            };
                         }
+
                     }
-                    else if (prop == 'pop') {
-                        result = () => {
-                            let index = target.length - 1;
-                            let res = target.pop();
-							let path = target.__path?target.__path:'';
-                            trigger('DELETED', path + "[" + index + "]", res);
-                            return res;
+                    else if(prop == 'pop') {
+                        if(target.__isProxy) {
+                            result = () => {
+                                let res = target.pop();
+                                return res;
+                            };
+                        }
+                        else {
+                            result = () => {
+                                let index = target.length - 1;
+                                let res = target.pop();
+                                let path = target.__path ? target.__path : '';
+                                trigger('DELETED', target, receiver, res, "[" + index + "]");
+                                removeProxyPath(res, path + "[" + index + "]");
+                                return res;
+                            };
                         }
                     }
                     else {
@@ -8617,72 +8744,68 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                     }
                     return result;
                 }
-                return element.bind(target)
+                return element.bind(target);
             }
             return Reflect.get(target, prop, receiver);
         },
         set(target, prop, value, receiver) {
             let triggerChange = false;
-            let newPath = '';
-            if (prop != "__path") {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
-                        if (target.__path) {
-                            newPath = target.__path;
-                        }
-                        newPath += "[" + prop + "]";
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
                         triggerChange = true;
                     }
                 }
                 else {
                     let oldValue = Reflect.get(target, prop, receiver);
-                    if (oldValue !== value) {
-                        if (target.__path) {
-                            newPath = target.__path + '.';
-                        }
-                        newPath += prop;
+                    if(oldValue !== value) {
                         triggerChange = true;
                     }
                 }
+
             }
+
             let result = Reflect.set(target, prop, value, receiver);
-            if (triggerChange) {
-				let index = this.avoidUpdate.indexOf(newPath);
-				if(index == -1){
-                	trigger('UPDATED', newPath, value);
-				}
-				else{
-					this.avoidUpdate.splice(index, 1);
-				}
+
+            if(triggerChange) {
+                let index = this.avoidUpdate.indexOf(prop);
+
+                if(index == -1) {
+                    trigger('UPDATED', target, receiver, value, prop);
+                }
+                else {
+                    this.avoidUpdate.splice(index, 1);
+                }
             }
             return result;
         },
-        deleteProperty(target, prop, receiver) {
+        deleteProperty(target, prop) {
             let triggerChange = false;
-            let newPath = '';
-            if (prop != "__path") {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
-                        if (target.__path) {
-                            newPath = target.__path;
+            let pathToDelete = '';
+            if(prop != "__path") {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
+                        if(target.__path) {
+                            pathToDelete = target.__path;
                         }
-                        newPath += "[" + prop + "]";
+                        pathToDelete += "[" + prop + "]";
                         triggerChange = true;
                     }
                 }
                 else {
-                    if (target.__path) {
-                        newPath = target.__path + '.';
+                    if(target.__path) {
+                        pathToDelete = target.__path + '.';
                     }
-                    newPath += prop;
+                    pathToDelete += prop;
                     triggerChange = true;
                 }
             }
-            if (target.hasOwnProperty(prop)) {
+            if(target.hasOwnProperty(prop)) {
                 let oldValue = target[prop];
                 delete target[prop];
-                if (triggerChange) {
-                    trigger('DELETED', newPath, oldValue);
+                if(triggerChange) {
+                    trigger('DELETED', target, null, oldValue, prop);
+                    removeProxyPath(oldValue, pathToDelete);
                 }
                 return true;
             }
@@ -8691,73 +8814,110 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         defineProperty(target, prop, descriptor) {
             let triggerChange = false;
             let newPath = '';
-            if (prop != "__path") {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
-                        if (target.__path) {
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
+                        if(target.__path) {
                             newPath = target.__path;
                         }
                         newPath += "[" + prop + "]";
-                        if(!target.hasOwnProperty(prop)){
+                        if(!target.hasOwnProperty(prop)) {
                             triggerChange = true;
                         }
                     }
                 }
                 else {
-                    if (target.__path) {
+                    if(target.__path) {
                         newPath = target.__path + '.';
                     }
                     newPath += prop;
-                    if(!target.hasOwnProperty(prop)){
+                    if(!target.hasOwnProperty(prop)) {
                         triggerChange = true;
                     }
                 }
             }
             let result = Reflect.defineProperty(target, prop, descriptor);
-            if (triggerChange) {
-				this.avoidUpdate.push(newPath);
-                trigger('CREATED', newPath, descriptor.value);
+            if(triggerChange) {
+                this.avoidUpdate.push(prop);
+                let proxyEl = this.getProxyObject(target, descriptor.value, prop);
+                target[prop] = proxyEl;
+                trigger('CREATED', target, null, proxyEl, prop);
             }
             return result;
         }
-    }
-    
+    };
+    const trigger = (type, target, receiver, value, prop) => {
+        if(target.__isProxy) {
+            return;
+        }
+        let allProxies = target.__proxyData;
+        // trigger only if same id
+        let receiverId = 0;
+        if(receiver == null) {
+            receiverId = proxyData.id;
+        }
+        else {
+            receiverId = receiver.__proxyId;
+        }
+        if(proxyData.id == receiverId) {
+            for(let triggerPath in allProxies) {
+                for(let currentProxyData of allProxies[triggerPath]) {
+                    [...currentProxyData.callbacks].forEach((cb) => {
+                        let pathToSend = triggerPath;
+                        if(pathToSend != "") {
+                            if(!prop.startsWith("[")) {
+                                pathToSend += ".";
+                            }
+                            pathToSend += prop;
+                        }
+                        else {
+                            pathToSend = prop;
+                        }
+                        cb(MutableAction[type], pathToSend, value);
+                    });
+                }
+            }
+        }
+    };
+
+
     let proxy = new Proxy(obj, proxyData);
-    return proxy
-}
-Object.prepareByPath = function(obj, path, currentPath = ""){
+    setProxyPath(proxy, '');
+    return proxy;
+};
+Object.prepareByPath = function (obj, path, currentPath = "") {
     let objToApply = obj;
     let canApply = true;
-    if(path.startsWith(currentPath)){
+    if(path.startsWith(currentPath)) {
         let missingPath = path.replace(currentPath, "");
-        if(missingPath.startsWith(".")){ missingPath = missingPath.slice(1); }
-        
+        if(missingPath.startsWith(".")) { missingPath = missingPath.slice(1); }
+
         let splited = missingPath.split(".");
-        for(let part of splited){
-            if(part == ""){
+        for(let part of splited) {
+            if(part == "") {
                 continue;
             }
-            if(part.startsWith("[")){
-                part = part.substring(1, part.length - 1)
+            if(part.startsWith("[")) {
+                part = part.substring(1, part.length - 1);
             }
-            if(objToApply.hasOwnProperty(part)){
+            if(objToApply.hasOwnProperty(part)) {
                 objToApply = objToApply[part];
             }
-            else{
+            else {
                 canApply = false;
                 break;
             }
         }
     }
-    else{
+    else {
         canApply = false;
     }
     return {
-        canApply:canApply,
-        objToApply:objToApply
-    }
-}
-Object.isPathMatching = function(p1, p2){
+        canApply: canApply,
+        objToApply: objToApply
+    };
+};
+Object.isPathMatching = function (p1, p2) {
     p1 = p1.replace(/\[\d*?\]/g, '[]');
     p2 = p2.replace(/\[\d*?\]/g, '[]');
     return p1 == p2;
@@ -9002,7 +9162,6 @@ var ColorTypes;(function (ColorTypes) {    ColorTypes[ColorTypes["rgb"] = 0] =
 class ColorData {    constructor() {        this.r = 0;        this.g = 0;        this.b = 0;    }}
 
 
-
 class AvFormElement extends WebComponent {
     static get observedAttributes() {return ["required", "name"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     constructor() { super(); if (this.constructor == AvFormElement) { throw "can't instanciate an abstract class"; } }
@@ -9103,6 +9262,88 @@ class AvFormElement extends WebComponent {
     __listBoolProps() { return ["required"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
      onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
 window.customElements.define('av-form-element', AvFormElement);
+class AvForm extends WebComponent {
+    static get observedAttributes() {return ["loading", "method", "action", "use_event"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
+    get 'loading'() {
+                        return this.hasAttribute('loading');
+                    }
+                    set 'loading'(val) {
+                        if(val === 1 || val === 'true' || val === ''){
+                            val = true;
+                        }
+                        else if(val === 0 || val === 'false' || val === null || val === undefined){
+                            val = false;
+                        }
+                        if(val !== false && val !== true){
+                            console.error("error setting boolean in loading");
+                            val = false;
+                        }
+                        if (val) {
+                            this.setAttribute('loading', 'true');
+                        } else{
+                            this.removeAttribute('loading');
+                        }
+                    }get 'method'() {
+                        return this.getAttribute('method');
+                    }
+                    set 'method'(val) {
+                        this.setAttribute('method',val);
+                    }get 'action'() {
+                        return this.getAttribute('action');
+                    }
+                    set 'action'(val) {
+                        this.setAttribute('action',val);
+                    }get 'use_event'() {
+                        return this.hasAttribute('use_event');
+                    }
+                    set 'use_event'(val) {
+                        if(val === 1 || val === 'true' || val === ''){
+                            val = true;
+                        }
+                        else if(val === 0 || val === 'false' || val === null || val === undefined){
+                            val = false;
+                        }
+                        if(val !== false && val !== true){
+                            console.error("error setting boolean in use_event");
+                            val = false;
+                        }
+                        if (val) {
+                            this.setAttribute('use_event', 'true');
+                        } else{
+                            this.removeAttribute('use_event');
+                        }
+                    }    __prepareVariables() { super.__prepareVariables(); if(this._fields === undefined) {this._fields = {};}if(this._fieldEnter === undefined) {this._fieldEnter = undefined;} }
+    __getStyle() {
+        let arrStyle = super.__getStyle();
+        arrStyle.push(``);
+        return arrStyle;
+    }
+    __getHtml() {
+        let parentInfo = super.__getHtml();
+        let info = {
+            html: `<slot></slot>`,
+            slots: {
+                'default':`<slot></slot>`
+            },
+            blocks: {
+                'default':`<slot></slot>`
+            }
+        }
+        return info;
+    }
+    __getMaxId() {
+        let temp = super.__getMaxId();
+        temp.push(["AvForm", 0])
+        return temp;
+    }
+    getClassName() {
+        return "AvForm";
+    }
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('loading')) { this.attributeChangedCallback('loading', false, false); }if(!this.hasAttribute('method')){ this['method'] = 'get'; }if(!this.hasAttribute('action')){ this['action'] = ''; }if(!this.hasAttribute('use_event')) { this.attributeChangedCallback('use_event', false, false); } }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('loading');this.__upgradeProperty('method');this.__upgradeProperty('action');this.__upgradeProperty('use_event'); }
+    __listBoolProps() { return ["loading","use_event"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
+     submitLastChild(e){if (e.keyCode == 13) {    this.submit();}}async  submit(){var form = new FormData();for (var key in this._fields) {    const input = this._fields[key];    if (!input.required) {        if (input.value) {            form.append(key, input.value);        }    }    else {        form.append(key, input.value);    }}if (this.use_event) {    var customEvent = new CustomEvent('submit', {        detail: {            form: form,            action: this.action,            method: this.method        },        bubbles: true,        composed: true    });    this.dispatchEvent(customEvent);}else {    let request = new HttpRequest({        url: this.action,        method: HttpRequest.getMethod(this.method),        data: form,    });    this.addEventListener("custom", () => {    });}} subsribe(fieldHTML){this._fields[fieldHTML.name] = fieldHTML;if (this._fieldEnter) {    this._fieldEnter.removeEventListener('keypress', this.submitLastChild);}this._fieldEnter = fieldHTML;} postCreation(){}}
+window.customElements.define('av-form', AvForm);
 class AvFor extends WebComponent {
     static get observedAttributes() {return ["item", "in", "index"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'item'() {

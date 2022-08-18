@@ -99,7 +99,7 @@ class AvTodoList extends WebComponent {
     getClassName() {
         return "AvTodoList";
     }
-}
+     addItem(item){this.items.push(item);}}
 window.customElements.define('av-todo-list', AvTodoList);
 class AvTodoItem extends WebComponent {
     get 'item'() {
@@ -118,7 +118,7 @@ class AvTodoItem extends WebComponent {
 							//this.__mutable["item"] = undefined;
 						}
 					}    __prepareMutablesActions() {
-					this.__mutableActions["item"] = [(() => {    console.log("Changed");})];
+					this.__mutableActions["item"] = [((target, action, path, value) => {    console.log(MutableAction[action], path);})];
 						this.__mutableActionsCb["item"] = (action, path, value) => {
 							for (let fct of this.__mutableActions["item"]) {
 								fct(this, action, path, value);
@@ -141,7 +141,7 @@ class AvTodoItem extends WebComponent {
 				}
     __getStyle() {
         let arrStyle = super.__getStyle();
-        arrStyle.push(``);
+        arrStyle.push(`:host{display:block;margin:10px 0}:host .name::before{content:" - ";display:inline-block;margin-right:15px;margin-left:15px}`);
         return arrStyle;
     }
     __getHtml() {
@@ -177,6 +177,163 @@ class AvTodoItem extends WebComponent {
     }
 }
 window.customElements.define('av-todo-item', AvTodoItem);
+class AvTodoCreation extends WebComponent {
+    __prepareVariables() { super.__prepareVariables(); if(this.todoList === undefined) {this.todoList = undefined;} }
+    __getStyle() {
+        let arrStyle = super.__getStyle();
+        arrStyle.push(``);
+        return arrStyle;
+    }
+    __getHtml() {
+        let parentInfo = super.__getHtml();
+        let info = {
+            html: `<av-form>
+	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
+	<button av-press="addTodo" _id="avtodocreation_1">Add</button>
+</av-form>`,
+            slots: {
+            },
+            blocks: {
+                'default':`<av-form>
+	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
+	<button av-press="addTodo" _id="avtodocreation_1">Add</button>
+</av-form>`
+            }
+        }
+        return info;
+    }
+    __getMaxId() {
+        let temp = super.__getMaxId();
+        temp.push(["AvTodoCreation", 2])
+        return temp;
+    }
+    get inputEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodocreation_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    getClassName() {
+        return "AvTodoCreation";
+    }
+    __addEvents(ids = null) { super.__addEvents(ids); 
+                new PressManager({
+                    "element": this._components['avtodocreation_1'],
+                    "onPress": (e) => {
+                        this.addTodo(e, this);
+                     },
+                });
+                 }
+     addTodo(){var _a;let data = new AvTodoData();data.name = this.inputEl.value;(_a = this.todoList) === null || _a === void 0 ? void 0 : _a.addItem(data);}}
+window.customElements.define('av-todo-creation', AvTodoCreation);
+class AvTodo extends WebComponent {
+    __getStyle() {
+        let arrStyle = super.__getStyle();
+        arrStyle.push(`:host{display:flex;flex-direction:column}:host av-todo-list{margin-bottom:30px}`);
+        return arrStyle;
+    }
+    __getHtml() {
+        let parentInfo = super.__getHtml();
+        let info = {
+            html: `<h1>My todo list</h1>
+<av-todo-list _id="avtodo_0"></av-todo-list>
+<av-todo-creation _id="avtodo_1"></av-todo-creation>`,
+            slots: {
+            },
+            blocks: {
+                'default':`<h1>My todo list</h1>
+<av-todo-list _id="avtodo_0"></av-todo-list>
+<av-todo-creation _id="avtodo_1"></av-todo-creation>`
+            }
+        }
+        return info;
+    }
+    __getMaxId() {
+        let temp = super.__getMaxId();
+        temp.push(["AvTodo", 2])
+        return temp;
+    }
+    get listEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodo_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }get creationEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodo_1"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    getClassName() {
+        return "AvTodo";
+    }
+     postCreation(){this.creationEl.todoList = this.listEl;}}
+window.customElements.define('av-todo', AvTodo);
+class AvInput extends AvFormElement {
+    static get observedAttributes() {return ["label"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
+    get 'label'() {
+                        return this.getAttribute('label');
+                    }
+                    set 'label'(val) {
+                        this.setAttribute('label',val);
+                    }    __getStyle() {
+        let arrStyle = super.__getStyle();
+        arrStyle.push(``);
+        return arrStyle;
+    }
+    __getHtml() {
+        let parentInfo = super.__getHtml();
+        let info = {
+            html: `<label for="test" _id="avinput_0"></label>
+<input id="test" _id="avinput_1">`,
+            slots: {
+            },
+            blocks: {
+                'default':`<label for="test" _id="avinput_0"></label>
+<input id="test" _id="avinput_1">`
+            }
+        }
+                let newHtml = parentInfo.html
+                for (let blockName in info.blocks) {
+                    if (!parentInfo.slots.hasOwnProperty(blockName)) {
+                        throw "can't found slot with name " + blockName;
+                    }
+                    newHtml = newHtml.replace(parentInfo.slots[blockName], info.blocks[blockName]);
+                }
+                info.html = newHtml;
+        return info;
+    }
+    __getMaxId() {
+        let temp = super.__getMaxId();
+        temp.push(["AvInput", 2])
+        return temp;
+    }
+    get inputEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avinput_1"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
+									for(var i = 0;i<this._components['avinput_0'].length;i++){
+									this._components['avinput_0'][i].innerHTML = ""+this.label+"".toString();
+								}
+							}}) }
+    getClassName() {
+        return "AvInput";
+    }
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('label')){ this['label'] = ''; } }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
+    __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avinput_1') != -1) {
+                    if (this._components['avinput_1']) {
+                        for (var i = 0; i < this._components['avinput_1'].length; i++) {
+                            this._components['avinput_1'][i].addEventListener('input', (e) => { this.inputChanged(e) })
+                        }
+                    }
+                } }
+     getDefaultValue(){return "";} inputChanged(){this.value = this.inputEl.value;this.onValueChanged();}}
+window.customElements.define('av-input', AvInput);
 class AvComplexTest extends WebComponent {
     static get observedAttributes() {return ["testvariable"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'testvariable'() {

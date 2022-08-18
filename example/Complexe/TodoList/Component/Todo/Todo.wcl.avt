@@ -1,0 +1,38 @@
+import { AvTodoCreation } from "./TodoCreation/TodoCreation.wcl.avt";
+import { AvTodoList } from "./TodoList/TodoList.wcl.avt";
+
+export class AvTodo extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+
+    //#endregion
+
+
+    //#region variables
+    listEl: AvTodoList;
+    creationEl: AvTodoCreation;
+	//#endregion
+
+
+	//#region states
+
+	//#endregion
+
+
+	//#region constructor
+
+	//#endregion
+
+
+	//#region methods
+	protected override postCreation(): void {
+		this.creationEl.todoList = this.listEl;
+	}
+	//#endregion
+
+}

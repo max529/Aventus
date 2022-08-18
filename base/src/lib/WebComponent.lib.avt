@@ -47,11 +47,11 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
         this._isReady = false;
         this.__prepareVariables();
         this.__prepareTranslations();
+        this.__prepareMutablesActions();
+        this.__initMutables();
         this.__prepareTemplate();
         this.__selectElementNeeded();
         this.__registerOnChange();
-        this.__prepareMutablesActions();
-        this.__initMutables();
         this.__createStates();
         this.__prepareForLoop();
         this.__endConstructor();

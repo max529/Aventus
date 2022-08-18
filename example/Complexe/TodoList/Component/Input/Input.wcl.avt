@@ -1,0 +1,40 @@
+export class AvInput extends AvFormElement<string> implements DefaultComponent {
+
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+	@attribute()
+	label:string;
+    //#endregion
+
+
+    //#region variables
+    inputEl: HTMLInputElement;
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    override getDefaultValue(): string {
+        return "";
+    }
+    private inputChanged():void {
+        this.value = this.inputEl.value;
+        this.onValueChanged();
+    }
+	//#endregion
+
+}

@@ -1,0 +1,7 @@
+:host{
+	display: flex;
+	flex-direction: column;
+	av-todo-list{
+		margin-bottom: 30px;
+	}
+}

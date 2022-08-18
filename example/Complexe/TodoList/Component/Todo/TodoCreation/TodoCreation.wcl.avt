@@ -1,0 +1,41 @@
+import { AvTodoData } from "../../../Data/TodoData.data.avt";
+import { AvInput } from "../../Input/Input.wcl.avt";
+import { AvTodoList } from "../TodoList/TodoList.wcl.avt";
+
+export class AvTodoCreation extends WebComponent implements DefaultComponent {
+
+	//#region static
+
+	//#endregion
+
+
+	//#region props
+
+	//#endregion
+
+
+	//#region variables
+	private inputEl:AvInput;
+	public todoList:AvTodoList;
+	//#endregion
+
+
+	//#region states
+
+	//#endregion
+			
+			
+	//#region constructor
+
+	//#endregion
+
+
+	//#region methods
+	addTodo(){
+		let data = new AvTodoData();
+		data.name = this.inputEl.value;
+		this.todoList?.addItem(data);
+	}
+	//#endregion
+	
+}

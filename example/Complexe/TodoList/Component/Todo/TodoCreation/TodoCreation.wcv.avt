@@ -1,0 +1,4 @@
+<av-form>
+	<av-input label="Todo name" av-element="inputEl"></av-input>
+	<button av-press="addTodo">Add</button>
+</av-form>
