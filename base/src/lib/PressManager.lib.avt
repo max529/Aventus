@@ -5,13 +5,11 @@ export interface Pointer {
     id: number;
     constructor(nativePointer: Touch | PointerEvent);
 }
-export interface PressManagerEvent extends MouseEvent {
-    details?: { element: Element, pointerEvent: PointerEvent; };
-}
+
 export interface InternalCustomFunction {
     src?: PressManager,
-    onDrag?: (e: MouseEvent, self: PressManager) => void,
-    onDragEnd?: (e: MouseEvent, self: PressManager) => void,
+    onDrag?: (e: PointerEvent, self: PressManager) => void,
+    onDragEnd?: (e: PointerEvent, self: PressManager) => void,
 }
 export interface InternalPointerEvent extends Event {
     detail: {
@@ -22,12 +20,12 @@ export interface InternalPointerEvent extends Event {
 }
 export interface PressManagerOptions {
     element: Element | Element[],
-    onPress?: (e: PressManagerEvent, self: PressManager) => void,
-    onLongPress?: (e: MouseEvent, self: PressManager) => void,
-    onDblPress?: (e: MouseEvent, self: PressManager) => void,
-    onDrag?: (e: MouseEvent, self: PressManager) => void,
-    onDragStart?: (e: MouseEvent, self: PressManager) => void,
-    onDragEnd?: (e: MouseEvent, self: PressManager) => void,
+    onPress?: (e: PointerEvent, self: PressManager) => void,
+    onLongPress?: (e: PointerEvent, self: PressManager) => void,
+    onDblPress?: (e: PointerEvent, self: PressManager) => void,
+    onDrag?: (e: PointerEvent, self: PressManager) => void,
+    onDragStart?: (e: PointerEvent, self: PressManager) => void,
+    onDragEnd?: (e: PointerEvent, self: PressManager) => void,
     offsetDrag?: number,
     delayDblPress?: number;
     delayLongPress?: number;
@@ -144,6 +142,7 @@ export class PressManager {
         this.element.addEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);
         this.element.addEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);
     }
+
 
     // #region current Event
     private downAction(e: PointerEvent) {
@@ -298,10 +297,10 @@ export class PressManager {
         }));
     }
     destroy() {
-        for(let sub of this.subPressManager){
+        for(let sub of this.subPressManager) {
             sub.destroy();
         }
-        if(this.element){
+        if(this.element) {
             this.element.removeEventListener("pointerdown", this.functionsBinded.downAction);
             this.element.removeEventListener("trigger_pointer_press", this.functionsBinded.childPress);
             this.element.removeEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);

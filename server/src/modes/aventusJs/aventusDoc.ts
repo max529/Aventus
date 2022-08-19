@@ -85,11 +85,11 @@ export class AventusDoc {
 		return AventusType.Unknow;
 	}
 
-	doValidation(config: AventusConfig): Diagnostic[] {
+	doValidation(config: AventusConfig, program:AventusJSProgram): Diagnostic[] {
 		let compileError: Diagnostic[] = [];
 
 		if (this.type == AventusType.Component) {
-			let compiled = compileComponent(this.document, config);
+			let compiled = compileComponent(this.document, config, program);
 			if(compiled.success){
 				this.lastCompiledWebComponent = compiled;
 			}
