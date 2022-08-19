@@ -1,0 +1,17 @@
+<div class="scroll-main-container" dt-element="elToCalculate">
+    <div class="content-zoom" dt-element="contentZoom">
+        <div class="content-hidder" dt-element="contentHidder">
+            <div class="content-wrapper" dt-element="contentWrapper">
+                <slot></slot>
+            </div>
+        </div>
+    </div>
+    <div dt-element="contentscroller">
+        <div class="container-scroller vertical" dt-element="verticalScrollerContainer">
+            <div class="scroller vertical" dt-element="verticalScroller"></div>
+        </div>
+        <div class="container-scroller horizontal" dt-element="horizontalScrollerContainer">
+            <div class="scroller horizontal" dt-element="horizontalScroller"></div>
+        </div>
+    </div>
+</div>
