@@ -1,5 +1,5 @@
 import { MutableAction } from "../data/MutableAction.data.avt";
-import { StateManager, States } from "./StateManager.lib.avt";
+import { State, StateManager, States } from "./StateManager.lib.avt";
 
 
 export interface DebuggerConfig {
@@ -113,12 +113,16 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     private __createStates() {
         this.currentState = "default";
         this.statesList = {
-            "default": {
-                active() { },
-                inactive() { }
-            }
+            "default": this.getDefaultStateCallbacks()
         };
         this.getSlugFct = {};
+    }
+
+    protected getDefaultStateCallbacks(): State {
+        return {
+            active: () => { },
+            inactive: () => { }
+        };
     }
 
     //#region select element

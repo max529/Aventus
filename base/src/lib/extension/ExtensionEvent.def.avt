@@ -9,3 +9,8 @@ declare interface Event {
      */
     realTarget:() => Element;
 }
+
+declare interface TouchEventNormalize extends TouchEvent {
+    pageX: number;
+    pageY: number;
+}
