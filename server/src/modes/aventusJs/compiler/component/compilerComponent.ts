@@ -13,11 +13,12 @@ import { loadFields, transpileMethod, transpileMethodNoRun } from './utils';
 import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { uriToPath } from '../../utils';
+import { AventusJSProgram } from '../../program';
 
 const ts = require("typescript");
 
 
-export function compileComponent(document: TextDocument, config: AventusConfig): CompileComponentResult {
+export function compileComponent(document: TextDocument, config: AventusConfig, program: AventusJSProgram): CompileComponentResult {
 	let specialTag = config.identifier;
 	let specialTagLower = specialTag.toLowerCase();
 	let baliseName = "";
@@ -171,38 +172,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 				...fields
 			}
 
-			let classParentStruct: ClassModel[] = [];
 
-			// TODO check err
-			let testStruct = parseStruct(readFileSync(AVENTUS_DEF_BASE_PATH, 'utf8'), {}, AVENTUS_DEF_BASE_PATH);
-			testStruct.classes.forEach(classInfo => {
-				// Check if classInfo implements DefaultComponent
-				let foundDefaultComponent = false;
-				for (let implement of classInfo.implements) {
-					if (implement.typeName == 'DefaultComponent') {
-						foundDefaultComponent = true;
-						break;
-					}
-				}
 
-				if (foundDefaultComponent) {
-					classParentStruct.push(classInfo);
-				}
-			});
 
 
 			if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent") {
-				for (let classInfo of classParentStruct) {
-					if (classInfo.name === jsonStruct.classes[0].extends[0].typeName) {
-						let fields = loadFields(classInfo, false);
-						toPrepare.allFields = {
-							...toPrepare.allFields,
-							...fields
-						}
-						return;
-					}
-				}
-
+				// search parent inside local import
 				for (let importTemp of jsonStruct._imports) {
 					for (let name of importTemp.clauses) {
 						if (name == jsonStruct.classes[0].extends[0].typeName) {
@@ -210,11 +185,20 @@ export function compileComponent(document: TextDocument, config: AventusConfig):
 							let parentScript = readFileSync(newPath, 'utf8').trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
 							newPath = newPath.replace(/\\/g, "/");
 							let parentStructure = parseStruct(parentScript, {}, newPath);
-							console.log(name)
 							_loadParent(parentStructure, false);
 							return;
 						}
 					}
+				}
+				// search parent inside definition file
+				let classInfoInDef = program.tryGetClassInDef(jsonStruct.classes[0].extends[0].typeName);
+				if (classInfoInDef) {
+					let fields = loadFields(classInfoInDef, false);
+					toPrepare.allFields = {
+						...toPrepare.allFields,
+						...fields
+					}
+					return;
 				}
 				result.diagnostics.push(createErrorTs(document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
 			}

@@ -1,0 +1,152 @@
+import { PressManager } from "./PressManager.lib.avt";
+
+export interface DragAndDropOptions {
+    /** If set to false, the element won't move */
+    applyDrag?: boolean;
+    /** Element to drag and drog */
+    element: Element;
+    /** Element that trigger the drag action; default is element */
+    elementTrigger?: Element;
+    /** Set the default offset for the drag trigger; default is DragAndDrop.defaultOffsetDrag */
+    offsetDrag?: number;
+    /** If set to true, the drag and drop will create a shadow element while dragging and removing it on drop. It will not move the original element anymore */
+    shadow?: boolean;
+    /** If set to false, the element will be considered as in the target if it touches it */
+    strict?: boolean;
+    /** The targets for the drop action */
+    targets?: Element[];
+    /** Use percent instead of pixel */
+    usePercent?: boolean;
+
+    /** Determine if drag is active or not */
+    isDragEnable?: () => boolean;
+    /** Get current zoom */
+    getZoom?: () => number;
+    /** Get offset X */
+    getOffsetX?: () => number;
+    /** Get offset Y */
+    getOffsetY?: () => number;
+    /** Trigger on drag start*/
+    onStart?: (e: PointerEvent) => void;
+    /** Trigger on moving  */
+    onMove?: (e: PointerEvent) => void;
+    /** Trigger after drop */
+    onStop?: (e: PointerEvent) => void;
+}
+
+
+export class DragAndDrop {
+    public static defaultOffsetDrag: number = 20;
+    private options: {
+        applyDrag: boolean,
+        element: Element,
+        elementTrigger: Element,
+        offsetDrag: number,
+        shadow: boolean,
+        strict: boolean,
+        targets: Element[],
+        usePercent: boolean,
+
+        isDragEnable: () => boolean;
+        getZoom: () => number;
+        getOffsetX: () => number;
+        getOffsetY: () => number;
+        onStart: (e: PointerEvent) => void;
+        onMove: (e: PointerEvent) => void;
+        onStop: (e: PointerEvent) => void;
+    };
+    private startPosition: {
+        x: number;
+        y: number;
+    };
+    constructor(options) {
+        this.options = this.getDefaultOptions();
+        this.mergeProperties(options);
+        this.mergeFunctions(options);
+        this.init();
+    }
+    // #region merge params
+    private getDefaultOptions() {
+        return {
+            applyDrag: true,
+            element: null,
+            elementTrigger: null,
+            offsetDrag: DragAndDrop.defaultOffsetDrag,
+            shadow: false,
+            strict: false,
+            targets: [],
+            usePercent: false,
+
+            isDragEnable: () => true,
+            getZoom: () => 1,
+            getOffsetX: () => 0,
+            getOffsetY: () => 0,
+            onStart: (e: PointerEvent) => { },
+            onMove: (e: PointerEvent) => { },
+            onStop: (e: PointerEvent) => { },
+        };
+    }
+    private mergeProperties(options: DragAndDropOptions) {
+        if(options.element === void 0) {
+            throw "You must define the element for the drag&drop";
+        }
+        this.options.element = options.element;
+        if(options.elementTrigger === void 0) {
+            this.options.elementTrigger = this.options.element;
+        }
+        this.defaultMerge(options, "applyDrag");
+        this.defaultMerge(options, "offsetDrag");
+        this.defaultMerge(options, "shadow");
+        this.defaultMerge(options, "strict");
+        this.defaultMerge(options, "targets");
+        this.defaultMerge(options, "usePercent");
+    }
+    private mergeFunctions(options: DragAndDropOptions) {
+        this.defaultMerge(options, "isDragEnable");
+        this.defaultMerge(options, "getZoom");
+        this.defaultMerge(options, "getOffsetX");
+        this.defaultMerge(options, "getOffsetY");
+        this.defaultMerge(options, "onStart");
+        this.defaultMerge(options, "onMove");
+        this.defaultMerge(options, "onStop");
+    }
+    private defaultMerge(options: DragAndDropOptions, name: string) {
+        if(options[name] === void 0) {
+            this.options[name] = options[name];
+        }
+    }
+    // #endregion
+
+    private init() {
+        new PressManager({
+            element: this.options.element,
+            onDragStart: this.onDragStart,
+            onDrag: this.onDrag,
+            onDragEnd: this.onDragEnd,
+            offsetDrag: this.options.offsetDrag
+        });
+    }
+
+    private onDragStart(e: PointerEvent) {
+        this.startPosition = {
+            x: e.pageX,
+            y: e.pageY
+        };
+        
+    }
+    private onDrag(e: PointerEvent) {
+        let zoom = this.options.getZoom();
+        let diff = {
+            x: (e.pageX - this.startPosition.x) / zoom,
+            y: (e.pageY - this.startPosition.y) / zoom
+        };
+    }
+    private onDragEnd(e: PointerEvent) {
+
+    }
+
+    public setTargets(targets: Element[]) {
+        this.options.targets = targets;
+    }
+
+}

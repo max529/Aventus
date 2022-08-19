@@ -1,11 +1,1784 @@
-class StateManager {    constructor() {        this.logLevel = 0; // 0 = error only / 1 = errors and warning / 2 = error, warning and logs (not implemented)        this._activeState = undefined;        this._activeParams = undefined;        this._activeSlug = undefined;        this._callbackList = {};        this._subscribersMutliple = {};        this._subscribers = {};        this._isNumberRegex = /^-?\d+$/;        this._callbackFunctions = {};    }    static getInstance(name) {        if (!name) {            name = "";        }        if (!this.__instances.hasOwnProperty(name)) {            this.__instances[name] = new StateManager();        }        return this.__instances[name];    }    subscribe(state, callbacks) {        if (!callbacks.hasOwnProperty("active") && !callbacks.hasOwnProperty("inactive") && callbacks.hasOwnProperty("askChange")) {            this._log(`Trying to subscribe to state : ${state} with no callbacks !`, "warning");            return;        }        if (!Array.isArray(state)) {            state = [state];        }        for (let i = 0; i < state.length; i++) {            let _state = state[i];            let res = this._prepareStateString(_state);            _state = res["state"];            // We have test that the state is present in the state list            if (!this._subscribers.hasOwnProperty(_state)) {                // The route doesn't exist, so we create the default architecture                let regex = new RegExp(_state);                let isActive = this._activeState !== undefined && regex.test(this._activeState);                this._subscribers[_state] = {                    "regex": regex,                    "callbacks": {                        "active": [],                        "inactive": [],                        "askChange": [],                    },                    "isActive": isActive,                    "testRegex": (string) => {                        if (!string) {                            string = this.getActiveState();                        }                        return this._subscribers[_state].regex.test(string);                    }                };            }            // Now, we're sure the route exist so we can add the callbacks            if (callbacks.hasOwnProperty("active")) {                this._subscribers[_state].callbacks.active.push(callbacks.active);                if (this._subscribers[_state].isActive) {                    callbacks.active(this._activeState);                }            }            if (callbacks.hasOwnProperty("inactive")) {                this._subscribers[_state].callbacks.inactive.push(callbacks.inactive);            }            if (callbacks.hasOwnProperty("askChange")) {                this._subscribers[_state].callbacks.askChange.push(callbacks.askChange);            }        }    }    /**     *     * @param {string|Array} state - The state(s) to unsubscribe from     * @param {Object} callbacks     * @param {activeCallback} [callbacks.active]     * @param {incativeCallback} [callbacks.inactive]     * @param {askChangeCallback} [callbacks.askChange]     */    unsubscribe(state, callbacks) {        if (!Array.isArray(state)) {            state = [state];        }        for (let i = 0; i < state.length; i++) {            let _state = state[i];            let res = this._prepareStateString(_state);            _state = res["state"];            // We can unsubscribe            if (this._subscribers.hasOwnProperty(_state)) {                // There is an object for this route                let modifications = false;                if (callbacks.hasOwnProperty("active")) {                    let index = this._subscribers[_state].callbacks.active.indexOf(callbacks["active"]);                    if (index !== -1) {                        this._subscribers[_state].callbacks.active.splice(index, 1);                        modifications = true;                    }                }                if (callbacks.hasOwnProperty("inactive")) {                    let index = this._subscribers[_state].callbacks.inactive.indexOf(callbacks["inactive"]);                    if (index !== -1) {                        this._subscribers[_state].callbacks.inactive.splice(index, 1);                        modifications = true;                    }                }                if (callbacks.hasOwnProperty("askChange")) {                    let index = this._subscribers[_state].callbacks.askChange.indexOf(callbacks["askChange"]);                    if (index !== -1) {                        this._subscribers[_state].callbacks.askChange.splice(index, 1);                        modifications = true;                    }                }                if (modifications &&                    this._subscribers[_state].callbacks.active.length === 0 &&                    this._subscribers[_state].callbacks.inactive.length === 0 &&                    this._subscribers[_state].callbacks.askChange.length === 0) {                    // There is no more callbacks linked to this route, we need to remove it                    delete this._subscribers[_state];                }            }            return;        }    }    /**     * Format a state and return if you need to bypass the test or not     * @param {string} string - The state to format     * @returns {Object} - The state, the formated state and if it's a regex state or not     */    _prepareStateString(string) {        let _state = string;        let stateToTest = _state; //Here we keep the state before escaping it to test it with the states list we have and maybe throw an error        let bypassTest = false;        if (_state.startsWith("^") && _state.endsWith("$")) {            // We're with a regex subscribe            bypassTest = true;        }        else {            // We're with a regular subscribe            if (_state.endsWith("/*")) {                // We need to replace the star with a regex that matches all numbers                _state = "^" + this._escapeRegExp(_state).replace("\*", "-?\\d+$"); // We replace the escaped star with the regex that matches all number            }            else {                let splittedState = _state.split("/");                let slug = splittedState.pop();                if (this._isNumberRegex.test(slug)) {                    stateToTest = splittedState.join("/") + "/*";                }                // We can escape the whole string                _state = "^" + this._escapeRegExp(_state) + "$";            }        }        return { "state": _state, "stateToTest": stateToTest, "bypassTest": bypassTest };    }    /**     * Escape a string to be regex-compatible ()     * @param {string} string The string to escape     * @returns An escaped string     */    _escapeRegExp(string) {        return string.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); // $& means the whole matched string    }    /**     * Get the slug from a state string     * @param {string} state The state to extract the slug from     * @returns {string|undefined} The slug of the state or undefined if the state don't have one     */    _getSlugFromState(state) {        let slug = state.split("/").pop();        if (this._isNumberRegex.test(slug)) {            return parseInt(slug);        }        else {            return undefined;        }    }    /**     * Save the current info (state/params) in cache     */    _saveDataInCache() {        if (!this._activeParams || Object.keys(this._activeParams).length == 0) {            if (localStorage["disableStorage"] == null) {                localStorage["state"] = this._activeState;            }        }    }    /**     * Add a callback to a key     * @param {string} key - The key to trigger to trigger the function     * @param {function} callback - The function to trigger     */    addFunction(key, callback) {        if (!this._callbackFunctions.hasOwnProperty(key)) {            this._callbackFunctions[key] = [];        }        this._callbackFunctions[key].push(callback);    }    /**     * Remove a function from a key     * @param {string} key - The key to remove the function from     * @param {function} callback - The function to remove     */    removeFunction(key, callback) {        if (this._callbackFunctions.hasOwnProperty(key)) {            const index = this._callbackFunctions[key].indexOf(callback);            if (index !== -1) {                this._callbackFunctions[key].splice(index, 1);                if (this._callbackFunctions[key].length === 0) {                    delete this._callbackFunctions[key];                }            }            else {                console.warn("Couldn't find callback in list " + key);            }        }        else {            console.warn("Couldn't find " + key + " in callback array");        }    }    /**     * Trigger all the functions added under a key     * @param {string} key - The key to trigger     * @param {*} [params] - The params to pass to the functions (optional)     */    triggerFunction(key, params = {}) {        if (this._callbackFunctions.hasOwnProperty(key)) {            const copy = [...this._callbackFunctions[key]];            copy.forEach(callback => {                callback(params);            });        }        else {            console.warn("Trying to trigger non existent key : " + key);        }    }    /**     * Remove all the function added under all keys     */    clearFunctions() {        this._callbackFunctions = {};    }    /**     * Set the current active state     * @param {string} state - The state to set to active     * @param {number} slug - The slug of the active state (Only work if the state ends with "*")     * @param {Object} params - The params of the active state     */    setActiveState(state, params = {}) {        //We format the state in order to check if it's present in the state list        if (this._activeState !== undefined && state === this._activeState) {            this._log("Trying to set a state that was already active. state : " + state + " activeState : " + this._activeState, "warning");            return;        }        let canChange = true;        if (this._activeState) {            // We need to ask before change and trigger inactive callbacks            let activeToInactive = [];            let inactiveToActive = [];            let triggerActive = [];            // We loop through all the subscribers of the state manager            for (let key in this._subscribers) {                let current = this._subscribers[key];                // If the subscriber is already active                if (current.isActive) {                    // And the subscriber does not match on the next state                    if (!current.regex.test(state)) {                        // We need to pass it from active to inactive -> trigger the askChange callback before                        // We clone all the callbacks                        let clone = [...current.callbacks["askChange"]];                        for (let i = 0; i < clone.length; i++) {                            let callback = clone[i];                            // If the askChange callback returns false, we can't change, but we continue to call all the others askChange callbacks                            if (!callback(this._activeState, state)) {                                canChange = false;                            }                        }                        // We push the current subscriber to the list to trigger                        activeToInactive.push(current);                    }                    else {                        // If it's already active and it will match on the next state. We want to trigger the activeCallback                        triggerActive.push(current);                    }                }                else {                    // If the state is not active and it will match on the next state, we want to trigger the activeCallback                    if (current.regex.test(state)) {                        // We need to pass it from inactive to active                        inactiveToActive.push(current);                    }                }            }            if (canChange) {                // We can change -> reset active params / slug, then triggers all inactive callbacks and then triggers all active callbacks                const oldState = this._activeState;                this._activeState = state;                this._activeSlug = this._getSlugFromState(state);                this._activeParams = params;                activeToInactive.forEach(route => {                    // We pass the subscriber to inactive                    route.isActive = false;                    // We clone all the callbacks in order to avoid the callback to modify the array                    [...route.callbacks.inactive].forEach(callback => {                        callback(oldState, state);                    });                });                // We clear the function list                this.clearFunctions();                // Now we trigger all the subscriber that were already active -> so no need to modify active property                triggerActive.forEach(route => {                    // We clone the callbacks in order to avoid the callback to modify the array                    [...route.callbacks.active].forEach(callback => {                        callback(state);                    });                });                // We trigger all the inactive to active callbacks                inactiveToActive.forEach(route => {                    // we set the subscriber to active                    route.isActive = true;                    // We clone the callbacks in order to avoid the callback to modify the array                    [...route.callbacks.active].forEach(callback => {                        callback(state);                    });                });            }        }        else {            // If there was no active state before, we can change -> reset active params / slug, then triggers all active callbacks            this._activeState = state;            this._activeSlug = this._getSlugFromState(state);            this._activeParams = params;            this.clearFunctions();            for (let key in this._subscribers) {                // If the subscriber match on the next state, we want to trigger the activeCallback                if (this._subscribers[key].regex.test(state)) {                    // As we have no old state, we can pass all the matches to active without further tests                    this._subscribers[key].isActive = true;                    [...this._subscribers[key].callbacks.active].forEach(callback => {                        callback(state);                    });                }            }        }        // We save the new state in cache        this._saveDataInCache();        return;    }    /**     * Get the active state     * @returns {string} - The active state     */    getActiveState() {        return this._activeState;    }    /**     * Get the active params     * @returns {Object} - The active params     */    getActiveParams() {        return this._activeParams;    }    /**     * Get the active slug     * @returns {int} - The active slug     */    getActiveSlug() {        return this._activeSlug;    }    /**     * Check if a state is in the subscribers and active, return true if it is, false otherwise     * @param {string} state - The state to test     * @returns {boolean} - True if the state is in the subscription list and active, false otherwise     */    isStateActive(state) {        state = this._prepareStateString(state).state;        if (this._subscribers[state] && this._subscribers[state].isActive) {            return true;        }        return false;    }    _log(logMessage, type) {        if (type === "error") {            console.error(logMessage);        }        else if (type === "warning" && this.logLevel > 0) {            console.warn(logMessage);        }        else if (type === "info" && this.logLevel > 1) {            console.log(logMessage);        }    }}StateManager.__instances = {};
-class SocketRAMManager {    constructor() {        this.types = {};        this.options = {};        this.records = {};        this.socketActions = {            get: "get",            getAll: "get/all",            create: "create",            created: "created",            update: "update",            updated: "updated",            delete: "delete",            deleted: "deleted"        };        this.gotAllRecords = false;        this.subscribers = {};        this.subscribers[this.socketActions.created] = [];        this.subscribers[this.socketActions.updated] = [];        this.subscribers[this.socketActions.deleted] = [];        this.socketRoutes = {};        for (const [key, name] of Object.entries(this.socketActions)) {            this.socketRoutes[key] = {                request: `${this.getObjectName()}/${name}`,                multiple: `${this.getObjectName()}/${name}/multiple`,                success: `${this.getObjectName()}/${name}/success`,                error: `${this.getObjectName()}/${name}/error`            };        }        Socket.getInstance(this._getSocketName()).addRoute({            channel: this.getObjectName() + "/" + this.socketActions.created,            callback: response => {                if (response.data) {                    for (let key in response.data) {                        this.addDataToRecords(response.data[key]);                        this.publish(this.socketActions.created, this.records[response.data[key][this.getPrimaryKey()]]);                    }                }            }        });        Socket.getInstance(this._getSocketName()).addRoute({            channel: this.getObjectName() + "/" + this.socketActions.updated,            callback: response => {                if (response.data) {                    for (let key in response.data) {                        const newData = response.data[key];                        const primaryKey = newData[this.getPrimaryKey()];                        if (this.records[primaryKey]) {                            const record = this.records[primaryKey];                            this.updateInstanceData(record, newData);                            this.addMemoryRecord(record);                            record._publish(this.socketActions.updated, record);                            this.publish(this.socketActions.updated, record);                        }                    }                }            }        });        Socket.getInstance(this._getSocketName()).addRoute({            channel: this.getObjectName() + "/" + this.socketActions.deleted,            callback: response => {                if (response.data) {                    for (let key in response.data) {                        const data = response.data[key];                        const primaryKey = data[this.getPrimaryKey()];                        if (this.records.hasOwnProperty(primaryKey)) {                            const record = this.records[primaryKey];                            this.deleteMemoryRecord(primaryKey);                            record._publish(this.socketActions.deleted, record);                            this.publish(this.socketActions.deleted, record);                        }                    }                }            }        });    }    getPrimaryKey() {        return "id";    }    _getSocketName() {        return undefined;    }    addErrorListener(callback) {        this.registeredErrorsCallbacks.push(callback);    }    triggerError(...args) {        this.registeredErrorsCallbacks.forEach(callback => {            callback(...args);        });    }    getAll() {        return new Promise((resolve, reject) => {            if (this.gotAllRecords) {                let toReturn = [];                for (let key in this.records) {                    toReturn.push(this.records[key]);                }                resolve(toReturn);            }            else {                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.getAll.request, {}, {                    [this.socketRoutes.getAll.success]: response => {                        if (response.data) {                            this.gotAllRecords = true;                            resolve(this.addDataToRecords(Object.values(response.data)));                        }                    }                });            }        });    }    get(id, forceRefresh = false) {        return new Promise((resolve, reject) => {            if (this.records[id] && !forceRefresh) {                resolve(this.records[id]);            }            else {                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.request, {                    [this.getPrimaryKey()]: id                }, {                    [this.socketRoutes.get.success]: response => {                        if (response.data) {                            if (forceRefresh) {                                delete this.records[id];                            }                            this.addDataToRecords(response.data, resolve);                        }                    },                    [this.socketRoutes.get.error]: response => {                        this.printErrors(response, "delete");                        reject(response);                    }                });            }        });    }    getMultiple(ids) {        return new Promise((resolve, reject) => {            let datas = [];            let missingIds = [];            for (let i = 0; i < ids.length; i++) {                let id = ids[i];                if (this.records[id]) {                    datas.push(this.records[id]);                }                else {                    missingIds.push(id);                }            }            if (missingIds.length > 0) {                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.multiple, {                    [this.getPrimaryKey()]: ids                }, {                    [this.socketRoutes.get.success]: response => {                        if (response.data) {                            this.addDataToRecords(response.data, (record) => {                                datas.push(record);                                resolve(record);                            }, (data) => {                                datas.push(data);                            });                        }                    },                    [this.socketRoutes.get.error]: response => {                        this.printErrors(response, "delete");                        reject(response);                    }                });            }            else {                resolve(datas);            }        });    }    create(data, cbError) {        const multiple = this.isDataContainsMultipleRecords(data);        let dataToSend = this.manageMultipleRecords(data);        if (cbError == null) {            cbError = (response) => { this.printErrors(response, "creation"); };        }        return new Promise((resolve, reject) => {            this.convertDefinitionToData(dataToSend);            let routeName = multiple ? this.socketRoutes.create.multiple : this.socketRoutes.create.request;            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {                [this.socketRoutes.create.success]: response => {                    response = this.formatResponse(response, this.socketActions.create);                    this.addDataToRecords(response, (record) => {                        console.warn("The object return by the created success was already in records. Record data : ", record);                    }, (data) => {                        this.publish(this.socketActions.created, data);                    });                    resolve(multiple ? response : response[0]);                },                [this.socketRoutes.create.error]: response => {                    cbError(response);                    reject(response);                }            });        });    }    update(data, cbError) {        const multiple = this.isDataContainsMultipleRecords(data);        let dataToSend = this.manageMultipleRecords(data);        if (cbError == null) {            cbError = (response) => { this.printErrors(response, "save"); };        }        return new Promise((resolve, reject) => {            this.convertDefinitionToData(dataToSend);            let routeName = multiple ? this.socketRoutes.update.multiple : this.socketRoutes.update.request;            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {                [this.socketRoutes.update.success]: response => {                    response = this.formatResponse(response, this.socketActions.update);                    if (multiple) {                        data = dataToSend.list;                    }                    response.forEach((newData) => {                        const index = newData[this.getPrimaryKey()];                        if (!this.records[index]) {                            this.addDataToRecords(response);                        }                        this.updateInstanceData(this.records[index], newData);                        this.addMemoryRecord(this.records[index]);                        this.records[index]._publish(this.socketActions.updated, this.records[index]);                    });                    resolve(multiple ? data : data[0]);                },                [this.socketRoutes.update.error]: response => {                    cbError(response);                    reject(response);                }            });        });    }    delete(data, cbError) {        const multiple = this.isDataContainsMultipleRecords(data);        let dataToSend = this.manageMultipleRecords(data);        if (cbError == null) {            cbError = (response) => { this.printErrors(response, "delete"); };        }        return new Promise((resolve, reject) => {            this.convertDefinitionToData(dataToSend);            let routeName = multiple ? this.socketRoutes.delete.multiple : this.socketRoutes.delete.request;            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {                [this.socketRoutes.delete.success]: response => {                    response = this.formatResponse(response, this.socketActions.delete);                    if (multiple) {                        data = dataToSend.list;                    }                    response.forEach((object, index) => {                        this.records[object[this.getPrimaryKey()]]._publish(this.socketActions.deleted, this.records[object[this.getPrimaryKey()]]);                        this.deleteMemoryRecord(object[this.getPrimaryKey()]);                    });                    resolve(multiple ? data : data[0]);                },                [this.socketRoutes.delete.error]: response => {                    cbError(response);                    reject(response);                }            });        });    }    subscribeMultiple(callback, types = [this.socketActions.created, this.socketActions.updated, this.socketActions.deleted]) {        types.forEach(type => {            this.addSubscriber(type, callback);        });    }    unsubscribeMultiple(callback, types = [this.socketActions.created, this.socketActions.updated, this.socketActions.deleted]) {        types.forEach(type => {            this.removeSubscriber(type, callback);        });    }    subscribe(callback) {        this.addSubscriber(this.socketActions.created, callback);    }    unsubscribe(callback) {        this.removeSubscriber(this.socketActions.created, callback);    }    onUpdated(callback) {        this.addSubscriber(this.socketActions.updated, callback);    }    offUpdated(callback) {        this.removeSubscriber(this.socketActions.updated, callback);    }    onDeleted(callback) {        this.addSubscriber(this.socketActions.deleted, callback);    }    offDelete(callback) {        this.removeSubscriber(this.socketActions.deleted, callback);    }    addSubscriber(type, callback) {        const index = this.subscribers[type].indexOf(callback);        if (index === -1) {            this.subscribers[type].push(callback);        }        else {            console.warn(`[${this.getObjectName()} Manager] Trying to subscribe to ${type} but callback was already present`);        }    }    removeSubscriber(type, callback) {        const index = this.subscribers[type].indexOf(callback);        if (index !== -1) {            this.subscribers[type].splice(index, 1);        }    }    printErrors(data, action) {        this.triggerError(data, action);    }    publish(type, data) {        [...this.subscribers[type]].forEach(callback => callback(data));    }    addDatabaseOperationsToRecord(data) {        this.updateObjectProperties(data);        const instance = Object.assign(Object.assign({}, data), { _subscribers: {                updated: [],                deleted: []            }, _publish: (type, data) => {                [...instance._subscribers[type]].forEach(callback => callback(data));                this.publish(type, data);            }, update: (newData) => {                return new Promise((resolve, reject) => {                    const formattedData = Object.assign(Object.assign({}, instance), newData);                    this.convertDefinitionToData(formattedData);                    Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.update.request, formattedData, {                        [this.socketRoutes.update.success]: response => {                            response = this.formatResponse(response, this.socketActions.update);                            this.updateInstanceData(instance, response[0]);                            this.addMemoryRecord(instance);                            instance._publish(this.socketActions.updated, instance);                            resolve(instance);                        },                        [this.socketRoutes.update.error]: response => {                            this.printErrors(response, "update");                            reject(response);                        }                    });                });            }, onUpdate: (callback) => {                if (!callback) {                    console.error("[Object Manager] onUpdate callback is undefined");                    return;                }                instance._subscribers.updated.push(callback);            }, offUpdate: (callback) => {                let index = instance._subscribers.updated.indexOf(callback);                if (index !== -1) {                    instance._subscribers.updated.splice(index, 1);                }            }, delete: () => {                return new Promise((resolve, reject) => {                    this.convertDefinitionToData(instance);                    Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.delete.request, instance, {                        [this.socketRoutes.delete.success]: response => {                            response = this.formatResponse(response, this.socketActions.delete);                            this.deleteMemoryRecord(response[0][this.getPrimaryKey()]);                            instance._publish(this.socketActions.deleted, instance);                            resolve(instance);                        },                        [this.socketRoutes.delete.error]: response => {                            this.printErrors(response, "delete");                            reject(response);                        }                    });                });            }, onDelete: (callback) => {                instance._subscribers.deleted.push(callback);            }, offDelete: (callback) => {                let index = instance._subscribers.deleted.indexOf(callback);                if (index !== -1) {                    instance._subscribers.deleted.splice(index, 1);                }            } });        this.addMemoryRecord(instance);        return instance;    }    formatResponse(response, action) {        if (action === this.socketActions.create) {            response = Object.values(response.created);        }        else if (action === this.socketActions.update) {            response = Object.values(response.updated);        }        else if (action === this.socketActions.delete) {            response = Object.values(response.deleted);        }        return response;    }    addDataToRecords(data, ifExistFct, ifNotExistFct) {        if (!Array.isArray(data)) {            data = [data];        }        if (!ifNotExistFct) {            ifNotExistFct = ifExistFct;        }        let toReturn = [];        data.forEach(record => {            if (!this.records[record[this.getPrimaryKey()]]) {                let instance = this.addDatabaseOperationsToRecord(record);                this.records[record[this.getPrimaryKey()]] = instance;                toReturn.push(instance);                ifNotExistFct(instance);            }            else {                toReturn.push(this.records[record[this.getPrimaryKey()]]);                ifExistFct(this.records[record[this.getPrimaryKey()]]);            }        });        return toReturn;    }    addMemoryRecord(record) {        const primaryKey = record[this.getPrimaryKey()];        this.convertDataToDefinition(record);        this.records[primaryKey] = record;    }    deleteMemoryRecord(recordId) {        delete this.records[recordId];    }    convertDataToDefinition(data) {        const realData = Object.assign({}, data);        if (!this.options.definition) {            return;        }        for (const [key, value] of Object.entries(this.options.definition)) {            data[value] = realData[key];            delete data[key];        }    }    convertDefinitionToData(data) {        const _convertDefinition = data => {            const definition = Object.assign({}, data);            if (!this.options.definition) {                return;            }            for (const [key, value] of Object.entries(this.options.definition)) {                if (definition[value]) {                    data[key] = definition[value];                }                else {                    delete data[key];                }                delete data[value];            }            delete data.update;            delete data.onUpdate;            delete data.offUpdate;            delete data.delete;            delete data.onDelete;            delete data.offDelete;        };        if (data.list) {            data.list.forEach(object => _convertDefinition(object));        }        else {            _convertDefinition(data);        }    }    updateObjectProperties(data) {        Object.keys(data).forEach(key => {            if (!this.objectProperties.includes(key)) {                this.objectProperties.push(key);            }        });    }    updateInstanceData(currentInstance, newData) {        this.updateObjectProperties(newData);        for (const [key, value] of Object.entries(newData)) {            currentInstance[key] = value;        }        this.objectProperties.forEach(key => {            if (currentInstance[key] !== undefined && newData[key] === undefined) {                delete currentInstance[key];            }        });    }    manageMultipleRecords(data) {        let toReturn;        if (this.isDataContainsMultipleRecords(data)) {            toReturn = { list: data };        }        return toReturn;    }    isDataContainsMultipleRecords(data) {        return Array.isArray(data);    }}
-class Socket {    constructor() {        this.waitingList = {};        this.multipltWaitingList = {};        this.memoryBeforeOpen = [];        this.nbClose = 0;    }    init(options = {}) {        if (!options.port) {            options.port = parseInt(window.location.port);        }        if (!options.ip) {            options.ip = window.location.hostname;        }        if (!options.hasOwnProperty('useHttps')) {            options.useHttps = window.location.protocol == "https:";        }        if (!options.routes) {            options.routes = {};        }        if (!options.socketName) {            options.socketName = "";        }        this.options = options;    }    static getInstance(name) {        if (!name) {            name = "";        }        if (!this.__instances.hasOwnProperty(name)) {            this.__instances[name] = new Socket();            this.__instances[name].init({ log: true });        }        return this.__instances[name];    }    addRoute(newRoute) {        if (!this.options.routes.hasOwnProperty(newRoute.channel)) {            this.options.routes[newRoute.channel] = [];        }        this.options.routes[newRoute.channel].push(newRoute);    }    /**     * The route to remove     * @param route - The route to remove     */    removeRoute(route) {        let index = this.options.routes[route.channel].indexOf(route);        if (index != -1) {            this.options.routes[route.channel].splice(index, 1);        }    }    open(done = () => { }, error = () => { }) {        if (this.socket) {            this.socket.close();        }        let protocol = "ws";        if (this.options.useHttps) {            protocol = "wss";        }        let url = protocol + "://" + this.options.ip + ":" + this.options.port + "/ws/" + this.options.socketName;        this.log(url);        this.socket = new WebSocket(url);        this.timeoutError = setTimeout(() => {            if (this.socket &&                this.socket.readyState != 1) {                delete this.socket;                this.socket = null;                console.error('Timeout on socket open');                error();            }        }, 3000);        this.socket.onopen = this.onOpen.bind(this);        this.socket.onclose = this.onClose.bind(this);        this.socket.onerror = this.onError.bind(this);        this.socket.onmessage = this.onMessage.bind(this);        this.onDone = done;    }    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param options the options to add to the message (typically the uid)     */    sendMessage(channelName, data = null, options = {}) {        if (this.socket && this.socket.readyState == 1) {            let message = {                channel: channelName,            };            for (let key in options) {                message[key] = options[key];            }            if (data) {                message.data = data;                this.log(message);                message.data = JSON.stringify(data);            }            else {                this.log(message);            }            this.socket.send(JSON.stringify(message));        }        else {            this.log('Socket not ready ! Please ensure that it is open and ready to send message');            this.memoryBeforeOpen.push({                channelName: channelName,                data: data,                options: options            });        }    }    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWait(channelName, data, callbacks) {        let uid = '_' + Math.random().toString(36).substr(2, 9);        this.waitingList[uid] = callbacks;        this.sendMessage(channelName, data, {            uid: uid        });    }    ;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWaitMultiple(channelName, data, callbacks) {        let uid = '_' + Math.random().toString(36).substr(2, 9);        this.multipltWaitingList[uid] = callbacks;        this.sendMessage(channelName, data, {            uid: uid        });    }    isReady() {        if (this.socket && this.socket.readyState == 1) {            return true;        }        return false;    }    onOpen() {        if (this.socket && this.socket.readyState == 1) {            this.log('Connection successfully established !' + this.options.ip + ":" + this.options.port);            window.clearTimeout(this.timeoutError);            this.onDone();            if (this.options.hasOwnProperty("onOpen")) {                this.options.onOpen();            }            for (let i = 0; i < this.memoryBeforeOpen.length; i++) {                this.sendMessage(this.memoryBeforeOpen[i].channelName, this.memoryBeforeOpen[i].data, this.memoryBeforeOpen[i].options);            }            this.memoryBeforeOpen = [];        }        else {            console.error("open with error " + this.options.ip + ":" + this.options.port + "(" + (this.socket ? this.socket.readyState : "unknown") + ")");            setTimeout(() => this.open(), 2000);        }    }    onError(event) {        this.log('An error has occured');        if (this.options.hasOwnProperty("onError")) {            this.options.onError();        }    }    onClose(event) {        this.log('Closing connection');        if (this.options.hasOwnProperty("onClose")) {            this.options.onClose();        }        else {            if (window.location.pathname == '/') {                this.nbClose++;                if (this.nbClose == 2) {                    window.location.href = '/login/logout';                }                else {                    console.warn("try reopen socket ");                    let reopenInterval = setTimeout(() => {                        this.open(() => {                            clearInterval(reopenInterval);                        }, () => { });                    }, 5000);                }            }            else {                console.warn("try reopen socket ");                let reopenInterval = setTimeout(() => {                    this.open(() => {                        clearInterval(reopenInterval);                    }, () => { });                }, 5000);            }        }    }    onMessage(event) {        let response = JSON.parse(event.data);        this.log(response);        response.data = JSON.parse(response.data);        if (this.options.routes.hasOwnProperty(response.channel)) {            this.options.routes[response.channel].forEach(element => {                element.callback(response.data);            });        }        if (response.uid) {            if (this.waitingList.hasOwnProperty(response.uid)) {                let group = this.waitingList[response.uid];                if (group.hasOwnProperty(response.channel)) {                    group[response.channel](response.data);                }                delete this.waitingList[response.uid];            }            else if (this.multipltWaitingList.hasOwnProperty(response.uid)) {                let group = this.multipltWaitingList[response.uid];                if (group.hasOwnProperty(response.channel)) {                    try {                        if (!group[response.channel](response.data)) {                            delete this.multipltWaitingList[response.uid];                        }                    }                    catch (e) {                        console.error(e);                        delete this.multipltWaitingList[response.uid];                    }                }            }        }    }    log(message) {        if (this.options.log) {            const now = new Date();            const hours = (now.getHours()).toLocaleString(undefined, { minimumIntegerDigits: 2 });            const minutes = (now.getMinutes()).toLocaleString(undefined, { minimumIntegerDigits: 2 });            const seconds = (now.getSeconds()).toLocaleString(undefined, { minimumIntegerDigits: 2 });            console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, JSON.parse(JSON.stringify(message)));        }    }}Socket.__instances = {};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }    return new (P || (P = Promise))(function (resolve, reject) {        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }        step((generator = generator.apply(thisArg, _arguments || [])).next());    });};class ResourceLoader {    static load(options, preventCache = false) {        let resourceData = localStorage.getItem("resource:" + options.url);        if (resourceData) {            options.success(resourceData);        }        else {            if (!this.waitingResources.hasOwnProperty(options.url)) {                this.waitingResources[options.url] = [options.success];                fetch(options.url)                    .then((response) => __awaiter(this, void 0, void 0, function* () {                    let html = yield response.text();                    if (preventCache) {                        localStorage.setItem("resource:" + options.url, html);                    }                    for (let i = 0; i < this.waitingResources[options.url].length; i++) {                        this.waitingResources[options.url][i](html);                    }                    delete this.waitingResources[options.url];                }));            }            else {                this.waitingResources[options.url].push(options.success);            }        }    }}ResourceLoader.waitingResources = {};
-class AvResizeObserver {    constructor(options) {        let realOption;        if (options instanceof Function) {            realOption = {                callback: options,            };        }        else {            realOption = options;        }        this.callback = realOption.callback;        this.targets = [];        if (!realOption.fps) {            realOption.fps = 60;        }        if (realOption.fps != -1) {            this.fpsInterval = 1000 / realOption.fps;        }        this.nextFrame = 0;        this.entriesChangedEvent = {};        this.willTrigger = false;    }    static getUniqueInstance() {        if (!AvResizeObserver.uniqueInstance) {            AvResizeObserver.uniqueInstance = new ResizeObserver(entries => {                let allClasses = [];                for (let j = 0; j < entries.length; j++) {                    let entry = entries[j];                    let index = entry.target['sourceIndex'];                    if (AvResizeObserver.resizeObserverClassByObject[index]) {                        for (let i = 0; i < AvResizeObserver.resizeObserverClassByObject[index].length; i++) {                            let classTemp = AvResizeObserver.resizeObserverClassByObject[index][i];                            classTemp.entryChanged(entry);                            if (allClasses.indexOf(classTemp) == -1) {                                allClasses.push(classTemp);                            }                        }                    }                }                for (let i = 0; i < allClasses.length; i++) {                    allClasses[i].triggerCb();                }            });        }        return AvResizeObserver.uniqueInstance;    }    observe(target) {        if (!target["sourceIndex"]) {            target["sourceIndex"] = Math.random().toString(36);            this.targets.push(target);            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]] = [];            AvResizeObserver.getUniqueInstance().observe(target);        }        if (AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].indexOf(this) == -1) {            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].push(this);        }    }    unobserve(target) {        for (let i = 0; this.targets.length; i++) {            let tempTarget = this.targets[i];            if (tempTarget == target) {                let position = AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].indexOf(this);                if (position != -1) {                    AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].splice(position, 1);                }                if (AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].length == 0) {                    delete AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']];                }                AvResizeObserver.getUniqueInstance().unobserve(target);                this.targets.splice(i, 1);                return;            }        }    }    disconnect() {        for (let i = 0; this.targets.length; i++) {            this.unobserve(this.targets[i]);        }    }    entryChanged(entry) {        let index = entry.target.sourceIndex;        this.entriesChangedEvent[index] = entry;    }    triggerCb() {        if (!this.willTrigger) {            this.willTrigger = true;            this._triggerCb();        }    }    _triggerCb() {        let now = window.performance.now();        let elapsed = now - this.nextFrame;        if (this.fpsInterval != -1 && elapsed <= this.fpsInterval) {            requestAnimationFrame(() => {                this._triggerCb();            });            return;        }        this.nextFrame = now - (elapsed % this.fpsInterval);        let changed = Object.values(this.entriesChangedEvent);        this.entriesChangedEvent = {};        this.willTrigger = false;        setTimeout(() => {            this.callback(changed);        }, 0);    }}AvResizeObserver.resizeObserverClassByObject = {};
-class RAMManager {    constructor() {        if (this.constructor == RAMManager) {            throw "can't instanciate an abstract class";        }        this.records = {};    }    static _getInstance() {        if (!this.allRams.hasOwnProperty(this.name)) {            let temp = { class: this };            this.allRams[this.name] = new temp["class"]();        }        return this.allRams[this.name];    }    getId(item) {        if (item[this.getPrimaryKey()] !== undefined) {            return item[this.getPrimaryKey()] + "";        }        console.error("can't found key " + this.getPrimaryKey() + " inside ", item);        return undefined;    }    //#region add    addList(list) {        this.beforeAddList(list);        for (let item of list) {            this.add(item);        }        this.afterAddList(list);    }    add(item) {        let key = this.getId(item);        if (key) {            this.beforeAddItem(item);            this.records[key] = item;            this.afterAddItem(item);        }    }    beforeAddList(list) { }    beforeAddItem(item) { }    afterAddItem(item) { }    afterAddList(list) { }    //#endregion    //#region update    updateList(list) {        this.beforeUpdateList(list);        for (let item of list) {            this.update(item);        }        this.afterAddList(list);    }    update(item) {        let key = this.getId(item);        if (key) {            if (this.records[key]) {                this.beforeUpdateItem(item);                // TODO do this to found update field for Proxy element, but must find a better way to do that                // this.records[key] = {                //     ...this.records[key],                //     ...item                // };                this.records[key] = item;                this.afterUpdateItem(item);            }            else {                console.error("can't update the item " + key + " because it wasn't found inside ram");            }        }    }    beforeUpdateList(list) { }    beforeUpdateItem(item) { }    afterUpdateItem(item) { }    afterUpdateList(list) { }    //#endregion    //#region delete    deleteList(list) {        this.beforeDeleteList(list);        for (let item of list) {            this.delete(item);        }        this.afterDeleteList(list);    }    delete(item) {        let key = this.getId(item);        if (key && this.records[key]) {            let oldItem = this.records[key];            this.beforeDeleteItem(oldItem);            delete this.records[key];            this.afterDeleteItem(oldItem);        }    }    beforeDeleteList(list) { }    beforeDeleteItem(item) { }    afterDeleteItem(item) { }    afterDeleteList(list) { }    //#endregion    //#region get    getById(id) {        if (this.records[id]) {            return this.records[id];        }        return undefined;    }    getAll() {        return this.records;    }    getList() {        return Object.values(this.records);    }}RAMManager.allRams = {};
-class PressManager {    /**     * @param {*} options - The options     * @param {HTMLElement | HTMLElement[]} options.element - The element to manage     */    constructor(options) {        this.subPressManager = [];        this.delayDblPress = 150;        this.delayLongPress = 700;        this.nbPress = 0;        this.offsetDrag = 20;        this.disableDrag = false;        this.state = {            oneActionTriggered: false,            isMoving: false,        };        this.startPosition = { x: 0, y: 0 };        this.customFcts = {};        this.timeoutDblPress = 0;        this.timeoutLongPress = 0;        this.functionsBinded = {            downAction: (e) => { },            upAction: (e) => { },            moveAction: (e) => { },            childPress: (e) => { },            childDblPress: (e) => { },            childLongPress: (e) => { },            childDragStart: (e) => { },        };        if (options.element === void 0) {            throw 'You must provide an element';        }        if (Array.isArray(options.element)) {            for (let el of options.element) {                let cloneOpt = Object.assign({}, options);                cloneOpt.element = el;                this.subPressManager.push(new PressManager(cloneOpt));            }        }        else {            this.element = options.element;            this.checkDragConstraint(options);            this.assignValueOption(options);            this.options = options;            this.init();        }    }    checkDragConstraint(options) {        if (options.onDrag !== void 0) {            if (options.onDragStart === void 0) {                options.onDragStart = (e) => { };            }            if (options.onDragEnd === void 0) {                options.onDragEnd = (e) => { };            }        }        if (options.onDragStart !== void 0) {            if (options.onDrag === void 0) {                options.onDrag = (e) => { };            }            if (options.onDragEnd === void 0) {                options.onDragEnd = (e) => { };            }        }        if (options.onDragEnd !== void 0) {            if (options.onDragStart === void 0) {                options.onDragStart = (e) => { };            }            if (options.onDrag === void 0) {                options.onDrag = (e) => { };            }        }    }    assignValueOption(options) {        if (options.delayDblPress !== undefined) {            this.delayDblPress = options.delayDblPress;        }        if (options.delayLongPress !== undefined) {            this.delayLongPress = options.delayLongPress;        }        if (options.offsetDrag !== undefined) {            this.offsetDrag = options.offsetDrag;        }        if (options.disableDrag !== undefined) {            this.disableDrag = options.disableDrag;        }    }    bindAllFunction() {        this.functionsBinded.downAction = this.downAction.bind(this);        this.functionsBinded.moveAction = this.moveAction.bind(this);        this.functionsBinded.upAction = this.upAction.bind(this);        this.functionsBinded.childDblPress = this.childDblPress.bind(this);        this.functionsBinded.childDragStart = this.childDragStart.bind(this);        this.functionsBinded.childLongPress = this.childLongPress.bind(this);        this.functionsBinded.childPress = this.childPress.bind(this);    }    init() {        this.bindAllFunction();        this.element.addEventListener("pointerdown", this.functionsBinded.downAction);        this.element.addEventListener("trigger_pointer_press", this.functionsBinded.childPress);        this.element.addEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);        this.element.addEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);        this.element.addEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);    }    // #region current Event    downAction(e) {        this.downEventSaved = e;        e.stopPropagation();        if (this.options.onPressStart) {            this.options.onPressStart(e, this);        }        this.customFcts = {};        if (this.nbPress == 0) {            this.state.oneActionTriggered = false;            clearTimeout(this.timeoutDblPress);        }        this.startPosition = { x: e.pageX, y: e.pageY };        document.addEventListener("pointerup", this.functionsBinded.upAction);        document.addEventListener("pointermove", this.functionsBinded.moveAction);        this.timeoutLongPress = setTimeout(() => {            if (!this.state.oneActionTriggered) {                if (this.options.onLongPress) {                    this.state.oneActionTriggered = true;                    this.options.onLongPress(e, this);                }                else {                    this.emitTriggerFunction("longpress", e);                }            }        }, this.delayLongPress);    }    upAction(e) {        e.stopPropagation();        document.removeEventListener("pointerup", this.functionsBinded.downAction);        document.removeEventListener("pointermove", this.functionsBinded.moveAction);        clearTimeout(this.timeoutLongPress);        this.nbPress++;        if (this.nbPress == 2) {            if (!this.state.oneActionTriggered) {                this.state.oneActionTriggered = true;                this.nbPress = 0;                if (this.options.onDblPress) {                    this.options.onDblPress(e, this);                }                else {                    this.emitTriggerFunction("dblpress", e);                }            }        }        else if (this.nbPress == 1) {            this.timeoutDblPress = setTimeout(() => {                this.nbPress = 0;                if (!this.state.oneActionTriggered) {                    if (this.options.onPress) {                        this.state.oneActionTriggered = true;                        this.options.onPress(e, this);                    }                    else {                        this.emitTriggerFunction("press", e);                    }                }            }, this.delayDblPress);        }        if (this.state.isMoving) {            this.state.isMoving = false;            if (this.options.onDragEnd) {                this.options.onDragEnd(e, this);            }            else if (this.customFcts.src && this.customFcts.onDragEnd) {                this.customFcts.onDragEnd(e, this.customFcts.src);            }        }    }    moveAction(e) {        if (!this.state.isMoving && !this.state.oneActionTriggered) {            e.stopPropagation();            let xDist = e.pageX - this.startPosition.x;            let yDist = e.pageY - this.startPosition.y;            let distance = Math.sqrt(xDist * xDist + yDist * yDist);            if (!this.disableDrag && distance > this.offsetDrag) {                this.state.oneActionTriggered = true;                if (this.options.onDragStart) {                    this.state.isMoving = true;                    if (this.options.onDragStart) {                        this.options.onDragStart(this.downEventSaved, this);                    }                    else {                        this.emitTriggerFunction("dragstart", this.downEventSaved);                    }                }            }        }        else if (this.state.isMoving) {            if (this.options.onDrag) {                this.options.onDrag(e, this);            }            else if (this.customFcts.src && this.customFcts.onDrag) {                this.customFcts.onDrag(e, this.customFcts.src);            }        }    }    // #endregion    // #region custom Event    childPress(e) {        if (this.options.onPress) {            e.stopPropagation();            e.detail.state.oneActionTriggered = true;            this.options.onPress(e.detail.realEvent, this);        }    }    childDblPress(e) {        if (this.options.onDblPress) {            e.stopPropagation();            if (e.detail.state) {                e.detail.state.oneActionTriggered = true;            }            this.options.onDblPress(e.detail.realEvent, this);        }    }    childLongPress(e) {        if (this.options.onLongPress) {            e.stopPropagation();            e.detail.state.oneActionTriggered = true;            this.options.onLongPress(e.detail.realEvent, this);        }    }    childDragStart(e) {        if (this.options.onDragStart) {            e.stopPropagation();            e.detail.state.isMoving = true;            e.detail.customFcts.src = this;            e.detail.customFcts.onDrag = this.options.onDrag;            e.detail.customFcts.onDragEnd = this.options.onDragEnd;            this.options.onDragStart(e.detail.realEvent, this);        }    }    // #endregion    emitTriggerFunction(action, e) {        this.element.dispatchEvent(new CustomEvent("trigger_pointer_" + action, {            bubbles: true,            cancelable: true,            composed: true,            detail: {                state: this.state,                customFcts: this.customFcts,                realEvent: e,            }        }));    }    destroy() {        for (let sub of this.subPressManager) {            sub.destroy();        }        if (this.element) {            this.element.removeEventListener("pointerdown", this.functionsBinded.downAction);            this.element.removeEventListener("trigger_pointer_press", this.functionsBinded.childPress);            this.element.removeEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);            this.element.removeEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);            this.element.removeEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);        }    }}
-class PointerTracker {    constructor(element, callbacks) {        this.element = element;        this.currentPointers = [];        const { start = () => true, move = () => {        }, end = () => {        } } = callbacks;        this.startCallback = start;        this.moveCallback = move;        this.endCallback = end;        this.pointerStart = this.pointerStart.bind(this);        this.touchStart = this.touchStart.bind(this);        this.triggerPointerStart = this.triggerPointerStart.bind(this);        this.move = this.move.bind(this);        this.triggerPointerEnd = this.triggerPointerEnd.bind(this);        this.pointerEnd = this.pointerEnd.bind(this);        this.touchEnd = this.touchEnd.bind(this);        this.lastEvent = new Date();        this.element.addEventListener('mousedown', this.pointerStart);        this.element.addEventListener('touchstart', this.touchStart);    }    reset() {        this.currentPointers = [];        window.removeEventListener('mousemove', this.move);        window.removeEventListener('mouseup', this.pointerEnd);        window.removeEventListener('touchmove', this.move);        window.removeEventListener('touchend', this.touchEnd);    }    createPointer(nativePointer) {        let id = -1;        // this.nativePointer = nativePointer;        // this.pageX = nativePointer.pageX;        // this.pageY = nativePointer.pageY;        // this.clientX = nativePointer.clientX;        // this.clientY = nativePointer.clientY;        if (self.Touch && nativePointer instanceof Touch) {            id = nativePointer.identifier;        }        else if (self.PointerEvent && nativePointer instanceof PointerEvent) {            id = nativePointer.pointerId;        }        return {            id: id        };    }    triggerPointerStart(pointer, event) {        if (this.isTooOld()) {            this.currentPointers = [];        }        if (!this.startCallback(pointer, event))            return false;        this.currentPointers.push(pointer);        return true;    }    pointerStart(event) {        if (event.button !== 0)            return;        const oldPointersLength = this.currentPointers.length;        if (!this.triggerPointerStart(this.createPointer(event), event))            return;        event.preventDefault();        if (oldPointersLength === 0) {            window.addEventListener('mousemove', this.move);            window.addEventListener('mouseup', this.pointerEnd);        }    }    touchStart(event) {        const oldPointersLength = this.currentPointers.length;        let touch;        for (touch of Array.from(event.changedTouches)) {            this.triggerPointerStart(this.createPointer(touch), event);        }        event.preventDefault();        if (oldPointersLength === 0) {            window.removeEventListener('touchmove', this.move);            window.removeEventListener('touchend', this.touchEnd);            window.addEventListener('touchmove', this.move);            window.addEventListener('touchend', this.touchEnd);        }    }    move(event) {        setTimeout(() => {            this.lastEvent = new Date();            const previousPointers = this.currentPointers.slice();            const changedPointers = ('changedTouches' in event) ? Array.from(event.changedTouches).map((t) => this.createPointer(t)) : [this.createPointer(event)];            const trackedChangedPointers = [];            for (let pointer of changedPointers) {                const index = this.currentPointers.findIndex(p => p.id === pointer.id);                if (index === -1)                    continue;                trackedChangedPointers.push(pointer);                this.currentPointers[index] = pointer;            }            if (trackedChangedPointers.length === 0)                return;            this.moveCallback(previousPointers, trackedChangedPointers, event);        });    }    triggerPointerEnd(pointer, event) {        const index = this.currentPointers.findIndex(p => p.id === pointer.id);        if (index === -1)            return false;        this.currentPointers.splice(index, 1);        this.endCallback(pointer, event);        return true;    }    pointerEnd(event) {        event.preventDefault();        if (this.currentPointers.length === 0) {            window.removeEventListener('mousemove', this.move);            window.removeEventListener('mouseup', this.pointerEnd);        }        if (!this.triggerPointerEnd(this.createPointer(event), event))            return;    }    touchEnd(event) {        for (const touch of Array.from(event.changedTouches)) {            this.triggerPointerEnd(this.createPointer(touch), event);        }        event.preventDefault();        if (this.currentPointers.length === 0) {            window.removeEventListener('touchmove', this.move);            window.removeEventListener('touchend', this.touchEnd);        }    }    isTooOld() {        let d = new Date();        let diff = d.getTime() - this.lastEvent.getTime();        if (diff > 2000) {            return true;        }        return false;    }}
+class DragAndDrop {
+    constructor(options) {
+    }
+}
+
+class StateManager {
+    constructor() {
+        this.logLevel = 0; // 0 = error only / 1 = errors and warning / 2 = error, warning and logs (not implemented)
+        this._activeState = undefined;
+        this._activeParams = undefined;
+        this._activeSlug = undefined;
+        this._callbackList = {};
+        this._subscribersMutliple = {};
+        this._subscribers = {};
+        this._isNumberRegex = /^-?\d+$/;
+        this._callbackFunctions = {};
+    }
+    static getInstance(name) {
+        if (!name) {
+            name = "";
+        }
+        if (!this.__instances.hasOwnProperty(name)) {
+            this.__instances[name] = new StateManager();
+        }
+        return this.__instances[name];
+    }
+    subscribe(state, callbacks) {
+        if (!callbacks.hasOwnProperty("active") && !callbacks.hasOwnProperty("inactive") && callbacks.hasOwnProperty("askChange")) {
+            this._log(`Trying to subscribe to state : ${state} with no callbacks !`, "warning");
+            return;
+        }
+        if (!Array.isArray(state)) {
+            state = [state];
+        }
+        for (let i = 0; i < state.length; i++) {
+            let _state = state[i];
+            let res = this._prepareStateString(_state);
+            _state = res["state"];
+            // We have test that the state is present in the state list
+            if (!this._subscribers.hasOwnProperty(_state)) {
+                // The route doesn't exist, so we create the default architecture
+                let regex = new RegExp(_state);
+                let isActive = this._activeState !== undefined && regex.test(this._activeState);
+                this._subscribers[_state] = {
+                    "regex": regex,
+                    "callbacks": {
+                        "active": [],
+                        "inactive": [],
+                        "askChange": [],
+                    },
+                    "isActive": isActive,
+                    "testRegex": (string) => {
+                        if (!string) {
+                            string = this.getActiveState();
+                        }
+                        return this._subscribers[_state].regex.test(string);
+                    }
+                };
+            }
+            // Now, we're sure the route exist so we can add the callbacks
+            if (callbacks.hasOwnProperty("active")) {
+                this._subscribers[_state].callbacks.active.push(callbacks.active);
+                if (this._subscribers[_state].isActive) {
+                    callbacks.active(this._activeState);
+                }
+            }
+            if (callbacks.hasOwnProperty("inactive")) {
+                this._subscribers[_state].callbacks.inactive.push(callbacks.inactive);
+            }
+            if (callbacks.hasOwnProperty("askChange")) {
+                this._subscribers[_state].callbacks.askChange.push(callbacks.askChange);
+            }
+        }
+    }
+    /**
+     *
+     * @param {string|Array} state - The state(s) to unsubscribe from
+     * @param {Object} callbacks
+     * @param {activeCallback} [callbacks.active]
+     * @param {incativeCallback} [callbacks.inactive]
+     * @param {askChangeCallback} [callbacks.askChange]
+     */
+    unsubscribe(state, callbacks) {
+        if (!Array.isArray(state)) {
+            state = [state];
+        }
+        for (let i = 0; i < state.length; i++) {
+            let _state = state[i];
+            let res = this._prepareStateString(_state);
+            _state = res["state"];
+            // We can unsubscribe
+            if (this._subscribers.hasOwnProperty(_state)) {
+                // There is an object for this route
+                let modifications = false;
+                if (callbacks.hasOwnProperty("active")) {
+                    let index = this._subscribers[_state].callbacks.active.indexOf(callbacks["active"]);
+                    if (index !== -1) {
+                        this._subscribers[_state].callbacks.active.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if (callbacks.hasOwnProperty("inactive")) {
+                    let index = this._subscribers[_state].callbacks.inactive.indexOf(callbacks["inactive"]);
+                    if (index !== -1) {
+                        this._subscribers[_state].callbacks.inactive.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if (callbacks.hasOwnProperty("askChange")) {
+                    let index = this._subscribers[_state].callbacks.askChange.indexOf(callbacks["askChange"]);
+                    if (index !== -1) {
+                        this._subscribers[_state].callbacks.askChange.splice(index, 1);
+                        modifications = true;
+                    }
+                }
+                if (modifications &&
+                    this._subscribers[_state].callbacks.active.length === 0 &&
+                    this._subscribers[_state].callbacks.inactive.length === 0 &&
+                    this._subscribers[_state].callbacks.askChange.length === 0) {
+                    // There is no more callbacks linked to this route, we need to remove it
+                    delete this._subscribers[_state];
+                }
+            }
+            return;
+        }
+    }
+    /**
+     * Format a state and return if you need to bypass the test or not
+     * @param {string} string - The state to format
+     * @returns {Object} - The state, the formated state and if it's a regex state or not
+     */
+    _prepareStateString(string) {
+        let _state = string;
+        let stateToTest = _state; //Here we keep the state before escaping it to test it with the states list we have and maybe throw an error
+        let bypassTest = false;
+        if (_state.startsWith("^") && _state.endsWith("$")) {
+            // We're with a regex subscribe
+            bypassTest = true;
+        }
+        else {
+            // We're with a regular subscribe
+            if (_state.endsWith("/*")) {
+                // We need to replace the star with a regex that matches all numbers
+                _state = "^" + this._escapeRegExp(_state).replace("\*", "-?\\d+$"); // We replace the escaped star with the regex that matches all number
+            }
+            else {
+                let splittedState = _state.split("/");
+                let slug = splittedState.pop();
+                if (this._isNumberRegex.test(slug)) {
+                    stateToTest = splittedState.join("/") + "/*";
+                }
+                // We can escape the whole string
+                _state = "^" + this._escapeRegExp(_state) + "$";
+            }
+        }
+        return { "state": _state, "stateToTest": stateToTest, "bypassTest": bypassTest };
+    }
+    /**
+     * Escape a string to be regex-compatible ()
+     * @param {string} string The string to escape
+     * @returns An escaped string
+     */
+    _escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); // $& means the whole matched string
+    }
+    /**
+     * Get the slug from a state string
+     * @param {string} state The state to extract the slug from
+     * @returns {string|undefined} The slug of the state or undefined if the state don't have one
+     */
+    _getSlugFromState(state) {
+        let slug = state.split("/").pop();
+        if (this._isNumberRegex.test(slug)) {
+            return parseInt(slug);
+        }
+        else {
+            return undefined;
+        }
+    }
+    /**
+     * Save the current info (state/params) in cache
+     */
+    _saveDataInCache() {
+        if (!this._activeParams || Object.keys(this._activeParams).length == 0) {
+            if (localStorage["disableStorage"] == null) {
+                localStorage["state"] = this._activeState;
+            }
+        }
+    }
+    /**
+     * Add a callback to a key
+     * @param {string} key - The key to trigger to trigger the function
+     * @param {function} callback - The function to trigger
+     */
+    addFunction(key, callback) {
+        if (!this._callbackFunctions.hasOwnProperty(key)) {
+            this._callbackFunctions[key] = [];
+        }
+        this._callbackFunctions[key].push(callback);
+    }
+    /**
+     * Remove a function from a key
+     * @param {string} key - The key to remove the function from
+     * @param {function} callback - The function to remove
+     */
+    removeFunction(key, callback) {
+        if (this._callbackFunctions.hasOwnProperty(key)) {
+            const index = this._callbackFunctions[key].indexOf(callback);
+            if (index !== -1) {
+                this._callbackFunctions[key].splice(index, 1);
+                if (this._callbackFunctions[key].length === 0) {
+                    delete this._callbackFunctions[key];
+                }
+            }
+            else {
+                console.warn("Couldn't find callback in list " + key);
+            }
+        }
+        else {
+            console.warn("Couldn't find " + key + " in callback array");
+        }
+    }
+    /**
+     * Trigger all the functions added under a key
+     * @param {string} key - The key to trigger
+     * @param {*} [params] - The params to pass to the functions (optional)
+     */
+    triggerFunction(key, params = {}) {
+        if (this._callbackFunctions.hasOwnProperty(key)) {
+            const copy = [...this._callbackFunctions[key]];
+            copy.forEach(callback => {
+                callback(params);
+            });
+        }
+        else {
+            console.warn("Trying to trigger non existent key : " + key);
+        }
+    }
+    /**
+     * Remove all the function added under all keys
+     */
+    clearFunctions() {
+        this._callbackFunctions = {};
+    }
+    /**
+     * Set the current active state
+     * @param {string} state - The state to set to active
+     * @param {number} slug - The slug of the active state (Only work if the state ends with "*")
+     * @param {Object} params - The params of the active state
+     */
+    setActiveState(state, params = {}) {
+        //We format the state in order to check if it's present in the state list
+        if (this._activeState !== undefined && state === this._activeState) {
+            this._log("Trying to set a state that was already active. state : " + state + " activeState : " + this._activeState, "warning");
+            return;
+        }
+        let canChange = true;
+        if (this._activeState) {
+            // We need to ask before change and trigger inactive callbacks
+            let activeToInactive = [];
+            let inactiveToActive = [];
+            let triggerActive = [];
+            // We loop through all the subscribers of the state manager
+            for (let key in this._subscribers) {
+                let current = this._subscribers[key];
+                // If the subscriber is already active
+                if (current.isActive) {
+                    // And the subscriber does not match on the next state
+                    if (!current.regex.test(state)) {
+                        // We need to pass it from active to inactive -> trigger the askChange callback before
+                        // We clone all the callbacks
+                        let clone = [...current.callbacks["askChange"]];
+                        for (let i = 0; i < clone.length; i++) {
+                            let callback = clone[i];
+                            // If the askChange callback returns false, we can't change, but we continue to call all the others askChange callbacks
+                            if (!callback(this._activeState, state)) {
+                                canChange = false;
+                            }
+                        }
+                        // We push the current subscriber to the list to trigger
+                        activeToInactive.push(current);
+                    }
+                    else {
+                        // If it's already active and it will match on the next state. We want to trigger the activeCallback
+                        triggerActive.push(current);
+                    }
+                }
+                else {
+                    // If the state is not active and it will match on the next state, we want to trigger the activeCallback
+                    if (current.regex.test(state)) {
+                        // We need to pass it from inactive to active
+                        inactiveToActive.push(current);
+                    }
+                }
+            }
+            if (canChange) {
+                // We can change -> reset active params / slug, then triggers all inactive callbacks and then triggers all active callbacks
+                const oldState = this._activeState;
+                this._activeState = state;
+                this._activeSlug = this._getSlugFromState(state);
+                this._activeParams = params;
+                activeToInactive.forEach(route => {
+                    // We pass the subscriber to inactive
+                    route.isActive = false;
+                    // We clone all the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.inactive].forEach(callback => {
+                        callback(oldState, state);
+                    });
+                });
+                // We clear the function list
+                this.clearFunctions();
+                // Now we trigger all the subscriber that were already active -> so no need to modify active property
+                triggerActive.forEach(route => {
+                    // We clone the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                });
+                // We trigger all the inactive to active callbacks
+                inactiveToActive.forEach(route => {
+                    // we set the subscriber to active
+                    route.isActive = true;
+                    // We clone the callbacks in order to avoid the callback to modify the array
+                    [...route.callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                });
+            }
+        }
+        else {
+            // If there was no active state before, we can change -> reset active params / slug, then triggers all active callbacks
+            this._activeState = state;
+            this._activeSlug = this._getSlugFromState(state);
+            this._activeParams = params;
+            this.clearFunctions();
+            for (let key in this._subscribers) {
+                // If the subscriber match on the next state, we want to trigger the activeCallback
+                if (this._subscribers[key].regex.test(state)) {
+                    // As we have no old state, we can pass all the matches to active without further tests
+                    this._subscribers[key].isActive = true;
+                    [...this._subscribers[key].callbacks.active].forEach(callback => {
+                        callback(state);
+                    });
+                }
+            }
+        }
+        // We save the new state in cache
+        this._saveDataInCache();
+        return;
+    }
+    /**
+     * Get the active state
+     * @returns {string} - The active state
+     */
+    getActiveState() {
+        return this._activeState;
+    }
+    /**
+     * Get the active params
+     * @returns {Object} - The active params
+     */
+    getActiveParams() {
+        return this._activeParams;
+    }
+    /**
+     * Get the active slug
+     * @returns {int} - The active slug
+     */
+    getActiveSlug() {
+        return this._activeSlug;
+    }
+    /**
+     * Check if a state is in the subscribers and active, return true if it is, false otherwise
+     * @param {string} state - The state to test
+     * @returns {boolean} - True if the state is in the subscription list and active, false otherwise
+     */
+    isStateActive(state) {
+        state = this._prepareStateString(state).state;
+        if (this._subscribers[state] && this._subscribers[state].isActive) {
+            return true;
+        }
+        return false;
+    }
+    _log(logMessage, type) {
+        if (type === "error") {
+            console.error(logMessage);
+        }
+        else if (type === "warning" && this.logLevel > 0) {
+            console.warn(logMessage);
+        }
+        else if (type === "info" && this.logLevel > 1) {
+            console.log(logMessage);
+        }
+    }
+}
+StateManager.__instances = {};
+
+class SocketRAMManager {
+    constructor() {
+        this.types = {};
+        this.options = {};
+        this.records = {};
+        this.socketActions = {
+            get: "get",
+            getAll: "get/all",
+            create: "create",
+            created: "created",
+            update: "update",
+            updated: "updated",
+            delete: "delete",
+            deleted: "deleted"
+        };
+        this.gotAllRecords = false;
+        this.subscribers = {};
+        this.subscribers[this.socketActions.created] = [];
+        this.subscribers[this.socketActions.updated] = [];
+        this.subscribers[this.socketActions.deleted] = [];
+        this.socketRoutes = {};
+        for (const [key, name] of Object.entries(this.socketActions)) {
+            this.socketRoutes[key] = {
+                request: `${this.getObjectName()}/${name}`,
+                multiple: `${this.getObjectName()}/${name}/multiple`,
+                success: `${this.getObjectName()}/${name}/success`,
+                error: `${this.getObjectName()}/${name}/error`
+            };
+        }
+        Socket.getInstance(this._getSocketName()).addRoute({
+            channel: this.getObjectName() + "/" + this.socketActions.created,
+            callback: response => {
+                if (response.data) {
+                    for (let key in response.data) {
+                        this.addDataToRecords(response.data[key]);
+                        this.publish(this.socketActions.created, this.records[response.data[key][this.getPrimaryKey()]]);
+                    }
+                }
+            }
+        });
+        Socket.getInstance(this._getSocketName()).addRoute({
+            channel: this.getObjectName() + "/" + this.socketActions.updated,
+            callback: response => {
+                if (response.data) {
+                    for (let key in response.data) {
+                        const newData = response.data[key];
+                        const primaryKey = newData[this.getPrimaryKey()];
+                        if (this.records[primaryKey]) {
+                            const record = this.records[primaryKey];
+                            this.updateInstanceData(record, newData);
+                            this.addMemoryRecord(record);
+                            record._publish(this.socketActions.updated, record);
+                            this.publish(this.socketActions.updated, record);
+                        }
+                    }
+                }
+            }
+        });
+        Socket.getInstance(this._getSocketName()).addRoute({
+            channel: this.getObjectName() + "/" + this.socketActions.deleted,
+            callback: response => {
+                if (response.data) {
+                    for (let key in response.data) {
+                        const data = response.data[key];
+                        const primaryKey = data[this.getPrimaryKey()];
+                        if (this.records.hasOwnProperty(primaryKey)) {
+                            const record = this.records[primaryKey];
+                            this.deleteMemoryRecord(primaryKey);
+                            record._publish(this.socketActions.deleted, record);
+                            this.publish(this.socketActions.deleted, record);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    getPrimaryKey() {
+        return "id";
+    }
+    _getSocketName() {
+        return undefined;
+    }
+    addErrorListener(callback) {
+        this.registeredErrorsCallbacks.push(callback);
+    }
+    triggerError(...args) {
+        this.registeredErrorsCallbacks.forEach(callback => {
+            callback(...args);
+        });
+    }
+    getAll() {
+        return new Promise((resolve, reject) => {
+            if (this.gotAllRecords) {
+                let toReturn = [];
+                for (let key in this.records) {
+                    toReturn.push(this.records[key]);
+                }
+                resolve(toReturn);
+            }
+            else {
+                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.getAll.request, {}, {
+                    [this.socketRoutes.getAll.success]: response => {
+                        if (response.data) {
+                            this.gotAllRecords = true;
+                            resolve(this.addDataToRecords(Object.values(response.data)));
+                        }
+                    }
+                });
+            }
+        });
+    }
+    get(id, forceRefresh = false) {
+        return new Promise((resolve, reject) => {
+            if (this.records[id] && !forceRefresh) {
+                resolve(this.records[id]);
+            }
+            else {
+                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.request, {
+                    [this.getPrimaryKey()]: id
+                }, {
+                    [this.socketRoutes.get.success]: response => {
+                        if (response.data) {
+                            if (forceRefresh) {
+                                delete this.records[id];
+                            }
+                            this.addDataToRecords(response.data, resolve);
+                        }
+                    },
+                    [this.socketRoutes.get.error]: response => {
+                        this.printErrors(response, "delete");
+                        reject(response);
+                    }
+                });
+            }
+        });
+    }
+    getMultiple(ids) {
+        return new Promise((resolve, reject) => {
+            let datas = [];
+            let missingIds = [];
+            for (let i = 0; i < ids.length; i++) {
+                let id = ids[i];
+                if (this.records[id]) {
+                    datas.push(this.records[id]);
+                }
+                else {
+                    missingIds.push(id);
+                }
+            }
+            if (missingIds.length > 0) {
+                Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.multiple, {
+                    [this.getPrimaryKey()]: ids
+                }, {
+                    [this.socketRoutes.get.success]: response => {
+                        if (response.data) {
+                            this.addDataToRecords(response.data, (record) => {
+                                datas.push(record);
+                                resolve(record);
+                            }, (data) => {
+                                datas.push(data);
+                            });
+                        }
+                    },
+                    [this.socketRoutes.get.error]: response => {
+                        this.printErrors(response, "delete");
+                        reject(response);
+                    }
+                });
+            }
+            else {
+                resolve(datas);
+            }
+        });
+    }
+    create(data, cbError) {
+        const multiple = this.isDataContainsMultipleRecords(data);
+        let dataToSend = this.manageMultipleRecords(data);
+        if (cbError == null) {
+            cbError = (response) => { this.printErrors(response, "creation"); };
+        }
+        return new Promise((resolve, reject) => {
+            this.convertDefinitionToData(dataToSend);
+            let routeName = multiple ? this.socketRoutes.create.multiple : this.socketRoutes.create.request;
+            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {
+                [this.socketRoutes.create.success]: response => {
+                    response = this.formatResponse(response, this.socketActions.create);
+                    this.addDataToRecords(response, (record) => {
+                        console.warn("The object return by the created success was already in records. Record data : ", record);
+                    }, (data) => {
+                        this.publish(this.socketActions.created, data);
+                    });
+                    resolve(multiple ? response : response[0]);
+                },
+                [this.socketRoutes.create.error]: response => {
+                    cbError(response);
+                    reject(response);
+                }
+            });
+        });
+    }
+    update(data, cbError) {
+        const multiple = this.isDataContainsMultipleRecords(data);
+        let dataToSend = this.manageMultipleRecords(data);
+        if (cbError == null) {
+            cbError = (response) => { this.printErrors(response, "save"); };
+        }
+        return new Promise((resolve, reject) => {
+            this.convertDefinitionToData(dataToSend);
+            let routeName = multiple ? this.socketRoutes.update.multiple : this.socketRoutes.update.request;
+            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {
+                [this.socketRoutes.update.success]: response => {
+                    response = this.formatResponse(response, this.socketActions.update);
+                    if (multiple) {
+                        data = dataToSend.list;
+                    }
+                    response.forEach((newData) => {
+                        const index = newData[this.getPrimaryKey()];
+                        if (!this.records[index]) {
+                            this.addDataToRecords(response);
+                        }
+                        this.updateInstanceData(this.records[index], newData);
+                        this.addMemoryRecord(this.records[index]);
+                        this.records[index]._publish(this.socketActions.updated, this.records[index]);
+                    });
+                    resolve(multiple ? data : data[0]);
+                },
+                [this.socketRoutes.update.error]: response => {
+                    cbError(response);
+                    reject(response);
+                }
+            });
+        });
+    }
+    delete(data, cbError) {
+        const multiple = this.isDataContainsMultipleRecords(data);
+        let dataToSend = this.manageMultipleRecords(data);
+        if (cbError == null) {
+            cbError = (response) => { this.printErrors(response, "delete"); };
+        }
+        return new Promise((resolve, reject) => {
+            this.convertDefinitionToData(dataToSend);
+            let routeName = multiple ? this.socketRoutes.delete.multiple : this.socketRoutes.delete.request;
+            Socket.getInstance(this._getSocketName()).sendMessageAndWait(routeName, dataToSend, {
+                [this.socketRoutes.delete.success]: response => {
+                    response = this.formatResponse(response, this.socketActions.delete);
+                    if (multiple) {
+                        data = dataToSend.list;
+                    }
+                    response.forEach((object, index) => {
+                        this.records[object[this.getPrimaryKey()]]._publish(this.socketActions.deleted, this.records[object[this.getPrimaryKey()]]);
+                        this.deleteMemoryRecord(object[this.getPrimaryKey()]);
+                    });
+                    resolve(multiple ? data : data[0]);
+                },
+                [this.socketRoutes.delete.error]: response => {
+                    cbError(response);
+                    reject(response);
+                }
+            });
+        });
+    }
+    subscribeMultiple(callback, types = [this.socketActions.created, this.socketActions.updated, this.socketActions.deleted]) {
+        types.forEach(type => {
+            this.addSubscriber(type, callback);
+        });
+    }
+    unsubscribeMultiple(callback, types = [this.socketActions.created, this.socketActions.updated, this.socketActions.deleted]) {
+        types.forEach(type => {
+            this.removeSubscriber(type, callback);
+        });
+    }
+    subscribe(callback) {
+        this.addSubscriber(this.socketActions.created, callback);
+    }
+    unsubscribe(callback) {
+        this.removeSubscriber(this.socketActions.created, callback);
+    }
+    onUpdated(callback) {
+        this.addSubscriber(this.socketActions.updated, callback);
+    }
+    offUpdated(callback) {
+        this.removeSubscriber(this.socketActions.updated, callback);
+    }
+    onDeleted(callback) {
+        this.addSubscriber(this.socketActions.deleted, callback);
+    }
+    offDelete(callback) {
+        this.removeSubscriber(this.socketActions.deleted, callback);
+    }
+    addSubscriber(type, callback) {
+        const index = this.subscribers[type].indexOf(callback);
+        if (index === -1) {
+            this.subscribers[type].push(callback);
+        }
+        else {
+            console.warn(`[${this.getObjectName()} Manager] Trying to subscribe to ${type} but callback was already present`);
+        }
+    }
+    removeSubscriber(type, callback) {
+        const index = this.subscribers[type].indexOf(callback);
+        if (index !== -1) {
+            this.subscribers[type].splice(index, 1);
+        }
+    }
+    printErrors(data, action) {
+        this.triggerError(data, action);
+    }
+    publish(type, data) {
+        [...this.subscribers[type]].forEach(callback => callback(data));
+    }
+    addDatabaseOperationsToRecord(data) {
+        this.updateObjectProperties(data);
+        const instance = Object.assign(Object.assign({}, data), { _subscribers: {
+                updated: [],
+                deleted: []
+            }, _publish: (type, data) => {
+                [...instance._subscribers[type]].forEach(callback => callback(data));
+                this.publish(type, data);
+            }, update: (newData) => {
+                return new Promise((resolve, reject) => {
+                    const formattedData = Object.assign(Object.assign({}, instance), newData);
+                    this.convertDefinitionToData(formattedData);
+                    Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.update.request, formattedData, {
+                        [this.socketRoutes.update.success]: response => {
+                            response = this.formatResponse(response, this.socketActions.update);
+                            this.updateInstanceData(instance, response[0]);
+                            this.addMemoryRecord(instance);
+                            instance._publish(this.socketActions.updated, instance);
+                            resolve(instance);
+                        },
+                        [this.socketRoutes.update.error]: response => {
+                            this.printErrors(response, "update");
+                            reject(response);
+                        }
+                    });
+                });
+            }, onUpdate: (callback) => {
+                if (!callback) {
+                    console.error("[Object Manager] onUpdate callback is undefined");
+                    return;
+                }
+                instance._subscribers.updated.push(callback);
+            }, offUpdate: (callback) => {
+                let index = instance._subscribers.updated.indexOf(callback);
+                if (index !== -1) {
+                    instance._subscribers.updated.splice(index, 1);
+                }
+            }, delete: () => {
+                return new Promise((resolve, reject) => {
+                    this.convertDefinitionToData(instance);
+                    Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.delete.request, instance, {
+                        [this.socketRoutes.delete.success]: response => {
+                            response = this.formatResponse(response, this.socketActions.delete);
+                            this.deleteMemoryRecord(response[0][this.getPrimaryKey()]);
+                            instance._publish(this.socketActions.deleted, instance);
+                            resolve(instance);
+                        },
+                        [this.socketRoutes.delete.error]: response => {
+                            this.printErrors(response, "delete");
+                            reject(response);
+                        }
+                    });
+                });
+            }, onDelete: (callback) => {
+                instance._subscribers.deleted.push(callback);
+            }, offDelete: (callback) => {
+                let index = instance._subscribers.deleted.indexOf(callback);
+                if (index !== -1) {
+                    instance._subscribers.deleted.splice(index, 1);
+                }
+            } });
+        this.addMemoryRecord(instance);
+        return instance;
+    }
+    formatResponse(response, action) {
+        if (action === this.socketActions.create) {
+            response = Object.values(response.created);
+        }
+        else if (action === this.socketActions.update) {
+            response = Object.values(response.updated);
+        }
+        else if (action === this.socketActions.delete) {
+            response = Object.values(response.deleted);
+        }
+        return response;
+    }
+    addDataToRecords(data, ifExistFct, ifNotExistFct) {
+        if (!Array.isArray(data)) {
+            data = [data];
+        }
+        if (!ifNotExistFct) {
+            ifNotExistFct = ifExistFct;
+        }
+        let toReturn = [];
+        data.forEach(record => {
+            if (!this.records[record[this.getPrimaryKey()]]) {
+                let instance = this.addDatabaseOperationsToRecord(record);
+                this.records[record[this.getPrimaryKey()]] = instance;
+                toReturn.push(instance);
+                ifNotExistFct(instance);
+            }
+            else {
+                toReturn.push(this.records[record[this.getPrimaryKey()]]);
+                ifExistFct(this.records[record[this.getPrimaryKey()]]);
+            }
+        });
+        return toReturn;
+    }
+    addMemoryRecord(record) {
+        const primaryKey = record[this.getPrimaryKey()];
+        this.convertDataToDefinition(record);
+        this.records[primaryKey] = record;
+    }
+    deleteMemoryRecord(recordId) {
+        delete this.records[recordId];
+    }
+    convertDataToDefinition(data) {
+        const realData = Object.assign({}, data);
+        if (!this.options.definition) {
+            return;
+        }
+        for (const [key, value] of Object.entries(this.options.definition)) {
+            data[value] = realData[key];
+            delete data[key];
+        }
+    }
+    convertDefinitionToData(data) {
+        const _convertDefinition = data => {
+            const definition = Object.assign({}, data);
+            if (!this.options.definition) {
+                return;
+            }
+            for (const [key, value] of Object.entries(this.options.definition)) {
+                if (definition[value]) {
+                    data[key] = definition[value];
+                }
+                else {
+                    delete data[key];
+                }
+                delete data[value];
+            }
+            delete data.update;
+            delete data.onUpdate;
+            delete data.offUpdate;
+            delete data.delete;
+            delete data.onDelete;
+            delete data.offDelete;
+        };
+        if (data.list) {
+            data.list.forEach(object => _convertDefinition(object));
+        }
+        else {
+            _convertDefinition(data);
+        }
+    }
+    updateObjectProperties(data) {
+        Object.keys(data).forEach(key => {
+            if (!this.objectProperties.includes(key)) {
+                this.objectProperties.push(key);
+            }
+        });
+    }
+    updateInstanceData(currentInstance, newData) {
+        this.updateObjectProperties(newData);
+        for (const [key, value] of Object.entries(newData)) {
+            currentInstance[key] = value;
+        }
+        this.objectProperties.forEach(key => {
+            if (currentInstance[key] !== undefined && newData[key] === undefined) {
+                delete currentInstance[key];
+            }
+        });
+    }
+    manageMultipleRecords(data) {
+        let toReturn;
+        if (this.isDataContainsMultipleRecords(data)) {
+            toReturn = { list: data };
+        }
+        return toReturn;
+    }
+    isDataContainsMultipleRecords(data) {
+        return Array.isArray(data);
+    }
+}
+
+class Socket {
+    constructor() {
+        this.waitingList = {};
+        this.multipltWaitingList = {};
+        this.memoryBeforeOpen = [];
+        this.nbClose = 0;
+    }
+    init(options = {}) {
+        if (!options.port) {
+            options.port = parseInt(window.location.port);
+        }
+        if (!options.ip) {
+            options.ip = window.location.hostname;
+        }
+        if (!options.hasOwnProperty('useHttps')) {
+            options.useHttps = window.location.protocol == "https:";
+        }
+        if (!options.routes) {
+            options.routes = {};
+        }
+        if (!options.socketName) {
+            options.socketName = "";
+        }
+        this.options = options;
+    }
+    static getInstance(name) {
+        if (!name) {
+            name = "";
+        }
+        if (!this.__instances.hasOwnProperty(name)) {
+            this.__instances[name] = new Socket();
+            this.__instances[name].init({ log: true });
+        }
+        return this.__instances[name];
+    }
+    addRoute(newRoute) {
+        if (!this.options.routes.hasOwnProperty(newRoute.channel)) {
+            this.options.routes[newRoute.channel] = [];
+        }
+        this.options.routes[newRoute.channel].push(newRoute);
+    }
+    /**
+     * The route to remove
+     * @param route - The route to remove
+     */
+    removeRoute(route) {
+        let index = this.options.routes[route.channel].indexOf(route);
+        if (index != -1) {
+            this.options.routes[route.channel].splice(index, 1);
+        }
+    }
+    open(done = () => { }, error = () => { }) {
+        if (this.socket) {
+            this.socket.close();
+        }
+        let protocol = "ws";
+        if (this.options.useHttps) {
+            protocol = "wss";
+        }
+        let url = protocol + "://" + this.options.ip + ":" + this.options.port + "/ws/" + this.options.socketName;
+        this.log(url);
+        this.socket = new WebSocket(url);
+        this.timeoutError = setTimeout(() => {
+            if (this.socket &&
+                this.socket.readyState != 1) {
+                delete this.socket;
+                this.socket = null;
+                console.error('Timeout on socket open');
+                error();
+            }
+        }, 3000);
+        this.socket.onopen = this.onOpen.bind(this);
+        this.socket.onclose = this.onClose.bind(this);
+        this.socket.onerror = this.onError.bind(this);
+        this.socket.onmessage = this.onMessage.bind(this);
+        this.onDone = done;
+    }
+    /**
+     *
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param options the options to add to the message (typically the uid)
+     */
+    sendMessage(channelName, data = null, options = {}) {
+        if (this.socket && this.socket.readyState == 1) {
+            let message = {
+                channel: channelName,
+            };
+            for (let key in options) {
+                message[key] = options[key];
+            }
+            if (data) {
+                message.data = data;
+                this.log(message);
+                message.data = JSON.stringify(data);
+            }
+            else {
+                this.log(message);
+            }
+            this.socket.send(JSON.stringify(message));
+        }
+        else {
+            this.log('Socket not ready ! Please ensure that it is open and ready to send message');
+            this.memoryBeforeOpen.push({
+                channelName: channelName,
+                data: data,
+                options: options
+            });
+        }
+    }
+    /**
+     *
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWait(channelName, data, callbacks) {
+        let uid = '_' + Math.random().toString(36).substr(2, 9);
+        this.waitingList[uid] = callbacks;
+        this.sendMessage(channelName, data, {
+            uid: uid
+        });
+    }
+    ;
+    /**
+     *
+     * @param channelName The channel on which the message is sent
+     * @param data The data to send
+     * @param callbacks The callbacks to call. With the channel as key and the callback function as value
+     */
+    sendMessageAndWaitMultiple(channelName, data, callbacks) {
+        let uid = '_' + Math.random().toString(36).substr(2, 9);
+        this.multipltWaitingList[uid] = callbacks;
+        this.sendMessage(channelName, data, {
+            uid: uid
+        });
+    }
+    isReady() {
+        if (this.socket && this.socket.readyState == 1) {
+            return true;
+        }
+        return false;
+    }
+    onOpen() {
+        if (this.socket && this.socket.readyState == 1) {
+            this.log('Connection successfully established !' + this.options.ip + ":" + this.options.port);
+            window.clearTimeout(this.timeoutError);
+            this.onDone();
+            if (this.options.hasOwnProperty("onOpen")) {
+                this.options.onOpen();
+            }
+            for (let i = 0; i < this.memoryBeforeOpen.length; i++) {
+                this.sendMessage(this.memoryBeforeOpen[i].channelName, this.memoryBeforeOpen[i].data, this.memoryBeforeOpen[i].options);
+            }
+            this.memoryBeforeOpen = [];
+        }
+        else {
+            console.error("open with error " + this.options.ip + ":" + this.options.port + "(" + (this.socket ? this.socket.readyState : "unknown") + ")");
+            setTimeout(() => this.open(), 2000);
+        }
+    }
+    onError(event) {
+        this.log('An error has occured');
+        if (this.options.hasOwnProperty("onError")) {
+            this.options.onError();
+        }
+    }
+    onClose(event) {
+        this.log('Closing connection');
+        if (this.options.hasOwnProperty("onClose")) {
+            this.options.onClose();
+        }
+        else {
+            if (window.location.pathname == '/') {
+                this.nbClose++;
+                if (this.nbClose == 2) {
+                    window.location.href = '/login/logout';
+                }
+                else {
+                    console.warn("try reopen socket ");
+                    let reopenInterval = setTimeout(() => {
+                        this.open(() => {
+                            clearInterval(reopenInterval);
+                        }, () => { });
+                    }, 5000);
+                }
+            }
+            else {
+                console.warn("try reopen socket ");
+                let reopenInterval = setTimeout(() => {
+                    this.open(() => {
+                        clearInterval(reopenInterval);
+                    }, () => { });
+                }, 5000);
+            }
+        }
+    }
+    onMessage(event) {
+        let response = JSON.parse(event.data);
+        this.log(response);
+        response.data = JSON.parse(response.data);
+        if (this.options.routes.hasOwnProperty(response.channel)) {
+            this.options.routes[response.channel].forEach(element => {
+                element.callback(response.data);
+            });
+        }
+        if (response.uid) {
+            if (this.waitingList.hasOwnProperty(response.uid)) {
+                let group = this.waitingList[response.uid];
+                if (group.hasOwnProperty(response.channel)) {
+                    group[response.channel](response.data);
+                }
+                delete this.waitingList[response.uid];
+            }
+            else if (this.multipltWaitingList.hasOwnProperty(response.uid)) {
+                let group = this.multipltWaitingList[response.uid];
+                if (group.hasOwnProperty(response.channel)) {
+                    try {
+                        if (!group[response.channel](response.data)) {
+                            delete this.multipltWaitingList[response.uid];
+                        }
+                    }
+                    catch (e) {
+                        console.error(e);
+                        delete this.multipltWaitingList[response.uid];
+                    }
+                }
+            }
+        }
+    }
+    log(message) {
+        if (this.options.log) {
+            const now = new Date();
+            const hours = (now.getHours()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            const minutes = (now.getMinutes()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            const seconds = (now.getSeconds()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
+            console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, JSON.parse(JSON.stringify(message)));
+        }
+    }
+}
+Socket.__instances = {};
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+class ResourceLoader {
+    static load(options, preventCache = false) {
+        let resourceData = localStorage.getItem("resource:" + options.url);
+        if (resourceData) {
+            options.success(resourceData);
+        }
+        else {
+            if (!this.waitingResources.hasOwnProperty(options.url)) {
+                this.waitingResources[options.url] = [options.success];
+                fetch(options.url)
+                    .then((response) => __awaiter(this, void 0, void 0, function* () {
+                    let html = yield response.text();
+                    if (preventCache) {
+                        localStorage.setItem("resource:" + options.url, html);
+                    }
+                    for (let i = 0; i < this.waitingResources[options.url].length; i++) {
+                        this.waitingResources[options.url][i](html);
+                    }
+                    delete this.waitingResources[options.url];
+                }));
+            }
+            else {
+                this.waitingResources[options.url].push(options.success);
+            }
+        }
+    }
+}
+ResourceLoader.waitingResources = {};
+
+class AvResizeObserver {
+    constructor(options) {
+        let realOption;
+        if (options instanceof Function) {
+            realOption = {
+                callback: options,
+            };
+        }
+        else {
+            realOption = options;
+        }
+        this.callback = realOption.callback;
+        this.targets = [];
+        if (!realOption.fps) {
+            realOption.fps = 60;
+        }
+        if (realOption.fps != -1) {
+            this.fpsInterval = 1000 / realOption.fps;
+        }
+        this.nextFrame = 0;
+        this.entriesChangedEvent = {};
+        this.willTrigger = false;
+    }
+    static getUniqueInstance() {
+        if (!AvResizeObserver.uniqueInstance) {
+            AvResizeObserver.uniqueInstance = new ResizeObserver(entries => {
+                let allClasses = [];
+                for (let j = 0; j < entries.length; j++) {
+                    let entry = entries[j];
+                    let index = entry.target['sourceIndex'];
+                    if (AvResizeObserver.resizeObserverClassByObject[index]) {
+                        for (let i = 0; i < AvResizeObserver.resizeObserverClassByObject[index].length; i++) {
+                            let classTemp = AvResizeObserver.resizeObserverClassByObject[index][i];
+                            classTemp.entryChanged(entry);
+                            if (allClasses.indexOf(classTemp) == -1) {
+                                allClasses.push(classTemp);
+                            }
+                        }
+                    }
+                }
+                for (let i = 0; i < allClasses.length; i++) {
+                    allClasses[i].triggerCb();
+                }
+            });
+        }
+        return AvResizeObserver.uniqueInstance;
+    }
+    observe(target) {
+        if (!target["sourceIndex"]) {
+            target["sourceIndex"] = Math.random().toString(36);
+            this.targets.push(target);
+            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]] = [];
+            AvResizeObserver.getUniqueInstance().observe(target);
+        }
+        if (AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].indexOf(this) == -1) {
+            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].push(this);
+        }
+    }
+    unobserve(target) {
+        for (let i = 0; this.targets.length; i++) {
+            let tempTarget = this.targets[i];
+            if (tempTarget == target) {
+                let position = AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].indexOf(this);
+                if (position != -1) {
+                    AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].splice(position, 1);
+                }
+                if (AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].length == 0) {
+                    delete AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']];
+                }
+                AvResizeObserver.getUniqueInstance().unobserve(target);
+                this.targets.splice(i, 1);
+                return;
+            }
+        }
+    }
+    disconnect() {
+        for (let i = 0; this.targets.length; i++) {
+            this.unobserve(this.targets[i]);
+        }
+    }
+    entryChanged(entry) {
+        let index = entry.target.sourceIndex;
+        this.entriesChangedEvent[index] = entry;
+    }
+    triggerCb() {
+        if (!this.willTrigger) {
+            this.willTrigger = true;
+            this._triggerCb();
+        }
+    }
+    _triggerCb() {
+        let now = window.performance.now();
+        let elapsed = now - this.nextFrame;
+        if (this.fpsInterval != -1 && elapsed <= this.fpsInterval) {
+            requestAnimationFrame(() => {
+                this._triggerCb();
+            });
+            return;
+        }
+        this.nextFrame = now - (elapsed % this.fpsInterval);
+        let changed = Object.values(this.entriesChangedEvent);
+        this.entriesChangedEvent = {};
+        this.willTrigger = false;
+        setTimeout(() => {
+            this.callback(changed);
+        }, 0);
+    }
+}
+AvResizeObserver.resizeObserverClassByObject = {};
+
+class RAMManager {
+    constructor() {
+        if (this.constructor == RAMManager) {
+            throw "can't instanciate an abstract class";
+        }
+        this.records = {};
+    }
+    static _getInstance() {
+        if (!this.allRams.hasOwnProperty(this.name)) {
+            let temp = { class: this };
+            this.allRams[this.name] = new temp["class"]();
+        }
+        return this.allRams[this.name];
+    }
+    getId(item) {
+        if (item[this.getPrimaryKey()] !== undefined) {
+            return item[this.getPrimaryKey()] + "";
+        }
+        console.error("can't found key " + this.getPrimaryKey() + " inside ", item);
+        return undefined;
+    }
+    //#region add
+    addList(list) {
+        this.beforeAddList(list);
+        for (let item of list) {
+            this.add(item);
+        }
+        this.afterAddList(list);
+    }
+    add(item) {
+        let key = this.getId(item);
+        if (key) {
+            this.beforeAddItem(item);
+            this.records[key] = item;
+            this.afterAddItem(item);
+        }
+    }
+    beforeAddList(list) { }
+    beforeAddItem(item) { }
+    afterAddItem(item) { }
+    afterAddList(list) { }
+    //#endregion
+    //#region update
+    updateList(list) {
+        this.beforeUpdateList(list);
+        for (let item of list) {
+            this.update(item);
+        }
+        this.afterAddList(list);
+    }
+    update(item) {
+        let key = this.getId(item);
+        if (key) {
+            if (this.records[key]) {
+                this.beforeUpdateItem(item);
+                // TODO do this to found update field for Proxy element, but must find a better way to do that
+                // this.records[key] = {
+                //     ...this.records[key],
+                //     ...item
+                // };
+                this.records[key] = item;
+                this.afterUpdateItem(item);
+            }
+            else {
+                console.error("can't update the item " + key + " because it wasn't found inside ram");
+            }
+        }
+    }
+    beforeUpdateList(list) { }
+    beforeUpdateItem(item) { }
+    afterUpdateItem(item) { }
+    afterUpdateList(list) { }
+    //#endregion
+    //#region delete
+    deleteList(list) {
+        this.beforeDeleteList(list);
+        for (let item of list) {
+            this.delete(item);
+        }
+        this.afterDeleteList(list);
+    }
+    delete(item) {
+        let key = this.getId(item);
+        if (key && this.records[key]) {
+            let oldItem = this.records[key];
+            this.beforeDeleteItem(oldItem);
+            delete this.records[key];
+            this.afterDeleteItem(oldItem);
+        }
+    }
+    beforeDeleteList(list) { }
+    beforeDeleteItem(item) { }
+    afterDeleteItem(item) { }
+    afterDeleteList(list) { }
+    //#endregion
+    //#region get
+    getById(id) {
+        if (this.records[id]) {
+            return this.records[id];
+        }
+        return undefined;
+    }
+    getAll() {
+        return this.records;
+    }
+    getList() {
+        return Object.values(this.records);
+    }
+}
+RAMManager.allRams = {};
+
+class PressManager {
+    /**
+     * @param {*} options - The options
+     * @param {HTMLElement | HTMLElement[]} options.element - The element to manage
+     */
+    constructor(options) {
+        this.subPressManager = [];
+        this.delayDblPress = 150;
+        this.delayLongPress = 700;
+        this.nbPress = 0;
+        this.offsetDrag = 20;
+        this.disableDrag = false;
+        this.state = {
+            oneActionTriggered: false,
+            isMoving: false,
+        };
+        this.startPosition = { x: 0, y: 0 };
+        this.customFcts = {};
+        this.timeoutDblPress = 0;
+        this.timeoutLongPress = 0;
+        this.functionsBinded = {
+            downAction: (e) => { },
+            upAction: (e) => { },
+            moveAction: (e) => { },
+            childPress: (e) => { },
+            childDblPress: (e) => { },
+            childLongPress: (e) => { },
+            childDragStart: (e) => { },
+        };
+        if (options.element === void 0) {
+            throw 'You must provide an element';
+        }
+        if (Array.isArray(options.element)) {
+            for (let el of options.element) {
+                let cloneOpt = Object.assign({}, options);
+                cloneOpt.element = el;
+                this.subPressManager.push(new PressManager(cloneOpt));
+            }
+        }
+        else {
+            this.element = options.element;
+            this.checkDragConstraint(options);
+            this.assignValueOption(options);
+            this.options = options;
+            this.init();
+        }
+    }
+    checkDragConstraint(options) {
+        if (options.onDrag !== void 0) {
+            if (options.onDragStart === void 0) {
+                options.onDragStart = (e) => { };
+            }
+            if (options.onDragEnd === void 0) {
+                options.onDragEnd = (e) => { };
+            }
+        }
+        if (options.onDragStart !== void 0) {
+            if (options.onDrag === void 0) {
+                options.onDrag = (e) => { };
+            }
+            if (options.onDragEnd === void 0) {
+                options.onDragEnd = (e) => { };
+            }
+        }
+        if (options.onDragEnd !== void 0) {
+            if (options.onDragStart === void 0) {
+                options.onDragStart = (e) => { };
+            }
+            if (options.onDrag === void 0) {
+                options.onDrag = (e) => { };
+            }
+        }
+    }
+    assignValueOption(options) {
+        if (options.delayDblPress !== undefined) {
+            this.delayDblPress = options.delayDblPress;
+        }
+        if (options.delayLongPress !== undefined) {
+            this.delayLongPress = options.delayLongPress;
+        }
+        if (options.offsetDrag !== undefined) {
+            this.offsetDrag = options.offsetDrag;
+        }
+        if (options.disableDrag !== undefined) {
+            this.disableDrag = options.disableDrag;
+        }
+    }
+    bindAllFunction() {
+        this.functionsBinded.downAction = this.downAction.bind(this);
+        this.functionsBinded.moveAction = this.moveAction.bind(this);
+        this.functionsBinded.upAction = this.upAction.bind(this);
+        this.functionsBinded.childDblPress = this.childDblPress.bind(this);
+        this.functionsBinded.childDragStart = this.childDragStart.bind(this);
+        this.functionsBinded.childLongPress = this.childLongPress.bind(this);
+        this.functionsBinded.childPress = this.childPress.bind(this);
+    }
+    init() {
+        this.bindAllFunction();
+        this.element.addEventListener("pointerdown", this.functionsBinded.downAction);
+        this.element.addEventListener("trigger_pointer_press", this.functionsBinded.childPress);
+        this.element.addEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);
+        this.element.addEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);
+        this.element.addEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);
+    }
+    // #region current Event
+    downAction(e) {
+        this.downEventSaved = e;
+        e.stopPropagation();
+        if (this.options.onPressStart) {
+            this.options.onPressStart(e, this);
+        }
+        this.customFcts = {};
+        if (this.nbPress == 0) {
+            this.state.oneActionTriggered = false;
+            clearTimeout(this.timeoutDblPress);
+        }
+        this.startPosition = { x: e.pageX, y: e.pageY };
+        document.addEventListener("pointerup", this.functionsBinded.upAction);
+        document.addEventListener("pointermove", this.functionsBinded.moveAction);
+        this.timeoutLongPress = setTimeout(() => {
+            if (!this.state.oneActionTriggered) {
+                if (this.options.onLongPress) {
+                    this.state.oneActionTriggered = true;
+                    this.options.onLongPress(e, this);
+                }
+                else {
+                    this.emitTriggerFunction("longpress", e);
+                }
+            }
+        }, this.delayLongPress);
+    }
+    upAction(e) {
+        e.stopPropagation();
+        document.removeEventListener("pointerup", this.functionsBinded.downAction);
+        document.removeEventListener("pointermove", this.functionsBinded.moveAction);
+        clearTimeout(this.timeoutLongPress);
+        this.nbPress++;
+        if (this.nbPress == 2) {
+            if (!this.state.oneActionTriggered) {
+                this.state.oneActionTriggered = true;
+                this.nbPress = 0;
+                if (this.options.onDblPress) {
+                    this.options.onDblPress(e, this);
+                }
+                else {
+                    this.emitTriggerFunction("dblpress", e);
+                }
+            }
+        }
+        else if (this.nbPress == 1) {
+            this.timeoutDblPress = setTimeout(() => {
+                this.nbPress = 0;
+                if (!this.state.oneActionTriggered) {
+                    if (this.options.onPress) {
+                        this.state.oneActionTriggered = true;
+                        this.options.onPress(e, this);
+                    }
+                    else {
+                        this.emitTriggerFunction("press", e);
+                    }
+                }
+            }, this.delayDblPress);
+        }
+        if (this.state.isMoving) {
+            this.state.isMoving = false;
+            if (this.options.onDragEnd) {
+                this.options.onDragEnd(e, this);
+            }
+            else if (this.customFcts.src && this.customFcts.onDragEnd) {
+                this.customFcts.onDragEnd(e, this.customFcts.src);
+            }
+        }
+    }
+    moveAction(e) {
+        if (!this.state.isMoving && !this.state.oneActionTriggered) {
+            e.stopPropagation();
+            let xDist = e.pageX - this.startPosition.x;
+            let yDist = e.pageY - this.startPosition.y;
+            let distance = Math.sqrt(xDist * xDist + yDist * yDist);
+            if (!this.disableDrag && distance > this.offsetDrag) {
+                this.state.oneActionTriggered = true;
+                if (this.options.onDragStart) {
+                    this.state.isMoving = true;
+                    if (this.options.onDragStart) {
+                        this.options.onDragStart(this.downEventSaved, this);
+                    }
+                    else {
+                        this.emitTriggerFunction("dragstart", this.downEventSaved);
+                    }
+                }
+            }
+        }
+        else if (this.state.isMoving) {
+            if (this.options.onDrag) {
+                this.options.onDrag(e, this);
+            }
+            else if (this.customFcts.src && this.customFcts.onDrag) {
+                this.customFcts.onDrag(e, this.customFcts.src);
+            }
+        }
+    }
+    // #endregion
+    // #region custom Event
+    childPress(e) {
+        if (this.options.onPress) {
+            e.stopPropagation();
+            e.detail.state.oneActionTriggered = true;
+            this.options.onPress(e.detail.realEvent, this);
+        }
+    }
+    childDblPress(e) {
+        if (this.options.onDblPress) {
+            e.stopPropagation();
+            if (e.detail.state) {
+                e.detail.state.oneActionTriggered = true;
+            }
+            this.options.onDblPress(e.detail.realEvent, this);
+        }
+    }
+    childLongPress(e) {
+        if (this.options.onLongPress) {
+            e.stopPropagation();
+            e.detail.state.oneActionTriggered = true;
+            this.options.onLongPress(e.detail.realEvent, this);
+        }
+    }
+    childDragStart(e) {
+        if (this.options.onDragStart) {
+            e.stopPropagation();
+            e.detail.state.isMoving = true;
+            e.detail.customFcts.src = this;
+            e.detail.customFcts.onDrag = this.options.onDrag;
+            e.detail.customFcts.onDragEnd = this.options.onDragEnd;
+            this.options.onDragStart(e.detail.realEvent, this);
+        }
+    }
+    // #endregion
+    emitTriggerFunction(action, e) {
+        this.element.dispatchEvent(new CustomEvent("trigger_pointer_" + action, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            detail: {
+                state: this.state,
+                customFcts: this.customFcts,
+                realEvent: e,
+            }
+        }));
+    }
+    destroy() {
+        for (let sub of this.subPressManager) {
+            sub.destroy();
+        }
+        if (this.element) {
+            this.element.removeEventListener("pointerdown", this.functionsBinded.downAction);
+            this.element.removeEventListener("trigger_pointer_press", this.functionsBinded.childPress);
+            this.element.removeEventListener("trigger_pointer_dblpress", this.functionsBinded.childDblPress);
+            this.element.removeEventListener("trigger_pointer_longpress", this.functionsBinded.childLongPress);
+            this.element.removeEventListener("trigger_pointer_dragstart", this.functionsBinded.childDragStart);
+        }
+    }
+}
+
+class PointerTracker {
+    constructor(element, callbacks) {
+        this.element = element;
+        this.currentPointers = [];
+        const { start = () => true, move = () => {
+        }, end = () => {
+        } } = callbacks;
+        this.startCallback = start;
+        this.moveCallback = move;
+        this.endCallback = end;
+        this.pointerStart = this.pointerStart.bind(this);
+        this.touchStart = this.touchStart.bind(this);
+        this.triggerPointerStart = this.triggerPointerStart.bind(this);
+        this.move = this.move.bind(this);
+        this.triggerPointerEnd = this.triggerPointerEnd.bind(this);
+        this.pointerEnd = this.pointerEnd.bind(this);
+        this.touchEnd = this.touchEnd.bind(this);
+        this.lastEvent = new Date();
+        this.element.addEventListener('mousedown', this.pointerStart);
+        this.element.addEventListener('touchstart', this.touchStart);
+    }
+    reset() {
+        this.currentPointers = [];
+        window.removeEventListener('mousemove', this.move);
+        window.removeEventListener('mouseup', this.pointerEnd);
+        window.removeEventListener('touchmove', this.move);
+        window.removeEventListener('touchend', this.touchEnd);
+    }
+    createPointer(nativePointer) {
+        let id = -1;
+        // this.nativePointer = nativePointer;
+        // this.pageX = nativePointer.pageX;
+        // this.pageY = nativePointer.pageY;
+        // this.clientX = nativePointer.clientX;
+        // this.clientY = nativePointer.clientY;
+        if (self.Touch && nativePointer instanceof Touch) {
+            id = nativePointer.identifier;
+        }
+        else if (self.PointerEvent && nativePointer instanceof PointerEvent) {
+            id = nativePointer.pointerId;
+        }
+        return {
+            id: id
+        };
+    }
+    triggerPointerStart(pointer, event) {
+        if (this.isTooOld()) {
+            this.currentPointers = [];
+        }
+        if (!this.startCallback(pointer, event))
+            return false;
+        this.currentPointers.push(pointer);
+        return true;
+    }
+    pointerStart(event) {
+        if (event.button !== 0)
+            return;
+        const oldPointersLength = this.currentPointers.length;
+        if (!this.triggerPointerStart(this.createPointer(event), event))
+            return;
+        event.preventDefault();
+        if (oldPointersLength === 0) {
+            window.addEventListener('mousemove', this.move);
+            window.addEventListener('mouseup', this.pointerEnd);
+        }
+    }
+    touchStart(event) {
+        const oldPointersLength = this.currentPointers.length;
+        let touch;
+        for (touch of Array.from(event.changedTouches)) {
+            this.triggerPointerStart(this.createPointer(touch), event);
+        }
+        event.preventDefault();
+        if (oldPointersLength === 0) {
+            window.removeEventListener('touchmove', this.move);
+            window.removeEventListener('touchend', this.touchEnd);
+            window.addEventListener('touchmove', this.move);
+            window.addEventListener('touchend', this.touchEnd);
+        }
+    }
+    move(event) {
+        setTimeout(() => {
+            this.lastEvent = new Date();
+            const previousPointers = this.currentPointers.slice();
+            const changedPointers = ('changedTouches' in event) ? Array.from(event.changedTouches).map((t) => this.createPointer(t)) : [this.createPointer(event)];
+            const trackedChangedPointers = [];
+            for (let pointer of changedPointers) {
+                const index = this.currentPointers.findIndex(p => p.id === pointer.id);
+                if (index === -1)
+                    continue;
+                trackedChangedPointers.push(pointer);
+                this.currentPointers[index] = pointer;
+            }
+            if (trackedChangedPointers.length === 0)
+                return;
+            this.moveCallback(previousPointers, trackedChangedPointers, event);
+        });
+    }
+    triggerPointerEnd(pointer, event) {
+        const index = this.currentPointers.findIndex(p => p.id === pointer.id);
+        if (index === -1)
+            return false;
+        this.currentPointers.splice(index, 1);
+        this.endCallback(pointer, event);
+        return true;
+    }
+    pointerEnd(event) {
+        event.preventDefault();
+        if (this.currentPointers.length === 0) {
+            window.removeEventListener('mousemove', this.move);
+            window.removeEventListener('mouseup', this.pointerEnd);
+        }
+        if (!this.triggerPointerEnd(this.createPointer(event), event))
+            return;
+    }
+    touchEnd(event) {
+        for (const touch of Array.from(event.changedTouches)) {
+            this.triggerPointerEnd(this.createPointer(touch), event);
+        }
+        event.preventDefault();
+        if (this.currentPointers.length === 0) {
+            window.removeEventListener('touchmove', this.move);
+            window.removeEventListener('touchend', this.touchEnd);
+        }
+    }
+    isTooOld() {
+        let d = new Date();
+        let diff = d.getTime() - this.lastEvent.getTime();
+        if (diff > 2000) {
+            return true;
+        }
+        return false;
+    }
+}
+
 var luxon = (function (exports) {
     'use strict';
   
@@ -6001,7 +7774,7 @@ var luxon = (function (exports) {
     } // convert a calendar object to a epoch timestamp
   
   
-    function objToTS(obj, offset, zone) {
+    function objToTS(obj, offset, ,zone) {
       return fixOffset(objToLocalTS(obj), offset, zone);
     } // create a new DT instance by adding a duration, adjusting for DSTs
   
@@ -8516,7 +10289,94 @@ var luxon = (function (exports) {
   
   })({});
 
-class DefaultHttpRequestOptions {    constructor() {        this.url = "";        this.method = HttpRequestMethod.GET;    }}var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }    return new (P || (P = Promise))(function (resolve, reject) {        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }        step((generator = generator.apply(thisArg, _arguments || [])).next());    });};class HttpRequest {    constructor(options) {        this._options = {};        this._url = '';        options = Object.assign(Object.assign({}, new DefaultHttpRequestOptions()), options);        let optionsToSend = {            method: this.getMethod(options.method),        };        if (options.data) {            if (options.data instanceof FormData) {                optionsToSend.body = options.data;            }            else {                let formData = new FormData();                for (let key in options.data) {                    formData.append(key, options.data[key]);                }                optionsToSend.body = formData;            }        }        this._options = optionsToSend;        this._url = options.url;    }    static getMethod(method) {        let genericMethod = method.toLowerCase().trim();        if (genericMethod == "get") {            return HttpRequestMethod.GET;        }        if (genericMethod == "post") {            return HttpRequestMethod.POST;        }        if (genericMethod == "delete") {            return HttpRequestMethod.DELETE;        }        if (genericMethod == "put") {            return HttpRequestMethod.PUT;        }        if (genericMethod == "option") {            return HttpRequestMethod.OPTION;        }        console.error("unknow type " + method + ". I ll return GET by default");        return HttpRequestMethod.GET;    }    getMethod(method) {        if (method == HttpRequestMethod.GET)            return "GET";        if (method == HttpRequestMethod.POST)            return "POST";        if (method == HttpRequestMethod.DELETE)            return "DELETE";        if (method == HttpRequestMethod.OPTION)            return "OPTION";        if (method == HttpRequestMethod.PUT)            return "PUT";        return "GET";    }    send() {        return __awaiter(this, void 0, void 0, function* () {            let result = yield fetch(this._url, this._options);            if (result.ok) {            }        });    }}var HttpRequestMethod;(function (HttpRequestMethod) {    HttpRequestMethod[HttpRequestMethod["GET"] = 0] = "GET";    HttpRequestMethod[HttpRequestMethod["POST"] = 1] = "POST";    HttpRequestMethod[HttpRequestMethod["DELETE"] = 2] = "DELETE";    HttpRequestMethod[HttpRequestMethod["PUT"] = 3] = "PUT";    HttpRequestMethod[HttpRequestMethod["OPTION"] = 4] = "OPTION";})(HttpRequestMethod || (HttpRequestMethod = {}));
+class DefaultHttpRequestOptions {
+    constructor() {
+        this.url = "";
+        this.method = HttpRequestMethod.GET;
+    }
+}
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+class HttpRequest {
+    constructor(options) {
+        this._options = {};
+        this._url = '';
+        options = Object.assign(Object.assign({}, new DefaultHttpRequestOptions()), options);
+        let optionsToSend = {
+            method: this.getMethod(options.method),
+        };
+        if (options.data) {
+            if (options.data instanceof FormData) {
+                optionsToSend.body = options.data;
+            }
+            else {
+                let formData = new FormData();
+                for (let key in options.data) {
+                    formData.append(key, options.data[key]);
+                }
+                optionsToSend.body = formData;
+            }
+        }
+        this._options = optionsToSend;
+        this._url = options.url;
+    }
+    static getMethod(method) {
+        let genericMethod = method.toLowerCase().trim();
+        if (genericMethod == "get") {
+            return HttpRequestMethod.GET;
+        }
+        if (genericMethod == "post") {
+            return HttpRequestMethod.POST;
+        }
+        if (genericMethod == "delete") {
+            return HttpRequestMethod.DELETE;
+        }
+        if (genericMethod == "put") {
+            return HttpRequestMethod.PUT;
+        }
+        if (genericMethod == "option") {
+            return HttpRequestMethod.OPTION;
+        }
+        console.error("unknow type " + method + ". I ll return GET by default");
+        return HttpRequestMethod.GET;
+    }
+    getMethod(method) {
+        if (method == HttpRequestMethod.GET)
+            return "GET";
+        if (method == HttpRequestMethod.POST)
+            return "POST";
+        if (method == HttpRequestMethod.DELETE)
+            return "DELETE";
+        if (method == HttpRequestMethod.OPTION)
+            return "OPTION";
+        if (method == HttpRequestMethod.PUT)
+            return "PUT";
+        return "GET";
+    }
+    send() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let result = yield fetch(this._url, this._options);
+            if (result.ok) {
+            }
+        });
+    }
+}
+var HttpRequestMethod;
+(function (HttpRequestMethod) {
+    HttpRequestMethod[HttpRequestMethod["GET"] = 0] = "GET";
+    HttpRequestMethod[HttpRequestMethod["POST"] = 1] = "POST";
+    HttpRequestMethod[HttpRequestMethod["DELETE"] = 2] = "DELETE";
+    HttpRequestMethod[HttpRequestMethod["PUT"] = 3] = "PUT";
+    HttpRequestMethod[HttpRequestMethod["OPTION"] = 4] = "OPTION";
+})(HttpRequestMethod || (HttpRequestMethod = {}));
+
 Proxy.__maxProxyData = 0;
 Object.transformIntoWatcher = function (obj, onDataChanged) {
     if(obj == undefined) {
@@ -9150,16 +11010,721 @@ Array.prototype.last = function () {
     }
     return this[this.length - 1];
 }
-class Color {    /**     * Create a new color     */    constructor(colorString) {        this.subscribers = [];        let colorType = this.getColorType(colorString);        if (colorType !== ColorTypes.unkown) {            if (colorType === ColorTypes.rgb) {                this.currentColor = this.stringToRgb(colorString);            }            else if (colorType === ColorTypes.hex) {                this.currentColor = this.hexStringToRgb(colorString);            }            else if (colorType === ColorTypes.rgba) {                console.log("Not implemented yet");            }            else {                throw new Error("Unknown color type");            }        }        else {            throw new Error(`${colorString} is not a supported color`);        }    }    static createFromRgb(r, g, b) {        return new Color(`rgb(${r}, ${g}, ${b})`);    }    /**     * The hex format of the color     */    get hex() {        return this.rgbToHex(this.currentColor.r, this.currentColor.g, this.currentColor.b);    }    set hex(hexString) {        this.currentColor = this.hexStringToRgb(hexString);        this.emitEvent();    }    /**     * The rgb format of the color     */    get rgb() {        return this.currentColor;    }    set rgb(value) {        if (typeof value === 'object' &&            !Array.isArray(value) &&            value !== null) {            value.r = Math.min(Math.max(value.r, 0), 255);            value.g = Math.min(Math.max(value.g, 0), 255);            value.b = Math.min(Math.max(value.b, 0), 255);            this.currentColor = value;            this.emitEvent();        }    }    get r() {        return this.currentColor.r;    }    set r(newValue) {        if (newValue >= 0 && newValue <= 255) {            this.currentColor.r = newValue;            this.emitEvent();        }        else {            throw new Error("Invalid value");        }    }    get g() {        return this.currentColor.g;    }    set g(newValue) {        if (newValue >= 0 && newValue <= 255) {            this.currentColor.g = newValue;            this.emitEvent();        }        else {            throw new Error("Invalid value");        }    }    get b() {        return this.currentColor.b;    }    set b(newValue) {        if (newValue >= 0 && newValue <= 255) {            this.currentColor.b = newValue;            this.emitEvent();        }        else {            throw new Error("Invalid value");        }    }    getColorType(colorString) {        let treatedColor = colorString.replaceAll(" ", "");        if (treatedColor[0] === "#") {            return ColorTypes.hex;        }        else if (/^rgb\((\d{1,3},*){3}\)$/.test(treatedColor)) {            return ColorTypes.rgb;        }        else if (/^rgb\((\d{1,3},*){4}\)$/.test(treatedColor)) {            return ColorTypes.rgba;        }        else {            console.warn(`Got an unknown color : ${treatedColor}`);            return ColorTypes.unkown;        }    }    stringToRgb(rgbColorString) {        let splitted = rgbColorString.replaceAll(/[\(\)rgb ]/g, "").split(",");        for (let i = 0; i < 3; i++) {            splitted[i] = Math.min(Math.max(parseInt(splitted[i])), 255);        }        return {            r: splitted[0],            g: splitted[1],            b: splitted[2]        };    }    hexStringToRgb(hexColorString) {        // source : https://stackoverflow.com/a/5624139        // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")        let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;        hexColorString = hexColorString.replace(shorthandRegex, function (m, r, g, b) {            return r + r + g + g + b + b;        });        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hexColorString);        if (!result) {            console.error(`Invalid hex string : ${hexColorString}`);            return {                r: 0,                g: 0,                b: 0            };        }        else {            return {                r: parseInt(result[1], 16),                g: parseInt(result[2], 16),                b: parseInt(result[3], 16)            };        }    }    rgbToHex(r, g, b) {        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);    }    onChange(callback) {        if (this.subscribers.indexOf(callback) !== -1) {            console.error("Callback was already present in the subscribers");            return;        }        this.subscribers.push(callback);    }    offChange(callback) {        let index = this.subscribers.indexOf(callback);        if (index === -1) {            console.error("Callback was not present in the subscribers");            return;        }        else {            this.subscribers.splice(index, 1);        }    }    emitEvent() {        [...this.subscribers].forEach(subscriber => {            subscriber(this);        });    }}
-class AnimationManager {    constructor(options) {        if (!options.animate) {            options.animate = () => { };        }        if (!options.stopped) {            options.stopped = () => { };        }        if (!options.fps) {            options.fps = AnimationManager.baseFps;        }        this.options = options;        this.fpsInterval = 1000 / this.options.fps;    }    animate() {        let now = window.performance.now();        let elapsed = now - this.nextFrame;        if (elapsed <= this.fpsInterval) {            requestAnimationFrame(this.animate);            return;        }        this.nextFrame = now - (elapsed % this.fpsInterval);        setTimeout(() => {            this.animate();        }, 0);        if (this.continueAnimation) {            requestAnimationFrame(this.animate);        }        else {            this.options.stopped();        }    }    /**     * Start the of animation     */    start() {        if (this.continueAnimation == false) {            this.continueAnimation = true;            this.nextFrame = window.performance.now();            this.animate();        }    }    /**     * Stop the animation     */    stop() {        this.continueAnimation = false;    }    /**     * Get the FPS     *     * @returns {number}     */    getFPS() {        return this.options.fps;    }    /**     * Set the FPS     *     * @param fps     */    setFPS(fps) {        this.options.fps = fps;        this.fpsInterval = 1000 / this.options.fps;    }    /**     * Get the animation status (true if animation is running)     *     * @returns {boolean}     */    isStarted() {        return this.continueAnimation;    }}AnimationManager.baseFps = 60;
-class WebComponent extends HTMLElement {    constructor() {        super();        this.currentState = "";        this.__onChangeFct = {};        this.__mutableActions = {};        this.__prepareForCreate = [];        this.__prepareForUpdate = [];        this.__loopTemplate = {};        this.__mutableActionsCb = {};        if (this.constructor == WebComponent) {            throw "can't instanciate an abstract class";        }        this._first = true;        this._isReady = false;        this.__prepareVariables();        this.__prepareTranslations();        this.__prepareMutablesActions();        this.__initMutables();        this.__prepareTemplate();        this.__selectElementNeeded();        this.__registerOnChange();        this.__createStates();        this.__prepareForLoop();        this.__endConstructor();    }    static get observedAttributes() {        return [];    }    get isReady() {        return this._isReady;    }    __prepareVariables() { }    __prepareMutablesActions() {        if (Object.keys(this.__mutableActions).length > 0) {            if (!this.__mutable) {                this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {                    console.log("mutation for " + this.nodeName, type, path, element, this);                    let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];                    action(type, path, element);                });            }        }    }    __initMutables() { }    __prepareForLoop() { }    //#region translation    __getLangTranslations() {        return [];    }    __prepareTranslations() {        this._translations = {};        let langs = this.__getLangTranslations();        for (let i = 0; i < langs.length; i++) {            this._translations[langs[i]] = {};        }        this.__setTranslations();    }    __setTranslations() {    }    //#endregion    //#region template    __getStyle() {        return [":host{display:inline-block;box-sizing:border-box}:host *{box-sizing:border-box}"];    }    __getHtml() {        return {            html: '<slot></slot>',            slots: {                default: '<slot></slot>'            }        };    }    __prepareTemplate() {        let tmpl = document.createElement('template');        tmpl.innerHTML = `        <style>            ${this.__getStyle().join("\r\n")}        </style>${this.__getHtml().html}`;        let shadowRoot = this.attachShadow({ mode: 'open' });        shadowRoot.appendChild(tmpl.content.cloneNode(true));    }    //#endregion    __createStates() {        this.currentState = "default";        this.statesList = {            "default": this.getDefaultStateCallbacks()        };        this.getSlugFct = {};    }    getDefaultStateCallbacks() {        return {            active: () => { },            inactive: () => { }        };    }    //#region select element    __getMaxId() {        return [];    }    __selectElementNeeded(ids = null) {        if (ids == null) {            var _maxId = this.__getMaxId();            this._components = {};            for (var i = 0; i < _maxId.length; i++) {                for (let j = 0; j < _maxId[i][1]; j++) {                    let key = _maxId[i][0].toLowerCase() + "_" + j;                    this._components[key] = Array.from(this.shadowRoot.querySelectorAll('[_id="' + key + '"]'));                }            }        }        else {            for (let i = 0; i < ids.length; i++) {                //this._components[ids[i]] = this.shadowRoot.querySelectorAll('[_id="component' + ids[i] + '"]');            }        }        this.__mapSelectedElement();    }    __mapSelectedElement() {    }    //#endregion    __registerOnChange() {    }    __endConstructor() { }    connectedCallback() {        this.__defaultValue();        this.__upgradeAttributes();        this.__addEvents();        if (this._first) {            this._first = false;            this.__applyTranslations();            setTimeout(() => {                this.__subscribeState();                this.postCreation();                this._isReady = true;                this.dispatchEvent(new CustomEvent('ready'));            });        }    }    __defaultValue() { }    __upgradeAttributes() { }    __listBoolProps() {        return [];    }    __upgradeProperty(prop) {        let boolProps = this.__listBoolProps();        if (boolProps.indexOf(prop) != -1) {            if (this.hasAttribute(prop) && (this.getAttribute(prop) === "true" || this.getAttribute(prop) === "")) {                let value = this.getAttribute(prop);                delete this[prop];                this[prop] = value;            }            else {                this.removeAttribute(prop);                this[prop] = false;            }        }        else {            if (this.hasAttribute(prop)) {                let value = this.getAttribute(prop);                delete this[prop];                this[prop] = value;            }        }    }    __addEvents() { }    __applyTranslations() { }    __getTranslation(key) {        if (!this._translations)            return;        var lang = localStorage.getItem('lang');        if (lang === null) {            lang = 'en';        }        if (key.indexOf('lang.') === 0) {            key = key.substring(5);        }        if (this._translations[lang] !== undefined) {            return this._translations[lang][key];        }        return key;    }    getStateManagerName() {        return undefined;    }    __subscribeState() {        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";        var stateSlugged = currentState.replace("*", currentSlug);        if (this.statesList.hasOwnProperty(stateSlugged)) {            this.statesList[stateSlugged].active(stateSlugged);        }        else {            this.statesList["default"].active("default");        }        for (let route in this.statesList) {            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);        }    }    attributeChangedCallback(name, oldValue, newValue) {        if (oldValue !== newValue) {            if (this.__onChangeFct.hasOwnProperty(name)) {                for (let fct of this.__onChangeFct[name]) {                    fct('');                }            }        }    }    postCreation() { }    _unsubscribeState() {        if (this.statesList) {            for (let key in this.statesList) {                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);            }        }    }}
+class Color {
+    /**
+     * Create a new color
+     */
+    constructor(colorString) {
+        this.subscribers = [];
+        let colorType = this.getColorType(colorString);
+        if (colorType !== ColorTypes.unkown) {
+            if (colorType === ColorTypes.rgb) {
+                this.currentColor = this.stringToRgb(colorString);
+            }
+            else if (colorType === ColorTypes.hex) {
+                this.currentColor = this.hexStringToRgb(colorString);
+            }
+            else if (colorType === ColorTypes.rgba) {
+                console.log("Not implemented yet");
+            }
+            else {
+                throw new Error("Unknown color type");
+            }
+        }
+        else {
+            throw new Error(`${colorString} is not a supported color`);
+        }
+    }
+    static createFromRgb(r, g, b) {
+        return new Color(`rgb(${r}, ${g}, ${b})`);
+    }
+    /**
+     * The hex format of the color
+     */
+    get hex() {
+        return this.rgbToHex(this.currentColor.r, this.currentColor.g, this.currentColor.b);
+    }
+    set hex(hexString) {
+        this.currentColor = this.hexStringToRgb(hexString);
+        this.emitEvent();
+    }
+    /**
+     * The rgb format of the color
+     */
+    get rgb() {
+        return this.currentColor;
+    }
+    set rgb(value) {
+        if (typeof value === 'object' &&
+            !Array.isArray(value) &&
+            value !== null) {
+            value.r = Math.min(Math.max(value.r, 0), 255);
+            value.g = Math.min(Math.max(value.g, 0), 255);
+            value.b = Math.min(Math.max(value.b, 0), 255);
+            this.currentColor = value;
+            this.emitEvent();
+        }
+    }
+    get r() {
+        return this.currentColor.r;
+    }
+    set r(newValue) {
+        if (newValue >= 0 && newValue <= 255) {
+            this.currentColor.r = newValue;
+            this.emitEvent();
+        }
+        else {
+            throw new Error("Invalid value");
+        }
+    }
+    get g() {
+        return this.currentColor.g;
+    }
+    set g(newValue) {
+        if (newValue >= 0 && newValue <= 255) {
+            this.currentColor.g = newValue;
+            this.emitEvent();
+        }
+        else {
+            throw new Error("Invalid value");
+        }
+    }
+    get b() {
+        return this.currentColor.b;
+    }
+    set b(newValue) {
+        if (newValue >= 0 && newValue <= 255) {
+            this.currentColor.b = newValue;
+            this.emitEvent();
+        }
+        else {
+            throw new Error("Invalid value");
+        }
+    }
+    getColorType(colorString) {
+        let treatedColor = colorString.replaceAll(" ", "");
+        if (treatedColor[0] === "#") {
+            return ColorTypes.hex;
+        }
+        else if (/^rgb\((\d{1,3},*){3}\)$/.test(treatedColor)) {
+            return ColorTypes.rgb;
+        }
+        else if (/^rgb\((\d{1,3},*){4}\)$/.test(treatedColor)) {
+            return ColorTypes.rgba;
+        }
+        else {
+            console.warn(`Got an unknown color : ${treatedColor}`);
+            return ColorTypes.unkown;
+        }
+    }
+    stringToRgb(rgbColorString) {
+        let splitted = rgbColorString.replaceAll(/[\(\)rgb ]/g, "").split(",");
+        for (let i = 0; i < 3; i++) {
+            splitted[i] = Math.min(Math.max(parseInt(splitted[i])), 255);
+        }
+        return {
+            r: splitted[0],
+            g: splitted[1],
+            b: splitted[2]
+        };
+    }
+    hexStringToRgb(hexColorString) {
+        // source : https://stackoverflow.com/a/5624139
+        // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+        let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hexColorString = hexColorString.replace(shorthandRegex, function (m, r, g, b) {
+            return r + r + g + g + b + b;
+        });
+        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hexColorString);
+        if (!result) {
+            console.error(`Invalid hex string : ${hexColorString}`);
+            return {
+                r: 0,
+                g: 0,
+                b: 0
+            };
+        }
+        else {
+            return {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            };
+        }
+    }
+    rgbToHex(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+    onChange(callback) {
+        if (this.subscribers.indexOf(callback) !== -1) {
+            console.error("Callback was already present in the subscribers");
+            return;
+        }
+        this.subscribers.push(callback);
+    }
+    offChange(callback) {
+        let index = this.subscribers.indexOf(callback);
+        if (index === -1) {
+            console.error("Callback was not present in the subscribers");
+            return;
+        }
+        else {
+            this.subscribers.splice(index, 1);
+        }
+    }
+    emitEvent() {
+        [...this.subscribers].forEach(subscriber => {
+            subscriber(this);
+        });
+    }
+}
 
-var MutableAction;(function (MutableAction) {    MutableAction[MutableAction["SET"] = 0] = "SET";    MutableAction[MutableAction["CREATED"] = 1] = "CREATED";    MutableAction[MutableAction["UPDATED"] = 2] = "UPDATED";    MutableAction[MutableAction["DELETED"] = 3] = "DELETED";})(MutableAction || (MutableAction = {}));
+class AnimationManager {
+    constructor(options) {
+        if (!options.animate) {
+            options.animate = () => { };
+        }
+        if (!options.stopped) {
+            options.stopped = () => { };
+        }
+        if (!options.fps) {
+            options.fps = AnimationManager.baseFps;
+        }
+        this.options = options;
+        this.fpsInterval = 1000 / this.options.fps;
+    }
+    animate() {
+        let now = window.performance.now();
+        let elapsed = now - this.nextFrame;
+        if (elapsed <= this.fpsInterval) {
+            requestAnimationFrame(this.animate);
+            return;
+        }
+        this.nextFrame = now - (elapsed % this.fpsInterval);
+        setTimeout(() => {
+            this.animate();
+        }, 0);
+        if (this.continueAnimation) {
+            requestAnimationFrame(this.animate);
+        }
+        else {
+            this.options.stopped();
+        }
+    }
+    /**
+     * Start the of animation
+     */
+    start() {
+        if (this.continueAnimation == false) {
+            this.continueAnimation = true;
+            this.nextFrame = window.performance.now();
+            this.animate();
+        }
+    }
+    /**
+     * Stop the animation
+     */
+    stop() {
+        this.continueAnimation = false;
+    }
+    /**
+     * Get the FPS
+     *
+     * @returns {number}
+     */
+    getFPS() {
+        return this.options.fps;
+    }
+    /**
+     * Set the FPS
+     *
+     * @param fps
+     */
+    setFPS(fps) {
+        this.options.fps = fps;
+        this.fpsInterval = 1000 / this.options.fps;
+    }
+    /**
+     * Get the animation status (true if animation is running)
+     *
+     * @returns {boolean}
+     */
+    isStarted() {
+        return this.continueAnimation;
+    }
+}
+AnimationManager.baseFps = 60;
+
+<<<<<<< HEAD
+class WebComponent extends HTMLElement {
+    constructor() {
+        super();
+        this.currentState = "";
+        this.__onChangeFct = {};
+        this.__mutableActions = {};
+        this.__prepareForCreate = [];
+        this.__prepareForUpdate = [];
+        this.__loopTemplate = {};
+        this.__mutableActionsCb = {};
+        if (this.constructor == WebComponent) {
+            throw "can't instanciate an abstract class";
+        }
+        this._first = true;
+        this._isReady = false;
+        this.__prepareVariables();
+        this.__prepareTranslations();
+        this.__prepareMutablesActions();
+        this.__initMutables();
+        this.__prepareTemplate();
+        this.__selectElementNeeded();
+        this.__registerOnChange();
+        this.__createStates();
+        this.__prepareForLoop();
+        this.__endConstructor();
+    }
+    static get observedAttributes() {
+        return [];
+    }
+    get isReady() {
+        return this._isReady;
+    }
+    __prepareVariables() { }
+    __prepareMutablesActions() {
+        if (Object.keys(this.__mutableActions).length > 0) {
+            if (!this.__mutable) {
+                this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
+                    console.log("mutation for " + this.nodeName, type, path, element, this);
+                    let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
+                    action(type, path, element);
+                });
+            }
+        }
+    }
+    __initMutables() { }
+    __prepareForLoop() { }
+    //#region translation
+    __getLangTranslations() {
+        return [];
+    }
+    __prepareTranslations() {
+        this._translations = {};
+        let langs = this.__getLangTranslations();
+        for (let i = 0; i < langs.length; i++) {
+            this._translations[langs[i]] = {};
+        }
+        this.__setTranslations();
+    }
+    __setTranslations() {
+    }
+    //#endregion
+    //#region template
+    __getStyle() {
+        return [":host{display:inline-block;box-sizing:border-box}:host *{box-sizing:border-box}"];
+    }
+    __getHtml() {
+        return {
+            html: '<slot></slot>',
+            slots: {
+                default: '<slot></slot>'
+            }
+        };
+    }
+    __prepareTemplate() {
+        let tmpl = document.createElement('template');
+        tmpl.innerHTML = `
+        <style>
+            ${this.__getStyle().join("\r\n")}
+        </style>${this.__getHtml().html}`;
+        let shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.appendChild(tmpl.content.cloneNode(true));
+    }
+    //#endregion
+    __createStates() {
+        this.currentState = "default";
+        this.statesList = {
+            "default": this.getDefaultStateCallbacks()
+        };
+        this.getSlugFct = {};
+    }
+    getDefaultStateCallbacks() {
+        return {
+            active: () => { },
+            inactive: () => { }
+        };
+    }
+    //#region select element
+    __getMaxId() {
+        return [];
+    }
+    __selectElementNeeded(ids = null) {
+        if (ids == null) {
+            var _maxId = this.__getMaxId();
+            this._components = {};
+            for (var i = 0; i < _maxId.length; i++) {
+                for (let j = 0; j < _maxId[i][1]; j++) {
+                    let key = _maxId[i][0].toLowerCase() + "_" + j;
+                    this._components[key] = Array.from(this.shadowRoot.querySelectorAll('[_id="' + key + '"]'));
+                }
+            }
+        }
+        else {
+            for (let i = 0; i < ids.length; i++) {
+                //this._components[ids[i]] = this.shadowRoot.querySelectorAll('[_id="component' + ids[i] + '"]');
+            }
+        }
+        this.__mapSelectedElement();
+    }
+    __mapSelectedElement() {
+    }
+    //#endregion
+    __registerOnChange() {
+    }
+    __endConstructor() { }
+    connectedCallback() {
+        this.__defaultValue();
+        this.__upgradeAttributes();
+        this.__addEvents();
+        if (this._first) {
+            this._first = false;
+            this.__applyTranslations();
+            setTimeout(() => {
+                this.__subscribeState();
+                this.postCreation();
+                this._isReady = true;
+                this.dispatchEvent(new CustomEvent('ready'));
+            });
+        }
+    }
+    __defaultValue() { }
+    __upgradeAttributes() { }
+    __listBoolProps() {
+        return [];
+    }
+    __upgradeProperty(prop) {
+        let boolProps = this.__listBoolProps();
+        if (boolProps.indexOf(prop) != -1) {
+            if (this.hasAttribute(prop) && (this.getAttribute(prop) === "true" || this.getAttribute(prop) === "")) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+            else {
+                this.removeAttribute(prop);
+                this[prop] = false;
+            }
+        }
+        else {
+            if (this.hasAttribute(prop)) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+        }
+    }
+    __addEvents() { }
+    __applyTranslations() { }
+    __getTranslation(key) {
+        if (!this._translations)
+            return;
+        var lang = localStorage.getItem('lang');
+        if (lang === null) {
+            lang = 'en';
+        }
+        if (key.indexOf('lang.') === 0) {
+            key = key.substring(5);
+        }
+        if (this._translations[lang] !== undefined) {
+            return this._translations[lang][key];
+        }
+        return key;
+    }
+    getStateManagerName() {
+        return undefined;
+    }
+    __subscribeState() {
+        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
+        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
+        var stateSlugged = currentState.replace("*", currentSlug);
+        if (this.statesList.hasOwnProperty(stateSlugged)) {
+            this.statesList[stateSlugged].active(stateSlugged);
+        }
+        else {
+            this.statesList["default"].active("default");
+        }
+        for (let route in this.statesList) {
+            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
+        }
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            if (this.__onChangeFct.hasOwnProperty(name)) {
+                for (let fct of this.__onChangeFct[name]) {
+                    fct('');
+                }
+            }
+        }
+    }
+    postCreation() { }
+    _unsubscribeState() {
+        if (this.statesList) {
+            for (let key in this.statesList) {
+                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
+            }
+        }
+    }
+}
+
+=======
+class WebComponent extends HTMLElement {
+    constructor() {
+        super();
+        this.currentState = "";
+        this.__onChangeFct = {};
+        this.__mutableActions = {};
+        this.__prepareForCreate = [];
+        this.__prepareForUpdate = [];
+        this.__loopTemplate = {};
+        this.__mutableActionsCb = {};
+        if (this.constructor == WebComponent) {
+            throw "can't instanciate an abstract class";
+        }
+        this._first = true;
+        this._isReady = false;
+        this.__prepareVariables();
+        this.__prepareTranslations();
+        this.__prepareMutablesActions();
+        this.__initMutables();
+        this.__prepareTemplate();
+        this.__selectElementNeeded();
+        this.__registerOnChange();
+        this.__createStates();
+        this.__prepareForLoop();
+        this.__endConstructor();
+    }
+    static get observedAttributes() {
+        return [];
+    }
+    get isReady() {
+        return this._isReady;
+    }
+    __prepareVariables() { }
+    __prepareMutablesActions() {
+        if (Object.keys(this.__mutableActions).length > 0) {
+            if (!this.__mutable) {
+                this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
+                    console.log("mutation for " + this.nodeName, type, path, element, this);
+                    let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
+                    action(type, path, element);
+                });
+            }
+        }
+    }
+    __initMutables() { }
+    __prepareForLoop() { }
+    //#region translation
+    __getLangTranslations() {
+        return [];
+    }
+    __prepareTranslations() {
+        this._translations = {};
+        let langs = this.__getLangTranslations();
+        for (let i = 0; i < langs.length; i++) {
+            this._translations[langs[i]] = {};
+        }
+        this.__setTranslations();
+    }
+    __setTranslations() {
+    }
+    //#endregion
+    //#region template
+    __getStyle() {
+        return [":host{display:inline-block;box-sizing:border-box}:host *{box-sizing:border-box}"];
+    }
+    __getHtml() {
+        return {
+            html: '<slot></slot>',
+            slots: {
+                default: '<slot></slot>'
+            }
+        };
+    }
+    __prepareTemplate() {
+        let tmpl = document.createElement('template');
+        tmpl.innerHTML = `
+        <style>
+            ${this.__getStyle().join("\r\n")}
+        </style>${this.__getHtml().html}`;
+        let shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.appendChild(tmpl.content.cloneNode(true));
+    }
+    //#endregion
+    __createStates() {
+        this.currentState = "default";
+        this.statesList = {
+            "default": {
+                active() { },
+                inactive() { }
+            }
+        };
+        this.getSlugFct = {};
+    }
+    //#region select element
+    __getMaxId() {
+        return [];
+    }
+    __selectElementNeeded(ids = null) {
+        if (ids == null) {
+            var _maxId = this.__getMaxId();
+            this._components = {};
+            for (var i = 0; i < _maxId.length; i++) {
+                for (let j = 0; j < _maxId[i][1]; j++) {
+                    let key = _maxId[i][0].toLowerCase() + "_" + j;
+                    this._components[key] = Array.from(this.shadowRoot.querySelectorAll('[_id="' + key + '"]'));
+                }
+            }
+        }
+        else {
+            for (let i = 0; i < ids.length; i++) {
+                //this._components[ids[i]] = this.shadowRoot.querySelectorAll('[_id="component' + ids[i] + '"]');
+            }
+        }
+        this.__mapSelectedElement();
+    }
+    __mapSelectedElement() {
+    }
+    //#endregion
+    __registerOnChange() {
+    }
+    __endConstructor() { }
+    connectedCallback() {
+        this.__defaultValue();
+        this.__upgradeAttributes();
+        this.__addEvents();
+        if (this._first) {
+            this._first = false;
+            this.__applyTranslations();
+            setTimeout(() => {
+                this.__subscribeState();
+                this.postCreation();
+                this._isReady = true;
+                this.dispatchEvent(new CustomEvent('ready'));
+            });
+        }
+    }
+    __defaultValue() { }
+    __upgradeAttributes() { }
+    __listBoolProps() {
+        return [];
+    }
+    __upgradeProperty(prop) {
+        let boolProps = this.__listBoolProps();
+        if (boolProps.indexOf(prop) != -1) {
+            if (this.hasAttribute(prop) && (this.getAttribute(prop) === "true" || this.getAttribute(prop) === "")) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+            else {
+                this.removeAttribute(prop);
+                this[prop] = false;
+            }
+        }
+        else {
+            if (this.hasAttribute(prop)) {
+                let value = this.getAttribute(prop);
+                delete this[prop];
+                this[prop] = value;
+            }
+        }
+    }
+    __addEvents() { }
+    __applyTranslations() { }
+    __getTranslation(key) {
+        if (!this._translations)
+            return;
+        var lang = localStorage.getItem('lang');
+        if (lang === null) {
+            lang = 'en';
+        }
+        if (key.indexOf('lang.') === 0) {
+            key = key.substring(5);
+        }
+        if (this._translations[lang] !== undefined) {
+            return this._translations[lang][key];
+        }
+        return key;
+    }
+    getStateManagerName() {
+        return undefined;
+    }
+    __subscribeState() {
+        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
+        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
+        var stateSlugged = currentState.replace("*", currentSlug);
+        if (this.statesList.hasOwnProperty(stateSlugged)) {
+            this.statesList[stateSlugged].active(stateSlugged);
+        }
+        else {
+            this.statesList["default"].active("default");
+        }
+        for (let route in this.statesList) {
+            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
+        }
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            if (this.__onChangeFct.hasOwnProperty(name)) {
+                for (let fct of this.__onChangeFct[name]) {
+                    fct('');
+                }
+            }
+        }
+    }
+    postCreation() { }
+    _unsubscribeState() {
+        if (this.statesList) {
+            for (let key in this.statesList) {
+                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
+            }
+        }
+    }
+}
+
+>>>>>>> 94962f24688f3ad73ac1246a8c8de19e50c39d4a
+
+var MutableAction;
+(function (MutableAction) {
+    MutableAction[MutableAction["SET"] = 0] = "SET";
+    MutableAction[MutableAction["CREATED"] = 1] = "CREATED";
+    MutableAction[MutableAction["UPDATED"] = 2] = "UPDATED";
+    MutableAction[MutableAction["DELETED"] = 3] = "DELETED";
+})(MutableAction || (MutableAction = {}));
 
 
-class Coordinate {    constructor() {        this.x = 0;        this.y = 0;    }}
-var ColorTypes;(function (ColorTypes) {    ColorTypes[ColorTypes["rgb"] = 0] = "rgb";    ColorTypes[ColorTypes["hex"] = 1] = "hex";    ColorTypes[ColorTypes["rgba"] = 2] = "rgba";    ColorTypes[ColorTypes["unkown"] = 3] = "unkown";})(ColorTypes || (ColorTypes = {}));
-class ColorData {    constructor() {        this.r = 0;        this.g = 0;        this.b = 0;    }}
+
+class Coordinate {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+    }
+}
+
+var ColorTypes;
+(function (ColorTypes) {
+    ColorTypes[ColorTypes["rgb"] = 0] = "rgb";
+    ColorTypes[ColorTypes["hex"] = 1] = "hex";
+    ColorTypes[ColorTypes["rgba"] = 2] = "rgba";
+    ColorTypes[ColorTypes["unkown"] = 3] = "unkown";
+})(ColorTypes || (ColorTypes = {}));
+
+class ColorData {
+    constructor() {
+        this.r = 0;
+        this.g = 0;
+        this.b = 0;
+    }
+}
+
 
 
 class AvFormElement extends WebComponent {
@@ -9184,12 +11749,14 @@ class AvFormElement extends WebComponent {
                         } else{
                             this.removeAttribute('required');
                         }
-                    }get 'name'() {
+                    }
+get 'name'() {
                         return this.getAttribute('name');
                     }
                     set 'name'(val) {
                         this.setAttribute('name',val);
-                    }get 'value'() {
+                    }
+get 'value'() {
 						return this.__mutable["value"];
 					}
 					set 'value'(val) {
@@ -9204,7 +11771,8 @@ class AvFormElement extends WebComponent {
 						else{
 							//this.__mutable["value"] = undefined;
 						}
-					}    __prepareMutablesActions() {
+					}
+    __prepareMutablesActions() {
 					this.__mutableActions["value"] = [];
 						this.__mutableActionsCb["value"] = (action, path, value) => {
 							for (let fct of this.__mutableActions["value"]) {
@@ -9221,8 +11789,10 @@ class AvFormElement extends WebComponent {
 									}*/
 								}
 							}
-						}					super.__prepareMutablesActions();
-				}__initMutables() {
+						}
+					super.__prepareMutablesActions();
+				}
+__initMutables() {
 					super.__initMutables();
 					this["value"] = this.getDefaultValue();
 				}
@@ -9252,10 +11822,19 @@ class AvFormElement extends WebComponent {
     getClassName() {
         return "AvFormElement";
     }
-    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; } }
-    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name'); }
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }
+if(!this.hasAttribute('name')){ this['name'] = ''; }
+ }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');
+this.__upgradeProperty('name');
+ }
     __listBoolProps() { return ["required"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
+     onValueChanged(){this.dispatchEvent(new CustomEvent("change", {
+    detail: {
+        value: this.value
+    }
+}));}
+}
 window.customElements.define('av-form-element', AvFormElement);
 class AvForm extends WebComponent {
     static get observedAttributes() {return ["loading", "method", "action", "use_event"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
@@ -9278,17 +11857,20 @@ class AvForm extends WebComponent {
                         } else{
                             this.removeAttribute('loading');
                         }
-                    }get 'method'() {
+                    }
+get 'method'() {
                         return this.getAttribute('method');
                     }
                     set 'method'(val) {
                         this.setAttribute('method',val);
-                    }get 'action'() {
+                    }
+get 'action'() {
                         return this.getAttribute('action');
                     }
                     set 'action'(val) {
                         this.setAttribute('action',val);
-                    }get 'use_event'() {
+                    }
+get 'use_event'() {
                         return this.hasAttribute('use_event');
                     }
                     set 'use_event'(val) {
@@ -9307,7 +11889,10 @@ class AvForm extends WebComponent {
                         } else{
                             this.removeAttribute('use_event');
                         }
-                    }    __prepareVariables() { super.__prepareVariables(); if(this._fields === undefined) {this._fields = {};}if(this._fieldEnter === undefined) {this._fieldEnter = undefined;} }
+                    }
+    __prepareVariables() { super.__prepareVariables(); if(this._fields === undefined) {this._fields = {};}
+if(this._fieldEnter === undefined) {this._fieldEnter = undefined;}
+ }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -9334,10 +11919,60 @@ class AvForm extends WebComponent {
     getClassName() {
         return "AvForm";
     }
-    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('loading')) { this.attributeChangedCallback('loading', false, false); }if(!this.hasAttribute('method')){ this['method'] = 'get'; }if(!this.hasAttribute('action')){ this['action'] = ''; }if(!this.hasAttribute('use_event')) { this.attributeChangedCallback('use_event', false, false); } }
-    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('loading');this.__upgradeProperty('method');this.__upgradeProperty('action');this.__upgradeProperty('use_event'); }
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('loading')) { this.attributeChangedCallback('loading', false, false); }
+if(!this.hasAttribute('method')){ this['method'] = 'get'; }
+if(!this.hasAttribute('action')){ this['action'] = ''; }
+if(!this.hasAttribute('use_event')) { this.attributeChangedCallback('use_event', false, false); }
+ }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('loading');
+this.__upgradeProperty('method');
+this.__upgradeProperty('action');
+this.__upgradeProperty('use_event');
+ }
     __listBoolProps() { return ["loading","use_event"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     submitLastChild(e){if (e.keyCode == 13) {    this.submit();}}async  submit(){var form = new FormData();for (var key in this._fields) {    const input = this._fields[key];    if (!input.required) {        if (input.value) {            form.append(key, input.value);        }    }    else {        form.append(key, input.value);    }}if (this.use_event) {    var customEvent = new CustomEvent('submit', {        detail: {            form: form,            action: this.action,            method: this.method        },        bubbles: true,        composed: true    });    this.dispatchEvent(customEvent);}else {    let request = new HttpRequest({        url: this.action,        method: HttpRequest.getMethod(this.method),        data: form,    });    this.addEventListener("custom", () => {    });}} subsribe(fieldHTML){this._fields[fieldHTML.name] = fieldHTML;if (this._fieldEnter) {    this._fieldEnter.removeEventListener('keypress', this.submitLastChild);}this._fieldEnter = fieldHTML;} postCreation(){}}
+     submitLastChild(e){if (e.keyCode == 13) {
+    this.submit();
+}}
+async  submit(){var form = new FormData();
+for (var key in this._fields) {
+    const input = this._fields[key];
+    if (!input.required) {
+        if (input.value) {
+            form.append(key, input.value);
+        }
+    }
+    else {
+        form.append(key, input.value);
+    }
+}
+if (this.use_event) {
+    var customEvent = new CustomEvent('submit', {
+        detail: {
+            form: form,
+            action: this.action,
+            method: this.method
+        },
+        bubbles: true,
+        composed: true
+    });
+    this.dispatchEvent(customEvent);
+}
+else {
+    let request = new HttpRequest({
+        url: this.action,
+        method: HttpRequest.getMethod(this.method),
+        data: form,
+    });
+    this.addEventListener("custom", () => {
+    });
+}}
+ subsribe(fieldHTML){this._fields[fieldHTML.name] = fieldHTML;
+if (this._fieldEnter) {
+    this._fieldEnter.removeEventListener('keypress', this.submitLastChild);
+}
+this._fieldEnter = fieldHTML;}
+ postCreation(){}
+}
 window.customElements.define('av-form', AvForm);
 class AvFor extends WebComponent {
     static get observedAttributes() {return ["item", "in", "index"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
@@ -9346,17 +11981,33 @@ class AvFor extends WebComponent {
                     }
                     set 'item'(val) {
                         this.setAttribute('item',val);
-                    }get 'in'() {
+                    }
+get 'in'() {
                         return this.getAttribute('in');
                     }
                     set 'in'(val) {
                         this.setAttribute('in',val);
-                    }get 'index'() {
+                    }
+get 'index'() {
                         return this.getAttribute('index');
                     }
                     set 'index'(val) {
                         this.setAttribute('index',val);
-                    }    __prepareVariables() { super.__prepareVariables(); if(this.template === undefined) {this.template = "";}if(this.parent === undefined) {this.parent = undefined;}if(this.parentIndex === undefined) {this.parentIndex = 0;}if(this.parentFor === undefined) {this.parentFor = undefined;}if(this.otherPart === undefined) {this.otherPart = undefined;}if(this.elementsByPath === undefined) {this.elementsByPath = {};}if(this.elementsRootByIndex === undefined) {this.elementsRootByIndex = {};}if(this.forInside === undefined) {this.forInside = {};}if(this.maxIndex === undefined) {this.maxIndex = 0;}if(this.mutableElement === undefined) {this.mutableElement = undefined;}if(this.mutableActionArray === undefined) {this.mutableActionArray = undefined;}if(this.mutableObjectArray === undefined) {this.mutableObjectArray = undefined;}if(this.mutableObjectName === undefined) {this.mutableObjectName = undefined;} }
+                    }
+    __prepareVariables() { super.__prepareVariables(); if(this.template === undefined) {this.template = "";}
+if(this.parent === undefined) {this.parent = undefined;}
+if(this.parentIndex === undefined) {this.parentIndex = 0;}
+if(this.parentFor === undefined) {this.parentFor = undefined;}
+if(this.otherPart === undefined) {this.otherPart = undefined;}
+if(this.elementsByPath === undefined) {this.elementsByPath = {};}
+if(this.elementsRootByIndex === undefined) {this.elementsRootByIndex = {};}
+if(this.forInside === undefined) {this.forInside = {};}
+if(this.maxIndex === undefined) {this.maxIndex = 0;}
+if(this.mutableElement === undefined) {this.mutableElement = undefined;}
+if(this.mutableActionArray === undefined) {this.mutableActionArray = undefined;}
+if(this.mutableObjectArray === undefined) {this.mutableObjectArray = undefined;}
+if(this.mutableObjectName === undefined) {this.mutableObjectName = undefined;}
+ }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -9380,17 +12031,279 @@ class AvFor extends WebComponent {
         temp.push(["AvFor", 0])
         return temp;
     }
-    __endConstructor() { super.__endConstructor(); (() => {    this.init();})() }
+    __endConstructor() { super.__endConstructor(); (() => {
+    this.init();
+})() }
     getClassName() {
         return "AvFor";
     }
-    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('item')){ this['item'] = ''; }if(!this.hasAttribute('in')){ this['in'] = ''; }if(!this.hasAttribute('index')){ this['index'] = ''; } }
-    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('item');this.__upgradeProperty('in');this.__upgradeProperty('index'); }
-     init(){if (!this.parent) {    let shadow = this.getRootNode();    if (shadow.host) {        this.parent = shadow.host;        let parentsFor = this.findParents("av-for", this.parent);        let inParts = this.in.split(".");        let firstPart = inParts.splice(0, 1)[0];        if (this.parent["__mutableActions"].hasOwnProperty(firstPart)) {            this.mutableActionArray = this.parent["__mutableActions"][firstPart];            this.mutableObjectArray = this.parent["__mutable"];            this.mutableObjectName = firstPart;        }        else {            for (let parentFor of parentsFor) {                if (parentFor.item == firstPart) {                    this.parentFor = parentFor;                    this.mutableActionArray = this.parentFor.mutableActionArray;                    this.mutableObjectArray = this.parentFor.mutableObjectArray;                    this.mutableObjectName = this.parentFor.mutableObjectName;                    this.otherPart = inParts;                    break;                }            }        }        if (this.mutableActionArray) {            let fctCb = (target, type, path, element) => {                path = path.replace(this.mutableObjectName, "");                if (type == MutableAction.SET || path == this.getParentKey()) {                    this.reset();                    this.mutableElement = element;                    let currentCreate = Object.prepareByPath(this.mutableElement, this.getParentKey());                    if (currentCreate.canApply) {                        if (Array.isArray(currentCreate.objToApply)) {                            for (let i = 0; i < currentCreate.objToApply.length; i++) {                                this.createForElement(currentCreate.objToApply[i], "[" + i + "]");                            }                        }                        else {                            for (let key in currentCreate.objToApply) {                                this.createForElement(currentCreate.objToApply[key], key);                            }                        }                    }                    else if (!Array.isArray(element) && element !== undefined) {                        console.error("something went wrong, but I don't understand how this is possible");                    }                }                else {                    let otherPartRegexp = this.getParentKey().replace(/\[/g, "\\[").replace(/\]/g, "\\]");                    let regexNumberLoop = new RegExp("^" + otherPartRegexp + "\\[(\\d*?)\\]$", "g");                    let testPath = new RegExp("^" + otherPartRegexp + "(\\[\\d*?\\].*)$", "g").exec(path);                    if (testPath) {                        let pathToUse = testPath[1];                        let matchTemp = path.match(regexNumberLoop);                        if (matchTemp) {                            if (type == MutableAction.CREATED) {                                this.createForElement(element, pathToUse);                            }                            else if (type == MutableAction.UPDATED) {                                this.updateForElement(element, pathToUse);                            }                            else if (type == MutableAction.DELETED) {                                this.deleteForElement(element, pathToUse);                            }                        }                        else {                            if (type == MutableAction.CREATED) {                                this.updateForElement(element, pathToUse);                            }                            else if (type == MutableAction.UPDATED) {                                this.updateForElement(element, pathToUse);                            }                            else if (type == MutableAction.DELETED) {                                this.updateForElement(undefined, pathToUse);                            }                        }                    }                }            };            this.mutableActionArray.push(fctCb);            if (this.mutableObjectArray[this.mutableObjectName]) {                fctCb(this.parentElement, MutableAction.SET, '', this.mutableObjectArray[this.mutableObjectName]);            }        }        else {            console.error("variable " + this.in + " in parent can't be found");        }    }}} createForElement(data,key){let temp = document.createElement("DIV");temp.innerHTML = this.parent["__loopTemplate"][this.getAttribute("_id")];let index = Number(key.replace("[", "").replace("]", ""));if (index > this.maxIndex) {    this.maxIndex = index;}let maxSaved = this.maxIndex;for (let i = maxSaved; i >= index; i--) {    if (this.elementsRootByIndex.hasOwnProperty(i)) {        if (i + 1 > this.maxIndex) {            this.maxIndex = i + 1;        }        this.elementsRootByIndex[i + 1] = this.elementsRootByIndex[i];        this.elementsByPath[i + 1] = this.elementsByPath[i];        this.forInside[i + 1] = this.forInside[i];        for (let elements of Object.values(this.elementsByPath[i + 1])) {            for (let element of elements) {                if (element["__values"].hasOwnProperty("$index$_" + this.index)) {                    element["__values"]["$index$_" + this.index] = i + 1;                    element["__templates"]["$index$_" + this.index].forEach((cb) => {                        cb(element);                    });                }            }        }        for (let forEl of this.forInside[i + 1]) {            forEl.parentIndex = i + 1;            forEl.updateIndexes(this.index, i + 1);        }    }}let result = this.parent['__prepareForCreate'][this.getAttribute("_id")](temp, data, key, this.getAllIndexes(index));let forEls = Array.from(temp.querySelectorAll("av-for"));this.forInside[index] = [];for (let forEl of forEls) {    forEl.parentIndex = index;    this.forInside[index].push(forEl);}this.elementsByPath[index] = result;this.elementsRootByIndex[index] = [];let appendChild = (el) => { this.appendChild(el); };if (index != this.maxIndex) {    let previous = this.elementsRootByIndex[index + 1][0];    appendChild = (el) => { this.insertBefore(el, previous); };}while (temp.children.length > 0) {    let el = temp.children[0];    this.elementsRootByIndex[index].push(el);    appendChild(el);}} updateForElement(data,key){let idendity = key.match(/\[\d*?\]/g)[0];let index = Number(idendity.replace("[", "").replace("]", ""));if (index > this.maxIndex) {    this.maxIndex = index;}key = key.replace(idendity, "");if (key.startsWith(".")) {    key = key.slice(1);}if (this.elementsByPath[index]) {    for (let pathName in this.elementsByPath[index]) {        for (let element of this.elementsByPath[index][pathName]) {            for (let valueName in element["__values"]) {                if (valueName == "") {                    element["__templates"][valueName].forEach((cb) => {                        cb(element, true);                    });                }                else if (valueName == key) {                    element["__values"][valueName] = data;                    element["__templates"][valueName].forEach((cb) => {                        cb(element);                    });                }                else if (valueName.startsWith(key)) {                    let temp = Object.prepareByPath(data, valueName, key);                    if (temp.canApply) {                        element["__values"][valueName] = temp.objToApply;                        element["__templates"][valueName].forEach((cb) => {                            cb(element);                        });                    }                }            }        }    }}else {    this.createForElement(this.mutableElement[index], idendity);}} deleteForElement(data,key){let index = Number(key.replace("[", "").replace("]", ""));if (index > this.maxIndex) {    this.maxIndex = index;}if (this.elementsRootByIndex[index]) {    for (let el of this.elementsRootByIndex[index]) {        el.remove();    }    delete this.elementsRootByIndex[index];    delete this.elementsByPath[index];    for (let i = index; i <= this.maxIndex; i++) {        if (i == this.maxIndex) {            this.maxIndex--;        }        if (this.elementsRootByIndex.hasOwnProperty(i)) {            this.elementsRootByIndex[i - 1] = this.elementsRootByIndex[i];            this.elementsByPath[i - 1] = this.elementsByPath[i];            this.forInside[i - 1] = this.forInside[i];            for (let elements of Object.values(this.elementsByPath[i - 1])) {                for (let element of elements) {                    if (element["__values"].hasOwnProperty("$index$_" + this.index)) {                        element["__values"]["$index$_" + this.index] = i - 1;                        element["__templates"]["$index$_" + this.index].forEach((cb) => {                            cb(element);                        });                    }                }            }            for (let forEl of this.forInside[i - 1]) {                forEl.parentIndex = i - 1;                forEl.updateIndexes(this.index, i - 1);            }        }    }}} reset(){this.elementsByPath = {};this.elementsRootByIndex = {};this.forInside = {};this.maxIndex = 0;this.innerHTML = "";} postCreation(){this.init();} getParentKey(){let el = this;let result = "";while (el.parentFor) {    result = result + "[" + el.parentIndex + "]." + this.otherPart.join(".");    el = el.parentFor;}return result;} updateIndexes(indexName,indexValue){for (let position in this.elementsByPath) {    for (let elements of Object.values(this.elementsByPath[position])) {        for (let element of elements) {            if (element["__values"].hasOwnProperty("$index$_" + indexName)) {                element["__values"]["$index$_" + indexName] = indexValue;                element["__templates"]["$index$_" + indexName].forEach((cb) => {                    cb(element);                });            }        }    }}for (let index in this.forInside) {    this.forInside[index].forEach((forEl) => {        forEl.updateIndexes(indexName, indexValue);    });}} getAllIndexes(currentIndex){let result = {};let el = this;while (el.parentFor) {    result[el.parentFor.index] = el.parentIndex;    el = el.parentFor;}result[this.index] = currentIndex;return result;}}
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('item')){ this['item'] = ''; }
+if(!this.hasAttribute('in')){ this['in'] = ''; }
+if(!this.hasAttribute('index')){ this['index'] = ''; }
+ }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('item');
+this.__upgradeProperty('in');
+this.__upgradeProperty('index');
+ }
+     init(){if (!this.parent) {
+    let shadow = this.getRootNode();
+    if (shadow.host) {
+        this.parent = shadow.host;
+        let parentsFor = this.findParents("av-for", this.parent);
+        let inParts = this.in.split(".");
+        let firstPart = inParts.splice(0, 1)[0];
+        if (this.parent["__mutableActions"].hasOwnProperty(firstPart)) {
+            this.mutableActionArray = this.parent["__mutableActions"][firstPart];
+            this.mutableObjectArray = this.parent["__mutable"];
+            this.mutableObjectName = firstPart;
+        }
+        else {
+            for (let parentFor of parentsFor) {
+                if (parentFor.item == firstPart) {
+                    this.parentFor = parentFor;
+                    this.mutableActionArray = this.parentFor.mutableActionArray;
+                    this.mutableObjectArray = this.parentFor.mutableObjectArray;
+                    this.mutableObjectName = this.parentFor.mutableObjectName;
+                    this.otherPart = inParts;
+                    break;
+                }
+            }
+        }
+        if (this.mutableActionArray) {
+            let fctCb = (target, type, path, element) => {
+                path = path.replace(this.mutableObjectName, "");
+                if (type == MutableAction.SET || path == this.getParentKey()) {
+                    this.reset();
+                    this.mutableElement = element;
+                    let currentCreate = Object.prepareByPath(this.mutableElement, this.getParentKey());
+                    if (currentCreate.canApply) {
+                        if (Array.isArray(currentCreate.objToApply)) {
+                            for (let i = 0; i < currentCreate.objToApply.length; i++) {
+                                this.createForElement(currentCreate.objToApply[i], "[" + i + "]");
+                            }
+                        }
+                        else {
+                            for (let key in currentCreate.objToApply) {
+                                this.createForElement(currentCreate.objToApply[key], key);
+                            }
+                        }
+                    }
+                    else if (!Array.isArray(element) && element !== undefined) {
+                        console.error("something went wrong, but I don't understand how this is possible");
+                    }
+                }
+                else {
+                    let otherPartRegexp = this.getParentKey().replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+                    let regexNumberLoop = new RegExp("^" + otherPartRegexp + "\\[(\\d*?)\\]$", "g");
+                    let testPath = new RegExp("^" + otherPartRegexp + "(\\[\\d*?\\].*)$", "g").exec(path);
+                    if (testPath) {
+                        let pathToUse = testPath[1];
+                        let matchTemp = path.match(regexNumberLoop);
+                        if (matchTemp) {
+                            if (type == MutableAction.CREATED) {
+                                this.createForElement(element, pathToUse);
+                            }
+                            else if (type == MutableAction.UPDATED) {
+                                this.updateForElement(element, pathToUse);
+                            }
+                            else if (type == MutableAction.DELETED) {
+                                this.deleteForElement(element, pathToUse);
+                            }
+                        }
+                        else {
+                            if (type == MutableAction.CREATED) {
+                                this.updateForElement(element, pathToUse);
+                            }
+                            else if (type == MutableAction.UPDATED) {
+                                this.updateForElement(element, pathToUse);
+                            }
+                            else if (type == MutableAction.DELETED) {
+                                this.updateForElement(undefined, pathToUse);
+                            }
+                        }
+                    }
+                }
+            };
+            this.mutableActionArray.push(fctCb);
+            if (this.mutableObjectArray[this.mutableObjectName]) {
+                fctCb(this.parentElement, MutableAction.SET, '', this.mutableObjectArray[this.mutableObjectName]);
+            }
+        }
+        else {
+            console.error("variable " + this.in + " in parent can't be found");
+        }
+    }
+}}
+ createForElement(data,key){let temp = document.createElement("DIV");
+temp.innerHTML = this.parent["__loopTemplate"][this.getAttribute("_id")];
+let index = Number(key.replace("[", "").replace("]", ""));
+if (index > this.maxIndex) {
+    this.maxIndex = index;
+}
+let maxSaved = this.maxIndex;
+for (let i = maxSaved; i >= index; i--) {
+    if (this.elementsRootByIndex.hasOwnProperty(i)) {
+        if (i + 1 > this.maxIndex) {
+            this.maxIndex = i + 1;
+        }
+        this.elementsRootByIndex[i + 1] = this.elementsRootByIndex[i];
+        this.elementsByPath[i + 1] = this.elementsByPath[i];
+        this.forInside[i + 1] = this.forInside[i];
+        for (let elements of Object.values(this.elementsByPath[i + 1])) {
+            for (let element of elements) {
+                if (element["__values"].hasOwnProperty("$index$_" + this.index)) {
+                    element["__values"]["$index$_" + this.index] = i + 1;
+                    element["__templates"]["$index$_" + this.index].forEach((cb) => {
+                        cb(element);
+                    });
+                }
+            }
+        }
+        for (let forEl of this.forInside[i + 1]) {
+            forEl.parentIndex = i + 1;
+            forEl.updateIndexes(this.index, i + 1);
+        }
+    }
+}
+let result = this.parent['__prepareForCreate'][this.getAttribute("_id")](temp, data, key, this.getAllIndexes(index));
+let forEls = Array.from(temp.querySelectorAll("av-for"));
+this.forInside[index] = [];
+for (let forEl of forEls) {
+    forEl.parentIndex = index;
+    this.forInside[index].push(forEl);
+}
+this.elementsByPath[index] = result;
+this.elementsRootByIndex[index] = [];
+let appendChild = (el) => { this.appendChild(el); };
+if (index != this.maxIndex) {
+    let previous = this.elementsRootByIndex[index + 1][0];
+    appendChild = (el) => { this.insertBefore(el, previous); };
+}
+while (temp.children.length > 0) {
+    let el = temp.children[0];
+    this.elementsRootByIndex[index].push(el);
+    appendChild(el);
+}}
+ updateForElement(data,key){let idendity = key.match(/\[\d*?\]/g)[0];
+let index = Number(idendity.replace("[", "").replace("]", ""));
+if (index > this.maxIndex) {
+    this.maxIndex = index;
+}
+key = key.replace(idendity, "");
+if (key.startsWith(".")) {
+    key = key.slice(1);
+}
+if (this.elementsByPath[index]) {
+    for (let pathName in this.elementsByPath[index]) {
+        for (let element of this.elementsByPath[index][pathName]) {
+            for (let valueName in element["__values"]) {
+                if (valueName == "") {
+                    element["__templates"][valueName].forEach((cb) => {
+                        cb(element, true);
+                    });
+                }
+                else if (valueName == key) {
+                    element["__values"][valueName] = data;
+                    element["__templates"][valueName].forEach((cb) => {
+                        cb(element);
+                    });
+                }
+                else if (valueName.startsWith(key)) {
+                    let temp = Object.prepareByPath(data, valueName, key);
+                    if (temp.canApply) {
+                        element["__values"][valueName] = temp.objToApply;
+                        element["__templates"][valueName].forEach((cb) => {
+                            cb(element);
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+else {
+    this.createForElement(this.mutableElement[index], idendity);
+}}
+ deleteForElement(data,key){let index = Number(key.replace("[", "").replace("]", ""));
+if (index > this.maxIndex) {
+    this.maxIndex = index;
+}
+if (this.elementsRootByIndex[index]) {
+    for (let el of this.elementsRootByIndex[index]) {
+        el.remove();
+    }
+    delete this.elementsRootByIndex[index];
+    delete this.elementsByPath[index];
+    for (let i = index; i <= this.maxIndex; i++) {
+        if (i == this.maxIndex) {
+            this.maxIndex--;
+        }
+        if (this.elementsRootByIndex.hasOwnProperty(i)) {
+            this.elementsRootByIndex[i - 1] = this.elementsRootByIndex[i];
+            this.elementsByPath[i - 1] = this.elementsByPath[i];
+            this.forInside[i - 1] = this.forInside[i];
+            for (let elements of Object.values(this.elementsByPath[i - 1])) {
+                for (let element of elements) {
+                    if (element["__values"].hasOwnProperty("$index$_" + this.index)) {
+                        element["__values"]["$index$_" + this.index] = i - 1;
+                        element["__templates"]["$index$_" + this.index].forEach((cb) => {
+                            cb(element);
+                        });
+                    }
+                }
+            }
+            for (let forEl of this.forInside[i - 1]) {
+                forEl.parentIndex = i - 1;
+                forEl.updateIndexes(this.index, i - 1);
+            }
+        }
+    }
+}}
+ reset(){this.elementsByPath = {};
+this.elementsRootByIndex = {};
+this.forInside = {};
+this.maxIndex = 0;
+this.innerHTML = "";}
+ postCreation(){this.init();}
+ getParentKey(){let el = this;
+let result = "";
+while (el.parentFor) {
+    result = result + "[" + el.parentIndex + "]." + this.otherPart.join(".");
+    el = el.parentFor;
+}
+return result;}
+ updateIndexes(indexName,indexValue){for (let position in this.elementsByPath) {
+    for (let elements of Object.values(this.elementsByPath[position])) {
+        for (let element of elements) {
+            if (element["__values"].hasOwnProperty("$index$_" + indexName)) {
+                element["__values"]["$index$_" + indexName] = indexValue;
+                element["__templates"]["$index$_" + indexName].forEach((cb) => {
+                    cb(element);
+                });
+            }
+        }
+    }
+}
+for (let index in this.forInside) {
+    this.forInside[index].forEach((forEl) => {
+        forEl.updateIndexes(indexName, indexValue);
+    });
+}}
+ getAllIndexes(currentIndex){let result = {};
+let el = this;
+while (el.parentFor) {
+    result[el.parentFor.index] = el.parentIndex;
+    el = el.parentFor;
+}
+result[this.index] = currentIndex;
+return result;}
+}
 window.customElements.define('av-for', AvFor);
 class DisplayElement extends WebComponent {
     constructor() { super(); if (this.constructor == DisplayElement) { throw "can't instanciate an abstract class"; } }
-    __prepareVariables() { super.__prepareVariables(); if(this.currentInstance === undefined) {this.currentInstance = undefined;}if(this.eventsFunctions === undefined) {this.eventsFunctions = {};} }
+    __prepareVariables() { super.__prepareVariables(); if(this.currentInstance === undefined) {this.currentInstance = undefined;}
+if(this.eventsFunctions === undefined) {this.eventsFunctions = {};}
+ }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -9419,5 +12332,19 @@ class DisplayElement extends WebComponent {
     getClassName() {
         return "DisplayElement";
     }
-     onDeleteFunction(data){} onUpdateFunction(data){} destroy(){if (this.currentInstance) {    this.unsubscribeFromInstance();}} subscribeToInstance(){} unsubscribeFromInstance(){this.currentInstance.offUpdate(this.eventsFunctions["onUpdate"]);this.currentInstance.offDelete(this.eventsFunctions["onDelete"]);} switchInstance(newInstance){if (this.currentInstance) {    this.unsubscribeFromInstance();}this.currentInstance = newInstance;this.subscribeToInstance();this.displayInfos(newInstance);}}
+     onDeleteFunction(data){}
+ onUpdateFunction(data){}
+ destroy(){if (this.currentInstance) {
+    this.unsubscribeFromInstance();
+}}
+ subscribeToInstance(){}
+ unsubscribeFromInstance(){this.currentInstance.offUpdate(this.eventsFunctions["onUpdate"]);
+this.currentInstance.offDelete(this.eventsFunctions["onDelete"]);}
+ switchInstance(newInstance){if (this.currentInstance) {
+    this.unsubscribeFromInstance();
+}
+this.currentInstance = newInstance;
+this.subscribeToInstance();
+this.displayInfos(newInstance);}
+}
 window.customElements.define('display-element', DisplayElement);

@@ -15,9 +15,11 @@ import { AVENTUS_DEF_BASE_PATH, loadLibrary } from '../libLoader';
 const nodeSass = require('sass');
 import * as cheerio from 'cheerio';
 import { HTMLDoc, SCSSDoc } from './compiler/component/def';
+import { ClassModel, parseStruct } from '../../ts-file-parser';
+import { connectionWithClient } from '../../mode';
 
 
-const baseAventusEndPath = "/aventus/base/src";
+const baseAventusEndPath = "/Aventus/base/src";
 
 export class AventusJSProgramManager {
 	private dico: { [key: string]: AventusJSProgram } = {}
@@ -119,6 +121,7 @@ export class AventusJSProgram {
 	private enableBuild: boolean = true;
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
+	private TSDefClass: { [key: string]: ClassModel } = {};
 
 	private jsLanguageService: ts.LanguageService | undefined;
 
@@ -654,7 +657,7 @@ export class AventusJSProgram {
 						const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(document.uri);
 						const semanticDiagnostics: ts.Diagnostic[] = languageService.getSemanticDiagnostics(document.uri);
 
-						const compileError: Diagnostic[] = this.filesLoaded[document.uri].doValidation(config);
+						const compileError: Diagnostic[] = this.filesLoaded[document.uri].doValidation(config, this);
 
 						diagnostics = syntaxDiagnostics.concat(semanticDiagnostics).map((diag: ts.Diagnostic): Diagnostic => {
 							return {
@@ -767,6 +770,13 @@ export class AventusJSProgram {
 		}
 	}
 
+
+	public tryGetClassInDef(name: string): ClassModel | undefined {
+		if (this.TSDefClass[name]) {
+			return this.TSDefClass[name];
+		}
+		return undefined;
+	}
 	private loadDef(pathToImport: string) {
 		pathToImport = normalize(pathToImport);
 		let uriToImport = pathToUri(pathToImport.replace(/\\/g, '/'));
@@ -778,6 +788,28 @@ export class AventusJSProgram {
 				if (this.filesNeeded.indexOf(document.uri) == -1) {
 					this.filesNeeded.push(document.uri);
 					this.filesLoaded[document.uri] = new AventusDoc(document, this);
+
+					try {
+						let structJs = parseStruct(document.getText(), {}, AVENTUS_DEF_BASE_PATH);
+						structJs.classes.forEach(classInfo => {
+							// Check if classInfo implements DefaultComponent
+							let foundDefaultComponent = false;
+							for (let implement of classInfo.implements) {
+								if (implement.typeName == 'DefaultComponent') {
+									foundDefaultComponent = true;
+									break;
+								}
+							}
+
+							if (foundDefaultComponent) {
+								this.TSDefClass[classInfo.name] = classInfo;
+							}
+						});
+					} catch {
+						let splitted = uriToImport.split("/");
+						let fileName = splitted[splitted.length - 1];
+						connectionWithClient?.window.showErrorMessage("There is an error inside file :" + fileName);
+					}
 				}
 			}
 
