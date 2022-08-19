@@ -99,7 +99,7 @@ A *.static.avt file is a file not compiled by the system. The content of the fil
 
 ### Definition
 
-A *.def.avt file is a file representing definition for a project. It allows you to use other project in your.
+A *.def.avt file is a file representing definition for a project. It allows you to use other project in yours.
 
 ## VS Code Settings 
 Edit settings.json and add
