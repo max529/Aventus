@@ -1,0 +1,20 @@
+:host {
+	av-scrollable {
+		width: 200px;
+		height: 200px;
+		border: 1px solid gray;
+
+		.item {
+			width: 200%;
+			height: 50px;
+			background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 35%, rgba(0,212,255,1) 100%);
+			margin: 10px 0;
+		}
+	}
+}
+:host(.big){
+	av-scrollable {
+		width: 400px;
+		height: 1000px;
+	}
+}

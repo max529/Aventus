@@ -141,8 +141,8 @@ Element.prototype.getPositionOnScreen = function (untilEl = undefined) {
     top -= window.scrollY;
     left -= window.scrollX;
     return {
-        top: top,
-        left: left
+        x: left,
+        y: top,
     };
 };
 Element.prototype.getElementsInSlot = function () {

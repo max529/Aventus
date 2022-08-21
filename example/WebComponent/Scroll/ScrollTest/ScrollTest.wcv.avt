@@ -1,0 +1,23 @@
+<button av-click="changeSize">change size</button>
+<av-scrollable>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+	<div class="item"></div>
+</av-scrollable>

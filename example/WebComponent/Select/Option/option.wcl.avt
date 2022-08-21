@@ -1,0 +1,40 @@
+export class AvOption extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    @attribute()
+    value: string = "";
+
+    @attribute()
+    selected: boolean = false;
+    //#endregion
+
+
+    //#region variables
+
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    protected override postCreation(): void {
+        if(this.value == '') {
+            this.value = this.innerHTML;
+        }
+    }
+	//#endregion
+
+}

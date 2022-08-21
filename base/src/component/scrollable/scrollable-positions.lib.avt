@@ -1,4 +1,4 @@
-export class DtScrollablePositions {
+export interface DtScrollablePositions {
     vertical: {
         value: number,
         max: number

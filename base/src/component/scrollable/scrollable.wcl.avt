@@ -1,6 +1,8 @@
 import { DtScrollablePositions } from "./scrollable-positions.lib.avt";
+import { AvResizeObserver } from "../../lib/ResizeObserver.lib.avt";
+import { DefaultComponent, WebComponent } from "../../lib/WebComponent.lib.avt";
 
-export class DtScrollable extends WebComponent implements DefaultComponent {
+export class AvScrollable extends WebComponent implements DefaultComponent {
 
     //#region static
 
@@ -9,20 +11,21 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
 
     //#region props
 
-    @attribute((target: DtScrollable) => {
+    @attribute((target: AvScrollable) => {
         if(target.disable_scroll) {
             target.removeResizeObserver();
             target.removeWheelAction();
-            target.contentZoom.style.width = "";
-            target.contentZoom.style.height = "";
-        } else {
+            target.contentZoom.style.width = '';
+            target.contentZoom.style.height = '';
+        }
+        else {
             target.addResizeObserver();
             target.addWheelAction();
         }
     })
     disable_scroll: boolean;
 
-    @attribute((target: DtScrollable) => {
+    @attribute((target: AvScrollable) => {
         target.changeZoom();
     })
     zoom: number = 1;
@@ -37,6 +40,17 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
 
 
     //#region variables
+    verticalScrollVisible: boolean = false;
+    horizontalScrollVisible: boolean = false;
+    observer: AvResizeObserver;
+    wheelAction: (e: WheelEvent) => void;
+    touchWheelAction: (e: MouseEvent) => void;
+    contentHidderWidth: number = 0;
+    contentHidderHeight: number = 0;
+    content: DtScrollablePositions = { "vertical": { "value": 0, "max": 0 }, "horizontal": { "value": 0, "max": 0 } };
+    scrollbar: DtScrollablePositions = { "vertical": { "value": 0, "max": 0 }, "horizontal": { "value": 0, "max": 0 } };
+    refreshTimeout: number = 100;
+
     elToCalculate: HTMLDivElement;
     contentZoom: HTMLDivElement;
     contentHidder: HTMLDivElement;
@@ -46,19 +60,6 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
     verticalScroller: HTMLDivElement;
     horizontalScrollerContainer: HTMLDivElement;
     horizontalScroller: HTMLDivElement;
-
-    verticalScrollVisible: boolean;
-    horizontalScrollVisible: boolean;
-    observer: AvResizeObserver;
-    wheelAction: EventListener;
-    touchWheelAction: EventListener;
-
-    contentHidderWidth: number;
-    contentHidderHeight: number;
-
-    content: DtScrollablePositions = new DtScrollablePositions();
-    scrollbar: DtScrollablePositions = new DtScrollablePositions();
-    refreshTimeout: number = 100;
 
     //#endregion
 
@@ -74,21 +75,21 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
 
 
     //#region methods
-    getVisibleBox() {
+    private getVisibleBox() {
         return {
             top: this.content.vertical.value,
             left: this.content.horizontal.value,
             width: this.contentHidder.offsetWidth,
-            height: this.contentHidder.offsetHeight,
+            height: this.contentHidder.offsetHeight
         };
     }
-    changeZoom() {
+    private changeZoom() {
         if(!this.disable_scroll) {
-            this.contentZoom.style.transform = "scale(" + this.zoom + ")";
-            this.dimensionRefreshed(null);
+            this.contentZoom.style.transform = 'scale(' + this.zoom + ')';
+            this.dimensionRefreshed();
         }
     }
-    dimensionRefreshed(entries) {
+    private dimensionRefreshed(entries?: any) {
         this.calculateRealSize();
         if(this.contentWrapper.scrollHeight - this.contentHidderHeight > 2) {
             if(!this.verticalScrollVisible) {
@@ -96,12 +97,13 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
                 this.verticalScrollVisible = true;
                 this.afterShowVerticalScroller();
             }
-            var verticalScrollerHeight =
-                (this.contentHidderHeight / this.contentWrapper.scrollHeight) * 100;
-            this.verticalScroller.style.height = verticalScrollerHeight + "%";
+            var verticalScrollerHeight = (this.contentHidderHeight / this.contentWrapper.scrollHeight * 100);
+            this.verticalScroller.style.height = verticalScrollerHeight + '%';
 
             this.scrollVerticalScrollbar(this.scrollbar.vertical.value);
-        } else if(this.verticalScrollVisible) {
+
+        }
+        else if(this.verticalScrollVisible) {
             this.verticalScrollerContainer.style.display = "none";
             this.verticalScrollVisible = false;
             this.afterShowVerticalScroller();
@@ -115,12 +117,12 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
                     this.horizontalScrollVisible = true;
                     this.afterShowHorizontalScroller();
                 }
-                var horizontalScrollerWidth =
-                    (this.contentHidderWidth / this.contentWrapper.scrollWidth) * 100;
-                this.horizontalScroller.style.width = horizontalScrollerWidth + "%";
+                var horizontalScrollerWidth = (this.contentHidderWidth / this.contentWrapper.scrollWidth * 100);
+                this.horizontalScroller.style.width = horizontalScrollerWidth + '%';
 
                 this.scrollHorizontalScrollbar(this.scrollbar.horizontal.value);
-            } else if(this.horizontalScrollVisible) {
+            }
+            else if(this.horizontalScrollVisible) {
                 this.horizontalScrollerContainer.style.display = "none";
                 this.horizontalScrollVisible = false;
                 this.afterShowHorizontalScroller();
@@ -130,8 +132,8 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
 
         if(entries && entries[0].target == this) {
             if(this.zoom != 1) {
-                this.contentZoom.style.width = "";
-                this.contentZoom.style.height = "";
+                this.contentZoom.style.width = '';
+                this.contentZoom.style.height = '';
                 this.changeZoom();
             }
         }
@@ -141,25 +143,22 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
             var currentOffsetWidth = this.contentZoom.offsetWidth;
             var currentOffsetHeight = this.contentZoom.offsetHeight;
 
-            this.contentHidderHeight = currentOffsetHeight; // * this.zoom;
+            this.contentHidderHeight = currentOffsetHeight;// * this.zoom;
             this.contentHidderWidth = currentOffsetWidth; //* this.zoom;
 
             if(this.zoom < 1) {
-                this.contentZoom.style.width =
-                    this.elToCalculate.offsetWidth / this.zoom + "px";
-                this.contentZoom.style.height =
-                    this.elToCalculate.offsetHeight / this.zoom + "px";
-            } else {
+                this.contentZoom.style.width = this.elToCalculate.offsetWidth / this.zoom + 'px';
+                this.contentZoom.style.height = this.elToCalculate.offsetHeight / this.zoom + 'px';
+
+            }
+            else {
                 let inlineStyle = this.getAttribute("style");
                 if(inlineStyle) {
                     let arrStyle = inlineStyle.split(";");
                     for(let i = 0; i < arrStyle.length; i++) {
-                        if(
-                            arrStyle[i].trim().startsWith("width") ||
-                            arrStyle[i].trim().startsWith("height")
-                        ) {
-                            this.contentZoom.style.width = "";
-                            this.contentZoom.style.height = "";
+                        if(arrStyle[i].trim().startsWith("width") || arrStyle[i].trim().startsWith("height")) {
+                            this.contentZoom.style.width = '';
+                            this.contentZoom.style.height = '';
                         }
                     }
                 }
@@ -170,60 +169,54 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
         }
     }
     private afterShowVerticalScroller() {
-        var leftMissing =
-            this.elToCalculate.offsetWidth -
-            this.verticalScrollerContainer.offsetLeft;
-        if(
-            leftMissing > 0 &&
-            this.verticalScrollVisible &&
-            !this.floating_scroll
-        ) {
-            this.contentHidder.style.width = "calc(100% - " + leftMissing + "px)";
-            this.contentHidder.style.marginRight = leftMissing + "px";
-        } else {
-            this.contentHidder.style.width = "";
-            this.contentHidder.style.marginRight = "";
+        var leftMissing = this.elToCalculate.offsetWidth - this.verticalScrollerContainer.offsetLeft;
+        if(leftMissing > 0 && this.verticalScrollVisible && !this.floating_scroll) {
+            this.contentHidder.style.width = 'calc(100% - ' + leftMissing + 'px)';
+            this.contentHidder.style.marginRight = leftMissing + 'px';
+        }
+        else {
+            this.contentHidder.style.width = '';
+            this.contentHidder.style.marginRight = '';
         }
     }
     private afterShowHorizontalScroller() {
-        var topMissing =
-            this.elToCalculate.offsetHeight -
-            this.horizontalScrollerContainer.offsetTop;
-        if(
-            topMissing > 0 &&
-            this.horizontalScrollVisible &&
-            !this.floating_scroll
-        ) {
-            this.contentHidder.style.height = "calc(100% - " + topMissing + "px)";
-            this.contentHidder.style.marginBottom = topMissing + "px";
-        } else {
-            this.contentHidder.style.height = "";
-            this.contentHidder.style.marginBottom = "";
+        var topMissing = this.elToCalculate.offsetHeight - this.horizontalScrollerContainer.offsetTop;
+        if(topMissing > 0 && this.horizontalScrollVisible && !this.floating_scroll) {
+            this.contentHidder.style.height = 'calc(100% - ' + topMissing + 'px)';
+            this.contentHidder.style.marginBottom = topMissing + 'px';
+        }
+        else {
+            this.contentHidder.style.height = '';
+            this.contentHidder.style.marginBottom = '';
         }
     }
-    createResizeObserver() {
+    private createResizeObserver() {
         let inProgress = false;
-        this.observer = new AvResizeObserver((entries) => {
-            if(inProgress) {
-                return;
-            }
-            inProgress = true;
-            this.dimensionRefreshed(entries);
-            inProgress = false;
+        this.observer = new AvResizeObserver({
+            callback: entries => {
+                if(inProgress) {
+                    return;
+                }
+                inProgress = true;
+                this.dimensionRefreshed(entries);
+                inProgress = false;
+            },
+            fps: 30
         });
+
     }
-    addResizeObserver() {
+    private addResizeObserver() {
         if(this.observer == undefined) {
             this.createResizeObserver();
         }
         this.observer.observe(this.contentWrapper);
         this.observer.observe(this);
     }
-    removeResizeObserver() {
+    private removeResizeObserver() {
         this.observer.unobserve(this.contentWrapper);
         this.observer.unobserve(this);
     }
-    addVerticalScrollAction() {
+    private addVerticalScrollAction() {
         var diff = 0;
         var oldDiff = 0;
         var intervalTimer = undefined;
@@ -270,7 +263,7 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
         this.verticalScroller.addEventListener("dragstart", this.preventDrag);
         this.verticalScroller.addEventListener("drop", this.preventDrag);
     }
-    addHorizontalScrollAction() {
+    private addHorizontalScrollAction() {
         var diff = 0;
         var oldDiff = 0;
         var intervalTimer = undefined;
@@ -316,19 +309,17 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
         this.horizontalScroller.addEventListener("dragstart", this.preventDrag);
         this.horizontalScroller.addEventListener("drop", this.preventDrag);
     }
-    createTouchWheelAction() {
-        this.touchWheelAction = (e: TouchEvent) => {
+    private createTouchWheelAction() {
+        this.touchWheelAction = (e) => {
             e.normalize();
-            let evtNormalize: TouchEventNormalize = e as TouchEventNormalize;
-            let startX = evtNormalize.pageX;
-            let startY = evtNormalize.pageY;
+            let startX = e.pageX;
+            let startY = e.pageY;
             let startVertical = this.scrollbar.vertical.value;
             let startHorizontal = this.scrollbar.horizontal.value;
-            let touchMove = (e: TouchEvent) => {
+            let touchMove = (e) => {
                 e.normalize();
-                let evtNormalize: TouchEventNormalize = e as TouchEventNormalize;
-                let diffX = startX - evtNormalize.pageX;
-                let diffY = startY - evtNormalize.pageY;
+                let diffX = startX - e.pageX;
+                let diffY = startY - e.pageY;
                 this.scrollHorizontalScrollbar(startHorizontal + diffX);
                 this.scrollVerticalScrollbar(startVertical + diffY);
             };
@@ -340,26 +331,33 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
             window.addEventListener("touchend", touchEnd);
         };
     }
-    createWheelAction() {
-        this.wheelAction = (e: WheelEvent) => {
+    private createWheelAction() {
+        this.wheelAction = (e) => {
             if(e.altKey) {
                 if(this.horizontalScrollVisible) {
                     var scrollX = e.deltaY / 5;
-                    this.scrollHorizontalScrollbar(
-                        this.scrollbar.horizontal.value + scrollX
-                    );
+                    this.scrollHorizontalScrollbar(this.scrollbar.horizontal.value + scrollX);
+                    let maxHorizontal = this.horizontalScrollerContainer.offsetWidth - this.horizontalScroller.offsetWidth;
+                    if(this.scrollbar.horizontal.value != 0 && this.scrollbar.horizontal.value != maxHorizontal) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
                 }
-            } else {
+            }
+            else {
                 if(this.verticalScrollVisible) {
                     var scrollY = e.deltaY / 5;
-                    this.scrollVerticalScrollbar(
-                        this.scrollbar.vertical.value + scrollY
-                    );
+                    this.scrollVerticalScrollbar(this.scrollbar.vertical.value + scrollY);
+                    let maxVertical = this.verticalScrollerContainer.offsetHeight - this.verticalScroller.offsetHeight;
+                    if(this.scrollbar.vertical.value != 0 && this.scrollbar.vertical.value != maxVertical) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
                 }
             }
         };
     }
-    addWheelAction() {
+    private addWheelAction() {
         if(!this.wheelAction) {
             this.createWheelAction();
         }
@@ -368,8 +366,9 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
         }
         this.addEventListener("wheel", this.wheelAction);
         this.addEventListener("touchstart", this.touchWheelAction);
+
     }
-    removeWheelAction() {
+    private removeWheelAction() {
         if(this.wheelAction) {
             this.removeEventListener("wheel", this.wheelAction);
         }
@@ -377,151 +376,136 @@ export class DtScrollable extends WebComponent implements DefaultComponent {
             this.removeEventListener("touchstart", this.touchWheelAction);
         }
     }
-    scrollScrollbarTo(horizontalValue: number, verticalValue: number) {
+    scrollScrollbarTo(horizontalValue, verticalValue) {
         this.scrollHorizontalScrollbar(horizontalValue);
         this.scrollVerticalScrollbar(verticalValue);
     }
-    scrollHorizontalScrollbar(horizontalValue: number) {
+    scrollHorizontalScrollbar(horizontalValue) {
         if(!this.only_vertical) {
             if(horizontalValue != undefined) {
-                var maxScroller =
-                    this.horizontalScrollerContainer.offsetWidth -
-                    this.horizontalScroller.offsetWidth;
+                var maxScroller = this.horizontalScrollerContainer.offsetWidth - this.horizontalScroller.offsetWidth;
                 this.scrollbar.horizontal.max = maxScroller;
-                var maxScrollContent =
-                    this.contentWrapper.scrollWidth - this.contentHidderWidth;
+                var maxScrollContent = this.contentWrapper.scrollWidth - this.contentHidderWidth;
                 if(maxScrollContent < 0) {
                     maxScrollContent = 0;
                 }
                 this.content.horizontal.max = maxScrollContent;
                 if(horizontalValue < 0) {
                     horizontalValue = 0;
-                } else if(horizontalValue > maxScroller) {
+                }
+                else if(horizontalValue > maxScroller) {
                     horizontalValue = maxScroller;
                 }
                 this.scrollbar.horizontal.value = horizontalValue;
-                this.horizontalScroller.style.left = horizontalValue + "px";
+                this.horizontalScroller.style.left = horizontalValue + 'px';
                 if(maxScroller != 0) {
                     var percent = maxScrollContent / maxScroller;
-                    this.content.horizontal.value = Math.round(
-                        horizontalValue * percent
-                    );
-                } else {
+                    this.content.horizontal.value = Math.round(horizontalValue * percent);
+                }
+                else {
                     this.content.horizontal.value = 0;
                 }
-                this.contentWrapper.style.left =
-                    -1 * this.content.horizontal.value + "px";
+                this.contentWrapper.style.left = -1 * this.content.horizontal.value + 'px';
                 this.emitScroll();
             }
         }
     }
-
-    scrollVerticalScrollbar(verticalValue: number) {
+    scrollVerticalScrollbar(verticalValue) {
         if(verticalValue != undefined) {
-            var maxScroller =
-                this.verticalScrollerContainer.offsetHeight -
-                this.verticalScroller.offsetHeight;
+            var maxScroller = this.verticalScrollerContainer.offsetHeight - this.verticalScroller.offsetHeight;
             this.scrollbar.vertical.max = maxScroller;
-            var maxScrollContent =
-                this.contentWrapper.scrollHeight - this.contentHidderHeight;
+            var maxScrollContent = this.contentWrapper.scrollHeight - this.contentHidderHeight;
             if(maxScrollContent < 0) {
                 maxScrollContent = 0;
             }
             this.content.vertical.max = maxScrollContent;
             if(verticalValue < 0) {
                 verticalValue = 0;
-            } else if(verticalValue > maxScroller) {
+            }
+            else if(verticalValue > maxScroller) {
                 verticalValue = maxScroller;
             }
             this.scrollbar.vertical.value = verticalValue;
-            this.verticalScroller.style.top = verticalValue + "px";
+            this.verticalScroller.style.top = verticalValue + 'px';
             if(maxScroller != 0) {
                 var percent = maxScrollContent / maxScroller;
                 this.content.vertical.value = Math.round(verticalValue * percent);
-            } else {
-                this.content.vertical.value = 0;
             }
-            this.contentWrapper.style.top = -1 * this.content.vertical.value + "px";
+            else {
+                this.content.vertical.value = 0;
+
+            }
+            this.contentWrapper.style.top = -1 * this.content.vertical.value + 'px';
             this.emitScroll();
         }
     }
-
-    scrollHorizontal(horizontalValue: number) {
+    scrollHorizontal(horizontalValue) {
         if(!this.only_vertical) {
             if(horizontalValue != undefined) {
-                var maxScroller =
-                    this.horizontalScrollerContainer.offsetWidth -
-                    this.horizontalScroller.offsetWidth;
+                var maxScroller = this.horizontalScrollerContainer.offsetWidth - this.horizontalScroller.offsetWidth;
                 this.scrollbar.horizontal.max = maxScroller;
-                var maxScrollContent =
-                    this.contentWrapper.scrollWidth - this.contentHidderWidth;
+                var maxScrollContent = this.contentWrapper.scrollWidth - this.contentHidderWidth;
                 if(maxScrollContent < 0) {
                     maxScrollContent = 0;
                 }
                 this.content.horizontal.max = maxScrollContent;
                 if(horizontalValue < 0) {
                     horizontalValue = 0;
-                } else if(horizontalValue > maxScrollContent) {
+                }
+                else if(horizontalValue > maxScrollContent) {
                     horizontalValue = maxScrollContent;
                 }
                 this.content.horizontal.value = horizontalValue;
-                this.contentWrapper.style.left = -horizontalValue + "px";
+                this.contentWrapper.style.left = -horizontalValue + 'px';
                 if(maxScroller != 0) {
                     var percent = maxScrollContent / maxScroller;
-                    this.scrollbar.horizontal.value = Math.round(
-                        horizontalValue / percent
-                    );
-                } else {
+                    this.scrollbar.horizontal.value = Math.round(horizontalValue / percent);
+                }
+                else {
                     this.scrollbar.horizontal.value = 0;
                 }
-                this.horizontalScroller.style.left =
-                    this.scrollbar.horizontal.value + "px";
+                this.horizontalScroller.style.left = this.scrollbar.horizontal.value + 'px';
                 this.emitScroll();
             }
         }
     }
-
-    scrollVertical(verticalValue: number) {
+    scrollVertical(verticalValue) {
         if(verticalValue != undefined) {
-            var maxScroller =
-                this.verticalScrollerContainer.offsetHeight -
-                this.verticalScroller.offsetHeight;
+            var maxScroller = this.verticalScrollerContainer.offsetHeight - this.verticalScroller.offsetHeight;
             this.scrollbar.vertical.max = maxScroller;
-            var maxScrollContent =
-                this.contentWrapper.scrollHeight - this.contentHidderHeight;
+            var maxScrollContent = this.contentWrapper.scrollHeight - this.contentHidderHeight;
             if(maxScrollContent < 0) {
                 maxScrollContent = 0;
             }
             this.content.vertical.max = maxScroller;
             if(verticalValue < 0) {
                 verticalValue = 0;
-            } else if(verticalValue > maxScrollContent) {
+            }
+            else if(verticalValue > maxScrollContent) {
                 verticalValue = maxScrollContent;
             }
             this.content.vertical.value = verticalValue;
-            this.verticalScroller.style.top = -verticalValue + "px";
+            this.verticalScroller.style.top = -verticalValue + 'px';
             if(maxScroller != 0) {
                 var percent = maxScrollContent / maxScroller;
                 this.scrollbar.vertical.value = Math.round(verticalValue / percent);
-            } else {
+            }
+            else {
                 this.scrollbar.vertical.value = 0;
             }
-            this.verticalScroller.style.top = this.scrollbar.vertical.value + "px";
-            this.contentWrapper.style.top = -1 * this.content.vertical.value + "px";
+            this.verticalScroller.style.top = this.scrollbar.vertical.value + 'px';
+            this.contentWrapper.style.top = -1 * this.content.vertical.value + 'px';
             this.emitScroll();
         }
     }
-
-    scrollTo(horizontalValue, verticalValue) {
+    scrollToPosition(horizontalValue, verticalValue) {
         this.scrollHorizontal(horizontalValue);
         this.scrollVertical(verticalValue);
     }
-
     private emitScroll() {
         var customEvent = new CustomEvent("scroll");
         this.dispatchEvent(customEvent);
     }
-
     private preventDrag(e) {
         e.preventDefault();
         return false;

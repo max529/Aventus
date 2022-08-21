@@ -1,125 +1,128 @@
 @import './vars';
 
 :host {
-    -webkit-user-drag: none;
-    -khtml-user-drag: none;
-    -moz-user-drag: none;
-    -o-user-drag: none;
-    user-drag: none;
+	-webkit-user-drag: none;
+	-khtml-user-drag: none;
+	-moz-user-drag: none;
+	-o-user-drag: none;
 
-    * {
-        -webkit-user-drag: none;
-        -khtml-user-drag: none;
-        -moz-user-drag: none;
-        -o-user-drag: none;
-        user-drag: none;
-        box-sizing: border-box;
-    }
+	* {
+		-webkit-user-drag: none;
+		-khtml-user-drag: none;
+		-moz-user-drag: none;
+		-o-user-drag: none;
+		box-sizing: border-box;
+	}
 }
 
 :host {
-    display: block;
-    position: relative;
-    height: 100%;
-    width: 100%;
+	display: block;
+	position: relative;
+	height: 100%;
+	width: 100%;
 
-    .scroll-main-container {
-        display: block;
-        position: relative;
-        height: 100%;
-        width: 100%;
+	.scroll-main-container {
+		display: block;
+		position: relative;
+		height: 100%;
+		width: 100%;
 
-        .content-zoom {
-            display: block;
-            position: relative;
-            height: 100%;
-            width: 100%;
-            transform-origin: 0 0;
-        }
+		.content-zoom {
+			display: block;
+			position: relative;
+			height: 100%;
+			width: 100%;
+			transform-origin: 0 0;
+		}
 
-        .content-hidder {
-            overflow: var(--internal-scrollbar-content-overflow);
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: block;
-        }
+		.content-hidder {
+			overflow: var(--internal-scrollbar-content-overflow);
+			width: 100%;
+			height: 100%;
+			position: relative;
+			display: block;
+		}
 
-        .content-wrapper {
-            position: absolute;
-            display: inline-block;
-            top: 0;
-            left: 0;
-            height: var(--internal-scrollbar-content-height);
-            width: var(--internal-scrollbar-content-width);
-            // min-height: 100%;
-        }
+		.content-wrapper {
+			position: absolute;
+			display: inline-block;
+			top: 0;
+			left: 0;
+			height: var(--internal-scrollbar-content-height);
+			width: var(--internal-scrollbar-content-width);
+			transition: top var(--internal-scollable-delay) linear, left var(--internal-scollable-delay) linear;
+			// min-height: 100%;
+		}
 
-        .container-scroller {
-            position: absolute;
-            background-color: var(--internal-scrollbar-container-color);
-            border-radius: 5px;
-            z-index: 5;
-            display: none;
-        }
+		.container-scroller {
+			position: absolute;
+			background-color: var(--internal-scrollbar-container-color);
+			border-radius: 5px;
+			z-index: 5;
+			display: none;
+		}
 
-        .scroller {
-            background-color: var(--internal-scrollbar-color);
-            border-radius: 5px;
-            position: absolute;
-            z-index: 5;
-            cursor: pointer;
-        }
+		.scroller {
+			background-color: var(--internal-scrollbar-color);
+			border-radius: 5px;
+			position: absolute;
+			z-index: 5;
+			cursor: pointer;
+		}
 
-        .scroller.active {
-            background-color: var(--internal-scrollbar-active-color);
-        }
+		.scroller.active {
+			background-color: var(--internal-scrollbar-active-color);
+			transition: none!important;
+		}
 
-        .container-scroller.vertical {
-            width: var(--internal-scroller-width);
-            padding-left:var(--internal-scroller-left);
-            top: var(--internal-scroller-bottom);
-            height: calc(100% - var(--internal-scroller-bottom) * 2 - var(--internal-scroller-width));
-            right: var(--internal-scroller-right);
-        }
+		.container-scroller.vertical {
+			width: calc(var(--internal-scroller-width) + var(--internal-scroller-left));
+			padding-left: var(--internal-scroller-left);
+			top: var(--internal-scroller-bottom);
+			height: calc(100% - var(--internal-scroller-bottom) * 2 - var(--internal-scroller-width));
+			right: var(--internal-scroller-right);
+		}
 
-        .scroller.vertical {
-            width: 100%;
-            top: 0;
-            box-shadow: var(--internal-scroller-vertical-shadow);
-        }
+		.scroller.vertical {
+			width: calc(100% - var(--internal-scroller-left));
+			top: 0;
+			transition: top var(--internal-scollable-delay) linear;
+			box-shadow: var(--internal-scroller-vertical-shadow);
+		}
 
-        .container-scroller.horizontal {
-            height: var(--internal-scroller-width);
-            padding-top:var(--internal-scroller-top);
-            left: var(--internal-scroller-right);
-            width: calc(100% - var(--internal-scroller-right) * 2 - var(--internal-scroller-width));
-            bottom: var(--internal-scroller-bottom);
-        }
+		.container-scroller.horizontal {
+			height: calc(var(--internal-scroller-width) + var(--internal-scroller-top));
+			padding-top: var(--internal-scroller-top);
+			left: var(--internal-scroller-right);
+			width: calc(100% - var(--internal-scroller-right) * 2 - var(--internal-scroller-width));
+			bottom: var(--internal-scroller-bottom);
+		}
 
-        .scroller.horizontal {
-            height: 100%;
-            left: 0;
-            box-shadow: var(--internal-scroller-horizontal-shadow);
-        }
-    }
+		.scroller.horizontal {
+			height: calc(100% - var(--internal-scroller-top));
+			left: 0;
+			transition: left var(--internal-scollable-delay) linear;
+			box-shadow: var(--internal-scroller-horizontal-shadow);
+		}
+	}
 }
 
 :host([disable_scroll]) {
-    .content-wrapper {
-        height: 100%;
-    }
+	.content-wrapper {
+		height: 100%;
+	}
 
-    .scroller {
-        display: none;
-    }
+	.scroller {
+		display: none;
+	}
 }
 
 :host(.scrolling) {
-    .content-wrapper * {
-        user-select: none;
-    }
-    ::slotted {
-        user-select: none;
-    }
+	.content-wrapper * {
+		user-select: none;
+	}
+
+	::slotted {
+		user-select: none;
+	}
 }
