@@ -12,6 +12,9 @@ import {
 export const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g;
 
 export function simplifyPath(importPathTxt, currentPath) {
+    if(importPathTxt.startsWith("custom://")){
+        return importPathTxt;
+    }
     let currentDir = decodeURIComponent(currentPath).replace("file:///", "").split("/");
     currentDir.pop();
     let currentDirPath = normalize(currentDir.join("/")).split("\\");
