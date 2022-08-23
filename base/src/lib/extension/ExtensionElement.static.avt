@@ -1,29 +1,90 @@
 Element.prototype.findParentByTag = function (tagname, untilNode = undefined) {
     let el = this;
+    if(Array.isArray(tagname)) {
+        for(let i = 0; i < tagname.length; i++) {
+            tagname[i] = tagname[i].toLowerCase();
+        }
+    } else {
+        tagname = [tagname.toLowerCase()];
+    }
+    let checkFunc = (el) => {
+        return tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1;
+    };
+    
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        if(checkFunc(el)) {
+            return el;
+        }
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+    return null;
+};
+Element.prototype.findParentByClass = function (classname, untilNode = undefined) {
+    let el = this;
+    if(!Array.isArray(classname)) {
+        classname = [classname];
+    }
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        for(let classnameTemp of classname) {
+            if(el.classList && el.classList.contains(classnameTemp)) {
+                return el;
+            }
+        }
+
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+
+    return null;
+};
+Element.prototype.findParentByType = function (type, untilNode = undefined) {
+    let el = this;
     let checkFunc = (el) => {
         return false;
-    }
-    if(typeof tagname == "function" && tagname.prototype.constructor) {
+    };
+    if(typeof type == "function" && type.prototype.constructor) {
         checkFunc = (el) => {
-            if(el instanceof tagname){
+            if(el instanceof type) {
                 return true;
             }
             return false;
-        }
-        
+        };
+
     }
     else {
-        if(Array.isArray(tagname)) {
-            for(let i = 0; i < tagname.length; i++) {
-                tagname[i] = tagname[i].toLowerCase();
-            }
-        } else {
-            tagname = [tagname.toLowerCase()];
-        }
-        checkFunc = (el) => {
-            return tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1
-        }
+        console.error("you must provide a class inside this function");
+        return null;
     }
+
     if(el) {
         if(el instanceof ShadowRoot) {
             el = el.host;
@@ -80,38 +141,6 @@ Element.prototype.findParents = function (tagname, untilNode = undefined) {
     }
 
     return result;
-};
-Element.prototype.findParentByClass = function (classname, untilNode = undefined) {
-    let el = this;
-    if(!Array.isArray(classname)) {
-        classname = [classname];
-    }
-    if(el) {
-        if(el instanceof ShadowRoot) {
-            el = el.host;
-        } else {
-            el = el.parentNode;
-        }
-    }
-    while(el) {
-        for(let classnameTemp of classname) {
-            if(el.classList && el.classList.contains(classnameTemp)) {
-                return el;
-            }
-        }
-
-
-        if(el instanceof ShadowRoot) {
-            el = el.host;
-        } else {
-            el = el.parentNode;
-        }
-        if(el == untilNode) {
-            break;
-        }
-    }
-
-    return null;
 };
 Element.prototype.containsChild = function (el) {
     var rootScope = this.getRootNode();
