@@ -100,8 +100,11 @@ export class AvForm extends WebComponent implements DefaultComponent {
             // });
         }
     }
-    public subsribe(fieldHTML: AvFormElement<any>) {
-        this._fields[fieldHTML.name] = fieldHTML;
+    public subscribe(fieldHTML: AvFormElement<any>) {
+        if(fieldHTML.hasAttribute("type") && fieldHTML.getAttribute("type") === "submit") {
+            console.log("SUBMIT:", fieldHTML);
+        }
+
         if(this._fieldEnter) {
             this._fieldEnter.removeEventListener('keypress', this.submitLastChild);
         }
@@ -110,9 +113,6 @@ export class AvForm extends WebComponent implements DefaultComponent {
         // }
         this._fieldEnter = fieldHTML;
     }
-    protected override postCreation(): void {
-
-    };
 
 	//#endregion
 

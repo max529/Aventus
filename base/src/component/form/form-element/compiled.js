@@ -91,5 +91,5 @@ class AvFormElement extends WebComponent {
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name'); }
     __listBoolProps() { return ["required"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
+     postCreation(){} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
 window.customElements.define('av-form-element', AvFormElement);

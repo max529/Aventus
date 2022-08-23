@@ -47,6 +47,10 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
     //#region methods
     public abstract getDefaultValue(): T;
 
+    protected override postCreation(): void {
+        //this.findParentByType(AvForm).subscribe(this);
+    }
+
     onValueChanged() {
         this.dispatchEvent(new CustomEvent("change", {
             detail: {

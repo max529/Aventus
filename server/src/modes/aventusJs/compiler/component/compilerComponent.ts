@@ -1138,23 +1138,23 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				let onPressStopTxt = "";
 				let delayTxt = "";
 				if (current.hasOwnProperty("onPress")) {
-					onPressTxt += `"onPress": (e) => {
-                        this.${current["onPress"]}(e, this);
+					onPressTxt += `"onPress": (e, pressInstance) => {
+                        this.${current["onPress"]}(e, pressInstance);
                      },`;
 				}
 				if (current.hasOwnProperty("onLongPress")) {
-					onLongPressTxt += `"onLongPress": (e) => {
-                        this.${current["onLongPress"]}(e, this);
+					onLongPressTxt += `"onLongPress": (e, pressInstance) => {
+                        this.${current["onLongPress"]}(e, pressInstance);
                      },`;
 				}
 				if (current.hasOwnProperty("onStop")) {
-					onPressStopTxt = `"onStop": (e) => {
-                        this.${current["onStop"]}(e, this);
+					onPressStopTxt = `"onStop": (e, pressInstance) => {
+                        this.${current["onStop"]}(e, pressInstance);
                     },`;
 				}
 				if (current.hasOwnProperty("onStart")) {
-					onPressStopTxt = `"onStart": (e) => {
-                        this.${current["onStart"]}(e, this);
+					onPressStopTxt = `"onStart": (e, pressInstance) => {
+                        this.${current["onStart"]}(e, pressInstance);
                     },`;
 				}
 				if (current.hasOwnProperty("delay")) {

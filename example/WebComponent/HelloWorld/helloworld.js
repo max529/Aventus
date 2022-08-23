@@ -60,8 +60,8 @@ class AvHelloWorld extends WebComponent {
     __addEvents(ids = null) { super.__addEvents(ids); 
                 new PressManager({
                     "element": this._components['avhelloworld_0'],
-                    "onPress": (e) => {
-                        this.onHelloClicked(e, this);
+                    "onPress": (e, pressInstance) => {
+                        this.onHelloClicked(e, pressInstance);
                      },
                 });
                  }
