@@ -20,6 +20,20 @@
                 "./WebComponent/HelloWorld/"
             ],
             "outputFile": "./WebComponent/HelloWorld/helloworld.js"
+        },
+        {
+            "name": "Web component - Select",
+            "inputPath": [
+                "./WebComponent/Select/"
+            ],
+            "outputFile": "./WebComponent/Select/select.js"
+        },
+        {
+            "name": "Web component - Scrollable",
+            "inputPath": [
+                "./WebComponent/Scroll/"
+            ],
+            "outputFile": "./WebComponent/Scroll/scroll.js"
         }
     ]
 }

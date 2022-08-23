@@ -1,0 +1,29 @@
+:host {
+    // Your style here
+    padding: 5px;
+    width: 100%;
+    font-size:12px;
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    transition: background-color 0.5s;
+    cursor: pointer;
+}
+
+:host([selected]){
+    background-color: rgba(0,0,0,0.1);
+}
+
+:host(:hover){
+    background-color: rgba(0,0,0,0.1);
+}
+
+:host(:first-child){
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+:host(:last-child){
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}

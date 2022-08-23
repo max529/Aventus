@@ -1,20 +1,26 @@
+import { Coordinate } from "../data/Coordinate.data.avt";
 import { PressManager } from "./PressManager.lib.avt";
 
 export interface DragAndDropOptions {
     /** If set to false, the element won't move */
     applyDrag?: boolean;
     /** Element to drag and drog */
-    element: Element;
+    element: HTMLElement;
     /** Element that trigger the drag action; default is element */
-    elementTrigger?: Element;
+    elementTrigger?: HTMLElement;
     /** Set the default offset for the drag trigger; default is DragAndDrop.defaultOffsetDrag */
     offsetDrag?: number;
-    /** If set to true, the drag and drop will create a shadow element while dragging and removing it on drop. It will not move the original element anymore */
-    shadow?: boolean;
+    /** Options to create a shadow element */
+    shadow?: {
+        /** If set to true, the drag and drop will create a shadow element while dragging and removing it on drop. It will not move the original element anymore */
+        enable: boolean,
+        /** The container where the shadow element will be added, default is body */
+        container?: HTMLElement;
+    };
     /** If set to false, the element will be considered as in the target if it touches it */
     strict?: boolean;
     /** The targets for the drop action */
-    targets?: Element[];
+    targets?: HTMLElement[];
     /** Use percent instead of pixel */
     usePercent?: boolean;
 
@@ -22,29 +28,35 @@ export interface DragAndDropOptions {
     isDragEnable?: () => boolean;
     /** Get current zoom */
     getZoom?: () => number;
-    /** Get offset X */
+    /** Get offset X in px related to element.offsetTarget */
     getOffsetX?: () => number;
-    /** Get offset Y */
+    /** Get offset Y in px related to element.offsetTarget */
     getOffsetY?: () => number;
     /** Trigger on drag start*/
     onStart?: (e: PointerEvent) => void;
     /** Trigger on moving  */
-    onMove?: (e: PointerEvent) => void;
-    /** Trigger after drop */
+    onMove?: (e: PointerEvent, position: Coordinate) => void;
+    /** Trigger after stop moving */
     onStop?: (e: PointerEvent) => void;
+    /** Trigger after drop if at least one target found; Element is the shadow or the target*/
+    onDrop?: (element: HTMLElement, targets: HTMLElement[]) => void;
 }
 
 
 export class DragAndDrop {
     public static defaultOffsetDrag: number = 20;
+    private pressManager: PressManager;
     private options: {
         applyDrag: boolean,
-        element: Element,
-        elementTrigger: Element,
+        element: HTMLElement,
+        elementTrigger: HTMLElement,
         offsetDrag: number,
-        shadow: boolean,
+        shadow: {
+            enable: boolean,
+            container: HTMLElement;
+        },
         strict: boolean,
-        targets: Element[],
+        targets: HTMLElement[],
         usePercent: boolean,
 
         isDragEnable: () => boolean;
@@ -52,14 +64,13 @@ export class DragAndDrop {
         getOffsetX: () => number;
         getOffsetY: () => number;
         onStart: (e: PointerEvent) => void;
-        onMove: (e: PointerEvent) => void;
+        onMove: (e: PointerEvent, position: Coordinate) => void;
         onStop: (e: PointerEvent) => void;
+        onDrop: (element: HTMLElement, targets: HTMLElement[]) => void;
     };
-    private startPosition: {
-        x: number;
-        y: number;
-    };
-    constructor(options) {
+    private startCursorPosition: Coordinate;
+    private startElementPosition: Coordinate;
+    constructor(options: DragAndDropOptions) {
         this.options = this.getDefaultOptions();
         this.mergeProperties(options);
         this.mergeFunctions(options);
@@ -72,7 +83,10 @@ export class DragAndDrop {
             element: null,
             elementTrigger: null,
             offsetDrag: DragAndDrop.defaultOffsetDrag,
-            shadow: false,
+            shadow: {
+                enable: false,
+                container: document.body
+            },
             strict: false,
             targets: [],
             usePercent: false,
@@ -84,6 +98,7 @@ export class DragAndDrop {
             onStart: (e: PointerEvent) => { },
             onMove: (e: PointerEvent) => { },
             onStop: (e: PointerEvent) => { },
+            onDrop: (element: HTMLElement, targets: HTMLElement[]) => { }
         };
     }
     private mergeProperties(options: DragAndDropOptions) {
@@ -96,10 +111,15 @@ export class DragAndDrop {
         }
         this.defaultMerge(options, "applyDrag");
         this.defaultMerge(options, "offsetDrag");
-        this.defaultMerge(options, "shadow");
         this.defaultMerge(options, "strict");
         this.defaultMerge(options, "targets");
         this.defaultMerge(options, "usePercent");
+        if(options.shadow !== void 0) {
+            this.options.shadow.enable = options.shadow.enable;
+            if(options.shadow.container !== void 0) {
+                this.options.shadow.container = options.shadow.container;
+            }
+        }
     }
     private mergeFunctions(options: DragAndDropOptions) {
         this.defaultMerge(options, "isDragEnable");
@@ -109,43 +129,146 @@ export class DragAndDrop {
         this.defaultMerge(options, "onStart");
         this.defaultMerge(options, "onMove");
         this.defaultMerge(options, "onStop");
+        this.defaultMerge(options, "onDrop");
     }
     private defaultMerge(options: DragAndDropOptions, name: string) {
-        if(options[name] === void 0) {
+        if(options[name] !== void 0) {
             this.options[name] = options[name];
         }
     }
     // #endregion
 
     private init() {
-        new PressManager({
-            element: this.options.element,
-            onDragStart: this.onDragStart,
-            onDrag: this.onDrag,
-            onDragEnd: this.onDragEnd,
+        this.pressManager = new PressManager({
+            element: this.options.elementTrigger,
+            onDragStart: this.onDragStart.bind(this),
+            onDrag: this.onDrag.bind(this),
+            onDragEnd: this.onDragEnd.bind(this),
             offsetDrag: this.options.offsetDrag
         });
     }
-
+    private draggableElement: HTMLElement;
+    private positionShadowRelativeToElement: Coordinate;
     private onDragStart(e: PointerEvent) {
-        this.startPosition = {
+        this.draggableElement = this.options.element as HTMLElement;
+        this.startCursorPosition = {
             x: e.pageX,
             y: e.pageY
         };
-        
+        this.startElementPosition = {
+            x: this.draggableElement.offsetLeft,
+            y: this.draggableElement.offsetTop
+        };
+        if(this.options.shadow.enable) {
+            this.draggableElement = this.options.element.cloneNode(true) as HTMLElement;
+            const posRelativeToContainer = this.options.element.getPositionOnScreen(this.options.shadow.container);
+            this.positionShadowRelativeToElement = {
+                x: this.startCursorPosition.x - posRelativeToContainer.x,
+                y: this.startCursorPosition.y - posRelativeToContainer.y
+            };
+            this.draggableElement.style.position = "absolute";
+            this.draggableElement.style.top = posRelativeToContainer.y / this.options.getZoom() + 'px';
+            this.draggableElement.style.left = posRelativeToContainer.x / this.options.getZoom() + 'px';
+            this.options.shadow.container.appendChild(this.draggableElement);
+        }
+        this.options.onStart(e);
     }
     private onDrag(e: PointerEvent) {
         let zoom = this.options.getZoom();
-        let diff = {
-            x: (e.pageX - this.startPosition.x) / zoom,
-            y: (e.pageY - this.startPosition.y) / zoom
+        let diff: Coordinate = {
+            x: 0,
+            y: 0
         };
+        if(this.options.shadow.enable) {
+            // TODO check if this.options.getOffsetX is right in this context
+            diff = {
+                x: e.pageX - (this.positionShadowRelativeToElement.x / this.options.getZoom()) + this.options.getOffsetX(),
+                y: e.pageY - (this.positionShadowRelativeToElement.y / this.options.getZoom()) + this.options.getOffsetY(),
+            };
+        }
+        else {
+            diff = {
+                x: (e.pageX - this.startCursorPosition.x) / zoom + this.startElementPosition.x + this.options.getOffsetX(),
+                y: (e.pageY - this.startCursorPosition.y) / zoom + this.startElementPosition.y + this.options.getOffsetY()
+            };
+        }
+        let newPos = this.setPosition(diff);
+        this.options.onMove(e, newPos);
     }
     private onDragEnd(e: PointerEvent) {
-
+        let targets = this.getMatchingTargets();
+        if(this.options.shadow.enable) {
+            this.draggableElement.parentNode?.removeChild(this.draggableElement);
+        }
+        if(targets.length > 0) {
+            this.options.onDrop(this.draggableElement, targets);
+        }
+    }
+    private setPosition(position: Coordinate): Coordinate {
+        if(this.options.usePercent) {
+            let elementParent = this.draggableElement.offsetParent as HTMLElement;
+            const percentLeft = (position.x / elementParent.offsetWidth) * 100;
+            const percentTop = (position.y / elementParent.offsetHeight) * 100;
+            if(this.options.applyDrag) {
+                this.draggableElement.style.left = percentLeft + '%';
+                this.draggableElement.style.top = percentTop + '%';
+            }
+            return {
+                x: percentLeft,
+                y: percentTop
+            };
+        }
+        else {
+            if(this.options.applyDrag) {
+                this.draggableElement.style.left = position.x + 'px';
+                this.draggableElement.style.top = position.y + 'px';
+            }
+        }
+        return position;
+    }
+    private getMatchingTargets(): HTMLElement[] {
+        let matchingTargets: HTMLElement[] = [];
+        for(let target of this.options.targets) {
+            const elementCoordinates = this.draggableElement.getBoundingClientRect();
+            const targetCoordinates = target.getBoundingClientRect();
+            let offsetX = this.options.getOffsetX();
+            let offsetY = this.options.getOffsetY();
+            let zoom = this.options.getZoom();
+            targetCoordinates.x += offsetX;
+            targetCoordinates.y += offsetY;
+            targetCoordinates.width *= zoom;
+            targetCoordinates.height *= zoom;
+            if(this.options.strict) {
+                if(
+                    (elementCoordinates.x >= targetCoordinates.x && elementCoordinates.x + elementCoordinates.width <= targetCoordinates.x + targetCoordinates.width) &&
+                    (elementCoordinates.y >= targetCoordinates.y && elementCoordinates.y + elementCoordinates.height <= targetCoordinates.y + targetCoordinates.height)
+                ) {
+                    matchingTargets.push(target);
+                }
+            } else {
+                let elementLeft = elementCoordinates.x;
+                let elementRight = elementCoordinates.x + elementCoordinates.width;
+                let elementTop = elementCoordinates.y;
+                let elementBottom = elementCoordinates.y + elementCoordinates.height;
+                let targetLeft = targetCoordinates.x;
+                let targetRight = targetCoordinates.x + targetCoordinates.width;
+                let targetTop = targetCoordinates.y;
+                let targetBottom = targetCoordinates.y + targetCoordinates.height;
+                if(
+                    !(elementRight < targetLeft ||
+                        elementLeft > targetRight ||
+                        elementBottom < targetTop ||
+                        elementTop > targetBottom)
+                ) {
+                    matchingTargets.push(target);
+                }
+            }
+        }
+        return matchingTargets;
     }
 
-    public setTargets(targets: Element[]) {
+
+    public setTargets(targets: HTMLElement[]) {
         this.options.targets = targets;
     }
 

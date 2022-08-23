@@ -21,6 +21,8 @@ export interface InternalPointerEvent extends Event {
 export interface PressManagerOptions {
     element: Element | Element[],
     onPress?: (e: PointerEvent, self: PressManager) => void,
+    onPressStart?: (e: PointerEvent, self: PressManager) => void,
+    onPressEnd?: (e: PointerEvent, self: PressManager) => void,
     onLongPress?: (e: PointerEvent, self: PressManager) => void,
     onDblPress?: (e: PointerEvent, self: PressManager) => void,
     onDrag?: (e: PointerEvent, self: PressManager) => void,
@@ -54,6 +56,12 @@ export class PressManager {
     private timeoutDblPress: number = 0;
     private timeoutLongPress: number = 0;
     private downEventSaved: PointerEvent;
+    private actionsName = {
+        press: "press",
+        longPress: "longPress",
+        dblPress: "dblPress",
+        drag: "drag"
+    };
 
     private functionsBinded = {
         downAction: (e: PointerEvent) => { },
@@ -162,6 +170,7 @@ export class PressManager {
                 if(this.options.onLongPress) {
                     this.state.oneActionTriggered = true;
                     this.options.onLongPress(e, this);
+                    this.triggerEventToParent(this.actionsName.longPress);
                 }
                 else {
                     this.emitTriggerFunction("longpress", e);
@@ -169,6 +178,9 @@ export class PressManager {
             }
 
         }, this.delayLongPress);
+        if(this.options.onPressStart) {
+            this.options.onPressStart(e, this);
+        }
     }
     private upAction(e: PointerEvent) {
         e.stopPropagation();
@@ -186,6 +198,7 @@ export class PressManager {
                 this.nbPress = 0;
                 if(this.options.onDblPress) {
                     this.options.onDblPress(e, this);
+                    this.triggerEventToParent(this.actionsName.dblPress);
                 }
                 else {
                     this.emitTriggerFunction("dblpress", e);
@@ -199,6 +212,7 @@ export class PressManager {
                     if(this.options.onPress) {
                         this.state.oneActionTriggered = true;
                         this.options.onPress(e, this);
+                        this.triggerEventToParent(this.actionsName.press);
                     }
                     else {
                         this.emitTriggerFunction("press", e);
@@ -217,6 +231,9 @@ export class PressManager {
                 this.customFcts.onDragEnd(e, this.customFcts.src);
             }
         }
+        if(this.options.onPressEnd) {
+            this.options.onPressEnd(e, this);
+        }
     }
     private moveAction(e: PointerEvent) {
         if(!this.state.isMoving && !this.state.oneActionTriggered) {
@@ -230,6 +247,7 @@ export class PressManager {
                     this.state.isMoving = true;
                     if(this.options.onDragStart) {
                         this.options.onDragStart(this.downEventSaved, this);
+                        this.triggerEventToParent(this.actionsName.drag);
                     }
                     else {
                         this.emitTriggerFunction("dragstart", this.downEventSaved);
@@ -246,6 +264,19 @@ export class PressManager {
             }
         }
     }
+    private triggerEventToParent(eventName: string) {
+        if(this.element.parentNode) {
+            this.element.parentNode.dispatchEvent(new CustomEvent("pressaction_trigger", {
+                bubbles: true,
+                cancelable: false,
+                composed: true,
+                detail: {
+                    target: this.element,
+                    eventName: eventName
+                }
+            }));
+        }
+    }
     // #endregion
 
     // #region custom Event
@@ -254,6 +285,7 @@ export class PressManager {
             e.stopPropagation();
             e.detail.state.oneActionTriggered = true;
             this.options.onPress(e.detail.realEvent, this);
+            this.triggerEventToParent(this.actionsName.press);
         }
     }
     private childDblPress(e: InternalPointerEvent) {
@@ -263,6 +295,7 @@ export class PressManager {
                 e.detail.state.oneActionTriggered = true;
             }
             this.options.onDblPress(e.detail.realEvent, this);
+            this.triggerEventToParent(this.actionsName.dblPress);
         }
     }
     private childLongPress(e: InternalPointerEvent) {
@@ -270,6 +303,7 @@ export class PressManager {
             e.stopPropagation();
             e.detail.state.oneActionTriggered = true;
             this.options.onLongPress(e.detail.realEvent, this);
+            this.triggerEventToParent(this.actionsName.longPress);
         }
     }
     private childDragStart(e: InternalPointerEvent) {
@@ -280,6 +314,7 @@ export class PressManager {
             e.detail.customFcts.onDrag = this.options.onDrag;
             e.detail.customFcts.onDragEnd = this.options.onDragEnd;
             this.options.onDragStart(e.detail.realEvent, this);
+            this.triggerEventToParent(this.actionsName.drag);
         }
     }
     // #endregion

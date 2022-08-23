@@ -1,0 +1,34 @@
+export class AvScrollTest extends WebComponent implements DefaultComponent {
+
+	//#region static
+
+	//#endregion
+
+
+	//#region props
+
+	//#endregion
+
+
+	//#region variables
+
+	//#endregion
+
+
+	//#region states
+
+	//#endregion
+			
+			
+	//#region constructor
+
+	//#endregion
+
+
+	//#region methods
+	private changeSize(e){
+		this.classList.toggle("big");
+	}
+	//#endregion
+	
+}

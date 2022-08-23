@@ -58,7 +58,10 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
             }
             else {
                 try {
-                    newProxy = new Proxy(element, this);
+                    if(element instanceof Object) {
+                        newProxy = new Proxy(element, this);
+                    }
+                    return element;
                 } catch {
                     // it's not an array or object
                     return element;

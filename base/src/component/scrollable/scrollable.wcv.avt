@@ -1,0 +1,17 @@
+<div class="scroll-main-container" av-element="elToCalculate">
+    <div class="content-zoom" av-element="contentZoom">
+        <div class="content-hidder" av-element="contentHidder">
+            <div class="content-wrapper" av-element="contentWrapper">
+                <slot></slot>
+            </div>
+        </div>
+    </div>
+    <div av-element="contentscroller">
+        <div class="container-scroller vertical" av-element="verticalScrollerContainer">
+            <div class="scroller vertical" av-element="verticalScroller"></div>
+        </div>
+        <div class="container-scroller horizontal" av-element="horizontalScrollerContainer">
+            <div class="scroller horizontal" av-element="horizontalScroller"></div>
+        </div>
+    </div>
+</div>

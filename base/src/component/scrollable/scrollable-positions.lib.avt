@@ -1,0 +1,11 @@
+export interface DtScrollablePositions {
+    vertical: {
+        value: number,
+        max: number
+    };
+    
+    horizontal: {
+        value: number,
+        max: number
+    }
+}
