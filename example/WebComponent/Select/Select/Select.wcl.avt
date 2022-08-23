@@ -43,7 +43,6 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
         return "";
     }
     private selectValueText(): void {
-        debugger;
         for(var i = 0; i < this.children.length; i++) {
             if(this.children[i] instanceof AvOption) {
                 let optionEl = this.children[i] as AvOption;
@@ -79,7 +78,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
         var offset = this.baseEl.getPositionOnScreen();
         this.options.style.left = offset.x + 'px';
-        this.options.style.top = offset.y + this.baseEl.offsetHeight + 5 + 'px';
+        this.options.style.top = offset.y + this.baseEl.offsetHeight + 2 + 'px';
         this.options.style.minWidth = this.offsetWidth + 'px';
     }
     selectOption(opt) {
@@ -90,6 +89,11 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
     }
 
     protected override postCreation(): void {
+        let valueAttr = this.getAttribute("value");
+        if(valueAttr){
+            this.value = valueAttr;
+            this.removeAttribute("value")
+        }
         var list = this.children;
         for(var i = 0; i < list.length; i++) {
             if(!(list[i] instanceof AvOption)) {

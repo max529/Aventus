@@ -1,3 +1,5 @@
+import { PressManager } from "../../lib/PressManager.lib.avt";
+import { DefaultComponent, WebComponent } from "../../lib/WebComponent.lib.avt";
 import { AvHideableOptions } from "./hideableOptions.lib.avt";
 
 export class AvHideable extends WebComponent implements DefaultComponent {
@@ -123,14 +125,16 @@ export class AvHideable extends WebComponent implements DefaultComponent {
     }
 
     async hide(force?: boolean) {
-        if(force || await this.options.canHide()) {
-            await this.options.beforeHide();
-            this.isVisible = false;
-            this.style.display = 'none';
-            this.oldParent.appendChild(this);
-            this.options.container.removeEventListener("pressaction_trigger", this.checkCloseBinded);
-            this.pressManager.destroy();
-            await this.options.afterHide();
+        if(this.isVisible) {
+            if(force || await this.options.canHide()) {
+                await this.options.beforeHide();
+                this.isVisible = false;
+                this.style.display = 'none';
+                this.oldParent.appendChild(this);
+                this.options.container.removeEventListener("pressaction_trigger", this.checkCloseBinded);
+                this.pressManager.destroy();
+                await this.options.afterHide();
+            }
         }
     }
 

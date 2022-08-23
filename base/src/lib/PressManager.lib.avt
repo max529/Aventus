@@ -31,6 +31,8 @@ export interface PressManagerOptions {
     offsetDrag?: number,
     delayDblPress?: number;
     delayLongPress?: number;
+    /** Force double press to be triggered (callback or dispatch to parent) */
+    forceDblPress?: boolean;
 }
 export interface PressManagerState {
     oneActionTriggered: boolean,
@@ -62,6 +64,8 @@ export class PressManager {
         dblPress: "dblPress",
         drag: "drag"
     };
+    private useDblPress: boolean = false;
+    private forceDblPress: boolean = false;
 
     private functionsBinded = {
         downAction: (e: PointerEvent) => { },
@@ -132,6 +136,12 @@ export class PressManager {
         if(options.offsetDrag !== undefined) {
             this.offsetDrag = options.offsetDrag;
         }
+        if(options.onDblPress !== undefined) {
+            this.useDblPress = true;
+        }
+        if(options.forceDblPress){
+            this.useDblPress = true;
+        }
     }
     private bindAllFunction() {
         this.functionsBinded.downAction = this.downAction.bind(this);
@@ -189,25 +199,48 @@ export class PressManager {
 
         clearTimeout(this.timeoutLongPress);
 
-
-
-        this.nbPress++;
-        if(this.nbPress == 2) {
-            if(!this.state.oneActionTriggered) {
-                this.state.oneActionTriggered = true;
-                this.nbPress = 0;
-                if(this.options.onDblPress) {
-                    this.options.onDblPress(e, this);
-                    this.triggerEventToParent(this.actionsName.dblPress);
-                }
-                else {
-                    this.emitTriggerFunction("dblpress", e);
-                }
+        if(this.state.isMoving) {
+            this.state.isMoving = false;
+            if(this.options.onDragEnd) {
+                this.options.onDragEnd(e, this);
+            }
+            else if(this.customFcts.src && this.customFcts.onDragEnd) {
+                this.customFcts.onDragEnd(e, this.customFcts.src);
             }
         }
-        else if(this.nbPress == 1) {
-            this.timeoutDblPress = setTimeout(() => {
-                this.nbPress = 0;
+        else {
+            if(this.useDblPress) {
+                this.nbPress++;
+                if(this.nbPress == 2) {
+                    if(!this.state.oneActionTriggered) {
+                        this.state.oneActionTriggered = true;
+                        this.nbPress = 0;
+                        if(this.options.onDblPress) {
+                            this.options.onDblPress(e, this);
+                            this.triggerEventToParent(this.actionsName.dblPress);
+                        }
+                        else {
+                            this.emitTriggerFunction("dblpress", e);
+                        }
+                    }
+                }
+                else if(this.nbPress == 1) {
+                    this.timeoutDblPress = setTimeout(() => {
+                        this.nbPress = 0;
+                        if(!this.state.oneActionTriggered) {
+                            if(this.options.onPress) {
+                                this.state.oneActionTriggered = true;
+                                this.options.onPress(e, this);
+                                this.triggerEventToParent(this.actionsName.press);
+                            }
+                            else {
+                                this.emitTriggerFunction("press", e);
+                            }
+                        }
+                    }, this.delayDblPress);
+                }
+            }
+            else {
                 if(!this.state.oneActionTriggered) {
                     if(this.options.onPress) {
                         this.state.oneActionTriggered = true;
@@ -218,19 +251,9 @@ export class PressManager {
                         this.emitTriggerFunction("press", e);
                     }
                 }
-            }, this.delayDblPress);
-        }
-
-
-        if(this.state.isMoving) {
-            this.state.isMoving = false;
-            if(this.options.onDragEnd) {
-                this.options.onDragEnd(e, this);
-            }
-            else if(this.customFcts.src && this.customFcts.onDragEnd) {
-                this.customFcts.onDragEnd(e, this.customFcts.src);
             }
         }
+
         if(this.options.onPressEnd) {
             this.options.onPressEnd(e, this);
         }
