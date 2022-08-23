@@ -1,5 +1,6 @@
 declare interface Element {
     findParentByTag<T>(tagname:string|string[], untilNode?:Element) => T | null;
+    findParentByType<T>(type: new()=>T) => T | null;
     findParents<T>(tagname:string|string[], untilNode?:Element) => T[];
     findParentByClass<T>(classname:string|string[]) => T | null;
     containsChild(el:Element) => boolean;

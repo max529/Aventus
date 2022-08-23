@@ -9080,6 +9080,9 @@ Element.prototype.findParentByClass = function (classname, untilNode = undefined
 
     return null;
 };
+Element.prototype.findParentByType = function(type, untilNode = undefined){
+    
+}
 Element.prototype.containsChild = function (el) {
     var rootScope = this.getRootNode();
     var elScope = el.getRootNode();
