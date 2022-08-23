@@ -28,8 +28,8 @@ export class AvForm extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-    _fields: { [key: string]: AvFormElement<any>; } = {};
-    _fieldEnter: AvFormElement<any>;
+    private fields: AvFormElement<any>[] = [];
+    private submitElement: HTMLElement;
     //#endregion
 
 
@@ -44,76 +44,73 @@ export class AvForm extends WebComponent implements DefaultComponent {
 
 
     //#region methods
-    private submitLastChild(e) {
-        if(e.keyCode == 13) {
-            this.submit();
-        }
-    }
-
     public async submit() {
-        var form = new FormData();
-        for(var key in this._fields) {
-            const input = this._fields[key];
-            if(!input.required) {
-                if(input.value) {
-                    form.append(key, input.value);
+        const data = {};
+
+        this.fields.forEach(field => {
+            if (field.required) {
+                data[field.name] = field.value;
+            } else {
+                if (field.value) {
+                    data[field.name] = field.value;
                 }
             }
-            else {
-                form.append(key, input.value);
-            }
-        }
-        if(this.use_event) {
-            var customEvent = new CustomEvent('submit', {
+        });
+
+        if (this.use_event) {
+            const customEvent = new CustomEvent("submit", {
                 detail: {
-                    form: form,
+                    data,
                     action: this.action,
                     method: this.method
                 },
                 bubbles: true,
                 composed: true
             });
+
             this.dispatchEvent(customEvent);
+        } else {
+            const formData = new FormData();
+            for (const key in data) {
+                formData.append(key, data[key]);
+            }
+
+            const request = new HttpRequest({
+                url: this.action,
+                method: HttpRequest.getMethod(this.method),
+                data: formData
+            });
         }
-        else {
-            let request = new HttpRequest(
-                {
-                    url: this.action,
-                    method: HttpRequest.getMethod(this.method),
-                    data: form,
+    }
+
+    /**
+     * Set the element that will perform the submit action on click.
+     */
+    public registerSubmit(submitElement: HTMLElement) {
+        this.submitElement = submitElement;
+    }
+
+    /**
+     * Add a field to the form.
+     */
+    public subscribe<T>(fieldHTML: AvFormElement<T>) {
+        const fieldIndex = this.fields.push(fieldHTML);
+
+        const _goNext = (e: KeyboardEvent, index: number = fieldIndex) => {
+            if (e.keyCode === 13) {
+                if (this.fields[index]) {
+                    if (this.fields[index].focusable) {
+                        this.fields[index].setFocus();
+                    } else {
+                        _goNext(e, index + 1);
+                    }
+                } else {
+                    this.submit();
                 }
-            );
-            this.addEventListener("custom", () => {
-                
-            })
-            // _ajax({
-            //     url: this.action,
-            //     method: this.method,
-            //     fenetre: rkWindow,
-            //     data: form,
-            //     enctype: 'multipart/form-data',
-            //     processData: false,
-            //     contentType: false,
-            //     success: (res, status, request) => {
-            //         rkWindow._navigateSuccess(res, status, request, this.action, null, null, false);
-            //     }
-            // });
-        }
-    }
-    public subscribe(fieldHTML: AvFormElement<any>) {
-        if(fieldHTML.hasAttribute("type") && fieldHTML.getAttribute("type") === "submit") {
-            console.log("SUBMIT:", fieldHTML);
-        }
+            }
+        };
 
-        if(this._fieldEnter) {
-            this._fieldEnter.removeEventListener('keypress', this.submitLastChild);
-        }
-        // if(!(this._fieldEnter instanceof RkTextarea)) {
-        //     fieldHTML.addEventListener('keypress', this.submitLastChild);
-        // }
-        this._fieldEnter = fieldHTML;
+        fieldHTML.addEventListener("keydown", _goNext);
     }
-
 	//#endregion
-
 }

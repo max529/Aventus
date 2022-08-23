@@ -9,7 +9,7 @@ interface Pointer {    id: number;    constructor(nativePointer: Touch | Point
 declare class PointerTracker {    private element;    private currentPointers;    private startCallback;    private moveCallback;    private endCallback;    private lastEvent;    constructor(element: any, callbacks: any);    reset(): void;    private createPointer;    private triggerPointerStart;    private pointerStart;    private touchStart;    private move;    private triggerPointerEnd;    private pointerEnd;    private touchEnd;    private isTooOld;}
 
 interface SocketMessage {    channel: string;    data?: any;}interface SocketRoute {    channel: string;    callback: (data: any) => void;}interface SocketOptions {    log?: boolean;    ip?: string;    port?: number;    useHttps?: boolean;    routes?: {        [key: string]: SocketRoute[];    };    socketName?: string;    onOpen?: () => void;    onError?: () => void;    onClose?: () => void;}interface ISocket {    init(options: SocketOptions): any;    addRoute(newRoute: SocketRoute): any;    /**     * The route to remove     * @param route - The route to remove     */    removeRoute(route: SocketRoute): any;    open(done: () => void, error: () => void): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param options the options to add to the message (typically the uid)     */    sendMessage<T>(channelName: string, data: T, options: any): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWait<T>(channelName: string, data: T, callbacks: {        [key: string]: (data: any) => void;    }): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {}): any;    isReady(): boolean;}
-interface HttpRequestOptions {    url: string;    method?: HttpRequestMethod;    data?: {        [key: string]: any;    } | FormData;}declare class DefaultHttpRequestOptions implements HttpRequestOptions {    url: string;    method: HttpRequestMethod;}declare class HttpRequest {    private _options;    private _url;    static getMethod(method: string): HttpRequestMethod;    private getMethod;    constructor(options: HttpRequestOptions);    send(): any;}declare enum HttpRequestMethod {    GET = 0,    POST = 1,    DELETE = 2,    PUT = 3,    OPTION = 4}
+interface HttpRequestOptions {    url: string;    method?: HttpRequestMethod;    data?: {        [key: string]: any;    } | FormData;}declare class DefaultHttpRequestOptions implements HttpRequestOptions {    url: string;    method: HttpRequestMethod;}declare class HttpRequest {    private options;    private url;    static getMethod(method: string): HttpRequestMethod;    private getMethod;    constructor(options: HttpRequestOptions);    send(): any;}declare enum HttpRequestMethod {    GET = 0,    POST = 1,    DELETE = 2,    PUT = 3,    OPTION = 4}
 declare interface ObjectConstructor {
     transformIntoWatcher: (obj, onDataChanged) => any;
     prepareByPath:(obj, path, currentPath?) => {canApply:boolean, objToApply:any};
@@ -143,12 +143,17 @@ declare abstract class AvFormElement<T> extends WebComponent implements DefaultC
      */
     name: string;
     /**
+     * If true, the element can be focusable
+     */
+    focusable: boolean;
+    /**
      * Value to use inside your component
      */
     value: T;
     abstract getDefaultValue(): T;
     protected postCreation(): void;
     onValueChanged(): void;
+    setFocus(): void;
 }
 
 declare class AvForm extends WebComponent implements DefaultComponent {
@@ -159,13 +164,17 @@ declare class AvForm extends WebComponent implements DefaultComponent {
     method: string;
     action: string;
     use_event: boolean;
-    _fields: {
-        [key: string]: AvFormElement<any>;
-    };
-    _fieldEnter: AvFormElement<any>;
-    private submitLastChild;
+    private fields;
+    private submitElement;
     submit(): any;
-    subscribe(fieldHTML: AvFormElement<any>): void;
+    /**
+     * Set the element that will perform the submit action on click.
+     */
+    registerSubmit(submitElement: HTMLElement): void;
+    /**
+     * Add a field to the form.
+     */
+    subscribe<T>(fieldHTML: AvFormElement<T>): void;
 }
 
 declare class AvFor extends WebComponent implements DefaultComponent {
@@ -238,5 +247,5 @@ declare abstract class DisplayElement<T extends Data> extends WebComponent imple
 {"display-element":[],"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
 // end region css //
 // region html //
-{"display-element":{"name":"display-element","description":"","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","values":[]},"in":{"name":"in","description":"Name of property to loop though","values":[]},"index":{"name":"index","description":"Name of your index","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","values":[]},"method":{"name":"method","description":"","values":[]},"action":{"name":"action","description":"","values":[]},"use_event":{"name":"use_event","description":"","values":[]}}},"av-form-element":{"name":"av-form-element","description":"","attributes":{"required":{"name":"required","description":"If true, the element will be required","values":[]},"name":{"name":"name","description":"Name to use inside your form","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"disable_scroll":{"name":"disable_scroll","description":"","values":[]},"zoom":{"name":"zoom","description":"","values":[]},"floating_scroll":{"name":"floating_scroll","description":"","values":[]},"only_vertical":{"name":"only_vertical","description":"","values":[]}}}}
+{"display-element":{"name":"display-element","description":"","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","values":[]},"in":{"name":"in","description":"Name of property to loop though","values":[]},"index":{"name":"index","description":"Name of your index","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","values":[]},"method":{"name":"method","description":"","values":[]},"action":{"name":"action","description":"","values":[]},"use_event":{"name":"use_event","description":"","values":[]}}},"av-form-element":{"name":"av-form-element","description":"","attributes":{"required":{"name":"required","description":"If true, the element will be required","values":[]},"name":{"name":"name","description":"Name to use inside your form","values":[]},"focusable":{"name":"focusable","description":"If true, the element can be focusable","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"disable_scroll":{"name":"disable_scroll","description":"","values":[]},"zoom":{"name":"zoom","description":"","values":[]},"floating_scroll":{"name":"floating_scroll","description":"","values":[]},"only_vertical":{"name":"only_vertical","description":"","values":[]}}}}
 // end region html //

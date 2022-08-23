@@ -8967,30 +8967,91 @@ Event.prototype.realTarget = function(){
 }
 Element.prototype.findParentByTag = function (tagname, untilNode = undefined) {
     let el = this;
+    if(Array.isArray(tagname)) {
+        for(let i = 0; i < tagname.length; i++) {
+            tagname[i] = tagname[i].toLowerCase();
+        }
+    } else {
+        tagname = [tagname.toLowerCase()];
+    }
+    let checkFunc = (el) => {
+        return tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1;
+    };
+    
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        if(checkFunc(el)) {
+            return el;
+        }
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+    return null;
+};
+Element.prototype.findParentByClass = function (classname, untilNode = undefined) {
+    let el = this;
+    if(!Array.isArray(classname)) {
+        classname = [classname];
+    }
+    if(el) {
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+    }
+    while(el) {
+        for(let classnameTemp of classname) {
+            if(el.classList && el.classList.contains(classnameTemp)) {
+                return el;
+            }
+        }
+
+
+        if(el instanceof ShadowRoot) {
+            el = el.host;
+        } else {
+            el = el.parentNode;
+        }
+        if(el == untilNode) {
+            break;
+        }
+    }
+
+    return null;
+};
+Element.prototype.findParentByType = function (type, untilNode = undefined) {
+    let el = this;
     let checkFunc = (el) => {
         return false;
-    }
-    if(typeof tagname == "function" && tagname.prototype.constructor) {
+    };
+    if(typeof type == "function" && type.prototype.constructor) {
         checkFunc = (el) => {
-            if(el instanceof tagname){
+            if(el instanceof type) {
                 return true;
             }
             return false;
-        }
-        
+        };
+
     }
     else {
-        if(Array.isArray(tagname)) {
-            for(let i = 0; i < tagname.length; i++) {
-                tagname[i] = tagname[i].toLowerCase();
-            }
-        } else {
-            tagname = [tagname.toLowerCase()];
-        }
-        checkFunc = (el) => {
-            return tagname.indexOf((el.nodeName || el.tagName).toLowerCase()) != -1
-        }
+        console.error("you must provide a class inside this function");
+        return null;
     }
+
     if(el) {
         if(el instanceof ShadowRoot) {
             el = el.host;
@@ -9048,41 +9109,6 @@ Element.prototype.findParents = function (tagname, untilNode = undefined) {
 
     return result;
 };
-Element.prototype.findParentByClass = function (classname, untilNode = undefined) {
-    let el = this;
-    if(!Array.isArray(classname)) {
-        classname = [classname];
-    }
-    if(el) {
-        if(el instanceof ShadowRoot) {
-            el = el.host;
-        } else {
-            el = el.parentNode;
-        }
-    }
-    while(el) {
-        for(let classnameTemp of classname) {
-            if(el.classList && el.classList.contains(classnameTemp)) {
-                return el;
-            }
-        }
-
-
-        if(el instanceof ShadowRoot) {
-            el = el.host;
-        } else {
-            el = el.parentNode;
-        }
-        if(el == untilNode) {
-            break;
-        }
-    }
-
-    return null;
-};
-Element.prototype.findParentByType = function(type, untilNode = undefined){
-    
-}
 Element.prototype.containsChild = function (el) {
     var rootScope = this.getRootNode();
     var elScope = el.getRootNode();
@@ -9486,7 +9512,7 @@ class AvFormElement extends WebComponent {
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name'); }
     __listBoolProps() { return ["required"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
+     postCreation(){this.findParentByType(AvForm).subscribe(this);} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
 window.customElements.define('av-form-element', AvFormElement);
 class AvForm extends WebComponent {
     static get observedAttributes() {return ["loading", "method", "action", "use_event"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
@@ -9568,7 +9594,7 @@ class AvForm extends WebComponent {
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('loading')) { this.attributeChangedCallback('loading', false, false); }if(!this.hasAttribute('method')){ this['method'] = 'get'; }if(!this.hasAttribute('action')){ this['action'] = ''; }if(!this.hasAttribute('use_event')) { this.attributeChangedCallback('use_event', false, false); } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('loading');this.__upgradeProperty('method');this.__upgradeProperty('action');this.__upgradeProperty('use_event'); }
     __listBoolProps() { return ["loading","use_event"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     submitLastChild(e){if (e.keyCode == 13) {    this.submit();}}async  submit(){var form = new FormData();for (var key in this._fields) {    const input = this._fields[key];    if (!input.required) {        if (input.value) {            form.append(key, input.value);        }    }    else {        form.append(key, input.value);    }}if (this.use_event) {    var customEvent = new CustomEvent('submit', {        detail: {            form: form,            action: this.action,            method: this.method        },        bubbles: true,        composed: true    });    this.dispatchEvent(customEvent);}else {    let request = new HttpRequest({        url: this.action,        method: HttpRequest.getMethod(this.method),        data: form,    });    this.addEventListener("custom", () => {    });}} subsribe(fieldHTML){this._fields[fieldHTML.name] = fieldHTML;if (this._fieldEnter) {    this._fieldEnter.removeEventListener('keypress', this.submitLastChild);}this._fieldEnter = fieldHTML;} postCreation(){}}
+     submitLastChild(e){if (e.keyCode == 13) {    this.submit();}}async  submit(){var form = new FormData();for (var key in this._fields) {    const input = this._fields[key];    if (!input.required) {        if (input.value) {            form.append(key, input.value);        }    }    else {        form.append(key, input.value);    }}if (this.use_event) {    var customEvent = new CustomEvent('submit', {        detail: {            form: form,            action: this.action,            method: this.method        },        bubbles: true,        composed: true    });    this.dispatchEvent(customEvent);}else {    let request = new HttpRequest({        url: this.action,        method: HttpRequest.getMethod(this.method),        data: form,    });    this.addEventListener("custom", () => {    });}} subscribe(fieldHTML){if (fieldHTML.hasAttribute("type") && fieldHTML.getAttribute("type") === "submit") {    console.log("SUBMIT:", fieldHTML);}if (this._fieldEnter) {    this._fieldEnter.removeEventListener('keypress', this.submitLastChild);}this._fieldEnter = fieldHTML;}}
 window.customElements.define('av-form', AvForm);
 class AvFor extends WebComponent {
     static get observedAttributes() {return ["item", "in", "index"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}

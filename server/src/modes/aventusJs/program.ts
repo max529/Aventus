@@ -19,7 +19,7 @@ import { ClassModel, parseStruct } from '../../ts-file-parser';
 import { connectionWithClient } from '../../mode';
 
 
-const baseAventusEndPath = "/Aventus/base/src";
+const baseAventusEndPath = "/aventus/base/src";
 
 export class AventusJSProgramManager {
 	private dico: { [key: string]: AventusJSProgram } = {}
@@ -136,7 +136,7 @@ export class AventusJSProgram {
 			this.baseDir = getFolder(this.configFile.uri);
 		}
 		if (this.baseDir) {
-			if (this.baseDir.endsWith(baseAventusEndPath)) {
+			if (this.baseDir.toLowerCase().endsWith(baseAventusEndPath)) {
 				this.filesNeeded = [];
 				loadAventusDef = false;
 			}

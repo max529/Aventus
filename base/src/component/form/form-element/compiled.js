@@ -1,5 +1,5 @@
 class AvFormElement extends WebComponent {
-    static get observedAttributes() {return ["required", "name"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
+    static get observedAttributes() {return ["required", "name", "focusable"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     constructor() { super(); if (this.constructor == AvFormElement) { throw "can't instanciate an abstract class"; } }
     get 'required'() {
                         return this.hasAttribute('required');
@@ -25,6 +25,25 @@ class AvFormElement extends WebComponent {
                     }
                     set 'name'(val) {
                         this.setAttribute('name',val);
+                    }get 'focusable'() {
+                        return this.hasAttribute('focusable');
+                    }
+                    set 'focusable'(val) {
+                        if(val === 1 || val === 'true' || val === ''){
+                            val = true;
+                        }
+                        else if(val === 0 || val === 'false' || val === null || val === undefined){
+                            val = false;
+                        }
+                        if(val !== false && val !== true){
+                            console.error("error setting boolean in focusable");
+                            val = false;
+                        }
+                        if (val) {
+                            this.setAttribute('focusable', 'true');
+                        } else{
+                            this.removeAttribute('focusable');
+                        }
                     }get 'value'() {
 						return this.__mutable["value"];
 					}
@@ -88,8 +107,8 @@ class AvFormElement extends WebComponent {
     getClassName() {
         return "AvFormElement";
     }
-    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; } }
-    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name'); }
-    __listBoolProps() { return ["required"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     postCreation(){} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));}}
+    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; }if(!this.hasAttribute('focusable')) { this.attributeChangedCallback('focusable', false, false); } }
+    __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name');this.__upgradeProperty('focusable'); }
+    __listBoolProps() { return ["required","focusable"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
+     postCreation(){this.findParentByType(AvForm).subscribe(this);} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));} setFocus(){}}
 window.customElements.define('av-form-element', AvFormElement);
