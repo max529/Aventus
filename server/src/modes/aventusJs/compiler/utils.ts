@@ -30,9 +30,13 @@ export function removeWhiteSpaceLines(txt: string) {
 
 export function removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration) {
 	let classContent = cls.content.trim();
-
+	let decoratorsToKeep: string[] = [
+		"viewElement"
+	];
 	cls.decorators.forEach(decorator => {
-		classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
+		if (decoratorsToKeep.indexOf(decorator.name) == -1) {
+			classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
+		}
 	});
 
 	return classContent.trim();
