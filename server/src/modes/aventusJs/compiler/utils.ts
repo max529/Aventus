@@ -30,13 +30,8 @@ export function removeWhiteSpaceLines(txt: string) {
 
 export function removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration) {
 	let classContent = cls.content.trim();
-	let decoratorsToKeep: string[] = [
-		"viewElement", "Debugger"
-	];
 	cls.decorators.forEach(decorator => {
-		if (decoratorsToKeep.indexOf(decorator.name) == -1) {
-			classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
-		}
+		classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
 	});
 
 	return classContent.trim();
@@ -143,7 +138,7 @@ export function compileDocTs(txt: string) {
 			return {
 				allowJs: true,
 				declaration: true,
-				emitDeclarationOnly: true,
+				emitDeclarationOnly: true
 			}
 		},
 		getScriptFileNames: () => ["temp.js"],
