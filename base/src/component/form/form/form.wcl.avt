@@ -1,6 +1,7 @@
 import { AvFormElement } from "../../../component/form/form-element/form-element.wcl.avt";
 import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.avt";
 import { HttpRequest } from "../../../lib/HttpRequest.lib.avt";
+import { PressManager } from "../../../lib/PressManager.lib.avt";
 
 export class AvForm extends WebComponent implements DefaultComponent {
 
@@ -30,6 +31,7 @@ export class AvForm extends WebComponent implements DefaultComponent {
     //#region variables
     private fields: AvFormElement<any>[] = [];
     private submitElement: HTMLElement;
+    private submitPressInstance: PressManager;
     //#endregion
 
 
@@ -45,6 +47,11 @@ export class AvForm extends WebComponent implements DefaultComponent {
 
     //#region methods
     public async submit() {
+        if (!this.validate()) {
+            return;
+        }
+
+        this.loading = true;
         const data = {};
 
         this.fields.forEach(field => {
@@ -80,6 +87,8 @@ export class AvForm extends WebComponent implements DefaultComponent {
                 method: HttpRequest.getMethod(this.method),
                 data: formData
             });
+
+            this.loading = false;
         }
     }
 
@@ -87,7 +96,17 @@ export class AvForm extends WebComponent implements DefaultComponent {
      * Set the element that will perform the submit action on click.
      */
     public registerSubmit(submitElement: HTMLElement) {
+        if (this.submitPressInstance) {
+            this.submitPressInstance.destroy();
+        }
+
         this.submitElement = submitElement;
+        this.submitPressInstance = new PressManager({
+            element: this.submitElement,
+            onPress: () => {
+                this.submit();
+            }
+        });
     }
 
     /**
@@ -111,6 +130,21 @@ export class AvForm extends WebComponent implements DefaultComponent {
         };
 
         fieldHTML.addEventListener("keydown", _goNext);
+    }
+
+    public validate(): boolean {
+        let valid = true;
+        this.fields.forEach(field => {
+            if (!field.validate()) {
+                if (valid === true) {
+                    field.setFocus();
+                }
+                
+                valid = false;
+            }
+        });
+
+        return valid;
     }
 	//#endregion
 }

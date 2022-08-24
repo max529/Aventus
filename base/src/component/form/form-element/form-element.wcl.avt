@@ -34,6 +34,12 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
      */
     @mutable()
     value: T = this.getDefaultValue();
+
+    @mutable((target: AvFormElement<T>) => {
+        console.log("Display errors");
+        target.displayErrors();
+    })
+    protected errors: string[] = [];
     //#endregion
 
     //#region variables
@@ -52,13 +58,13 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
 
 
     //#region methods
-    public abstract getDefaultValue(): T;
-
     protected override postCreation(): void {
         this.findParentByType(AvForm).subscribe(this);
     }
 
-    onValueChanged() {
+    public abstract getDefaultValue(): T;
+
+    public onValueChanged() {
         this.dispatchEvent(new CustomEvent("change", {
             detail: {
                 value: this.value
@@ -66,9 +72,21 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
         }));
     }
 
-    setFocus() {
-        
+    public setFocus() {}
+
+    public validate(): boolean {
+        return true;
     }
-	 //#endregion
+
+    public setError(message: string) {
+        this.errors.push(message);
+    }
+
+    public clearErrors() {
+        this.errors = [];
+    }
+
+    protected displayErrors() {}
+	//#endregion
 
 }

@@ -17,7 +17,7 @@ export class AvHideable extends WebComponent implements DefaultComponent {
     //#region variables
     private oldParent: HTMLElement = undefined;
     @mutable((target: AvHideable) => {
-        target.dispatchEvent(new CustomEvent("toggleVisibility", { detail: { visible: target.isVisible } }));
+        target.dispatchEvent(new CustomEvent("toggle_visibility", { detail: { visible: target.isVisible } }));
     })
     private isVisible: boolean = false;
     private options: AvHideableOptions;
@@ -101,6 +101,11 @@ export class AvHideable extends WebComponent implements DefaultComponent {
         });
 
     }
+
+    getVisibility(): boolean {
+        return this.isVisible;
+    }
+
     private loadCSSVariables() {
         let styleSheets = this.shadowRoot.styleSheets;
         let realStyle = getComputedStyle(this);

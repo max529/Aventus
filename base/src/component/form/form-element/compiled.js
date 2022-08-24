@@ -59,6 +59,21 @@ class AvFormElement extends WebComponent {
 						else{
 							//this.__mutable["value"] = undefined;
 						}
+					}get 'errors'() {
+						return this.__mutable["errors"];
+					}
+					set 'errors'(val) {
+						/*if (this.__mutable["errors"]) {
+							this.__mutable["errors"].__unsubscribe(this.__mutableActionsCb["errors"]);
+						}*/
+						this.__mutable["errors"] = val;
+						if (val) {
+							//this.__mutable["errors"] = Object.transformIntoWatcher(val, this.__mutableActionsCb["errors"]);
+							//this.__mutableActionsCb["errors"](MutableAction.SET, '', this.__mutable["errors"]);
+						}
+						else{
+							//this.__mutable["errors"] = undefined;
+						}
 					}    __prepareMutablesActions() {
 					this.__mutableActions["value"] = [];
 						this.__mutableActionsCb["value"] = (action, path, value) => {
@@ -76,10 +91,26 @@ class AvFormElement extends WebComponent {
 									}*/
 								}
 							}
+						}this.__mutableActions["errors"] = [((target) => {    console.log("Display errors");    target.displayErrors();})];
+						this.__mutableActionsCb["errors"] = (action, path, value) => {
+							for (let fct of this.__mutableActions["errors"]) {
+								fct(this, action, path, value);
+							}
+							if(this.__onChangeFct["errors"]){
+								for(let fct of this.__onChangeFct["errors"]){
+									fct("errors")
+									/*if(path == ""){
+										fct("errors")
+									}
+									else{
+										fct("errors."+path);
+									}*/
+								}
+							}
 						}					super.__prepareMutablesActions();
 				}__initMutables() {
 					super.__initMutables();
-					this["value"] = this.getDefaultValue();
+					this["value"] = this.getDefaultValue();this["errors"] = [];
 				}
     __getStyle() {
         let arrStyle = super.__getStyle();
@@ -110,5 +141,5 @@ class AvFormElement extends WebComponent {
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('required')) { this.attributeChangedCallback('required', false, false); }if(!this.hasAttribute('name')){ this['name'] = ''; }if(!this.hasAttribute('focusable')) { this.attributeChangedCallback('focusable', false, false); } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('required');this.__upgradeProperty('name');this.__upgradeProperty('focusable'); }
     __listBoolProps() { return ["required","focusable"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
-     postCreation(){this.findParentByType(AvForm).subscribe(this);} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));} setFocus(){}}
+     postCreation(){this.findParentByType(AvForm).subscribe(this);} onValueChanged(){this.dispatchEvent(new CustomEvent("change", {    detail: {        value: this.value    }}));} setFocus(){} validate(){return true;} setError(message){this.errors.push(message);} clearErrors(){this.errors = [];} displayErrors(){}}
 window.customElements.define('av-form-element', AvFormElement);

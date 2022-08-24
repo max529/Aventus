@@ -97,12 +97,7 @@ class AvSelect extends AvFormElement {
         temp.push(["AvSelect", 5])
         return temp;
     }
-    get baseEl () {
-										return this.shadowRoot.querySelector('[_id="avselect_1"]');
-									}get test () {
-										var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avselect_0"]'));
-										return list;
-									}    __mapSelectedElement() { super.__mapSelectedElement(); this.hider = this.shadowRoot.querySelector('[_id="avselect_3"]');this.options = this.shadowRoot.querySelector('[_id="avselect_4"]');}
+    __mapSelectedElement() { super.__mapSelectedElement(); this.hider = this.shadowRoot.querySelector('[_id="avselect_3"]');this.options = this.shadowRoot.querySelector('[_id="avselect_4"]');this.baseEl = this.shadowRoot.querySelector('[_id="avselect_1"]');this.test = this.shadowRoot.querySelector('[_id="avselect_0"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avselect_0'].length;i++){
 									this._components['avselect_0'][i].innerHTML = ""+this.label+"".toString();

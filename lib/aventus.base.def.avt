@@ -129,13 +129,14 @@ declare class AvHideable extends WebComponent implements DefaultComponent {
     private defaultCanHide;
     configure(options: AvHideableOptions): void;
     show(): void;
+    getVisibility(): boolean;
     private loadCSSVariables;
     hide(force?: boolean): any;
     private checkClose;
     protected postCreation(): void;
 }
 
-declare abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
+export declare abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
     /**
      * If true, the element will be required
      */
@@ -152,10 +153,15 @@ declare abstract class AvFormElement<T> extends WebComponent implements DefaultC
      * Value to use inside your component
      */
     value: T;
-    abstract getDefaultValue(): T;
+    protected errors: string[];
     protected postCreation(): void;
+    abstract getDefaultValue(): T;
     onValueChanged(): void;
     setFocus(): void;
+    validate(): boolean;
+    setError(message: string): void;
+    clearErrors(): void;
+    protected displayErrors(): void;
 }
 
 declare class AvForm extends WebComponent implements DefaultComponent {
@@ -168,6 +174,7 @@ declare class AvForm extends WebComponent implements DefaultComponent {
     use_event: boolean;
     private fields;
     private submitElement;
+    private submitPressInstance;
     submit(): any;
     /**
      * Set the element that will perform the submit action on click.
@@ -177,6 +184,7 @@ declare class AvForm extends WebComponent implements DefaultComponent {
      * Add a field to the form.
      */
     subscribe<T>(fieldHTML: AvFormElement<T>): void;
+    validate(): boolean;
 }
 
 declare class AvFor extends WebComponent implements DefaultComponent {

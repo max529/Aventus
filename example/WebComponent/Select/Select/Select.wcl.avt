@@ -24,6 +24,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
     hider: AvHideable;
     options: HTMLDivElement;
     baseEl: HTMLDivElement;
+    test: HTMLLabelElement;
     
     //#endregion
 
