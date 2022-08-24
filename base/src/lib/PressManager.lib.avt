@@ -19,7 +19,7 @@ export interface InternalPointerEvent extends Event {
     };
 }
 export interface PressManagerOptions {
-    element: Element | Element[] | Document,
+    element: Element | Element[],
     onPress?: (e: PointerEvent, self: PressManager) => void,
     onPressStart?: (e: PointerEvent, self: PressManager) => void,
     onPressEnd?: (e: PointerEvent, self: PressManager) => void,
@@ -28,6 +28,7 @@ export interface PressManagerOptions {
     onDrag?: (e: PointerEvent, self: PressManager) => void,
     onDragStart?: (e: PointerEvent, self: PressManager) => void,
     onDragEnd?: (e: PointerEvent, self: PressManager) => void,
+    preventPropagation?: boolean,
     offsetDrag?: number,
     delayDblPress?: number;
     delayLongPress?: number;
@@ -40,9 +41,10 @@ export interface PressManagerState {
 }
 export class PressManager {
     private options: PressManagerOptions;
-    private element: Element | Document;
+    private element: Element;
     private subPressManager: PressManager[] = [];
 
+    private preventPropagation: boolean;
     private delayDblPress: number = 150;
     private delayLongPress: number = 700;
     private nbPress: number = 0;
@@ -101,7 +103,7 @@ export class PressManager {
 
     }
 
-    public getElement(): Element | Document {
+    public getElement(): Element {
         return this.element;
     }
 
@@ -146,6 +148,9 @@ export class PressManager {
         }
         if(options.forceDblPress){
             this.useDblPress = true;
+        }
+        if (options.preventPropagation) {
+            this.preventPropagation = true;
         }
     }
     private bindAllFunction() {
@@ -293,7 +298,7 @@ export class PressManager {
         }
     }
     private triggerEventToParent(eventName: string) {
-        if(this.element.parentNode) {
+        if(!this.preventPropagation && this.element.parentNode) {
             this.element.parentNode.dispatchEvent(new CustomEvent("pressaction_trigger", {
                 bubbles: true,
                 cancelable: false,

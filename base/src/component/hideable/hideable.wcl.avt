@@ -16,6 +16,9 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     //#region variables
     private oldParent: HTMLElement = undefined;
+    @mutable((target: AvHideable) => {
+        target.dispatchEvent(new CustomEvent("toggleVisibility", { detail: { visible: target.isVisible } }));
+    })
     private isVisible: boolean = false;
     private options: AvHideableOptions;
     private checkCloseBinded: (e: Event) => {};
@@ -75,8 +78,10 @@ export class AvHideable extends WebComponent implements DefaultComponent {
         if(this.shadowRoot.querySelector("style").innerText.indexOf(":host{--inserted: \"here\"}") != -1) {
             // insert style from
             let newStyle = "";
-            if(this.oldParent instanceof ShadowRoot) {
-                let matchingArr = this.oldParent.querySelector("style").innerText.match(/av-hideable.*?\{.*?\}/g);
+
+            const parentShadowRoot = this.oldParent.findParentByType(ShadowRoot);
+            if(parentShadowRoot instanceof ShadowRoot) {
+                let matchingArr = parentShadowRoot.querySelector("style").innerText.match(/av-hideable.*?\{.*?\}/g);
                 if(matchingArr) {
                     newStyle = matchingArr.join("").replace(/av-hideable/g, ":host");
                 }
@@ -138,7 +143,7 @@ export class AvHideable extends WebComponent implements DefaultComponent {
         }
     }
 
-    private checkClose(e) {
+    private checkClose(e: Event) {
         var realTargetEl = e.realTarget();
         for(var i = 0; i < this.options.noHideItems.length; i++) {
             if(this.options.noHideItems[i].containsChild(realTargetEl)) {
