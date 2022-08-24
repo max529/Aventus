@@ -21,8 +21,8 @@ export class DefaultHttpRequestOptions implements HttpRequestOptions {
 
 
 export class HttpRequest {
-    private _options: RequestInit = {};
-    private _url: string = '';
+    private options: RequestInit = {};
+    private url: string = '';
 
     public static getMethod(method: string): HttpRequestMethod {
         let genericMethod = method.toLowerCase().trim();
@@ -76,12 +76,12 @@ export class HttpRequest {
             }
         }
 
-        this._options = optionsToSend;
-        this._url = options.url;
+        this.options = optionsToSend;
+        this.url = options.url;
     }
 
     async send() {
-        let result = await fetch(this._url, this._options);
+        let result = await fetch(this.url, this.options);
         if(result.ok) {
             
         }

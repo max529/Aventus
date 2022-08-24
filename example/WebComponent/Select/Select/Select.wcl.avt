@@ -118,7 +118,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
         let form = this.findParentByTag<AvForm>("av-form");
         if(form) {
-            form.subsribe(this);
+            form.subscribe(this);
         }
         setTimeout(() => {
             this.selectValueText();

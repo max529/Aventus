@@ -214,8 +214,8 @@ class AvTodoCreation extends WebComponent {
     __addEvents(ids = null) { super.__addEvents(ids); 
                 new PressManager({
                     "element": this._components['avtodocreation_1'],
-                    "onPress": (e) => {
-                        this.addTodo(e, this);
+                    "onPress": (e, pressInstance) => {
+                        this.addTodo(e, pressInstance);
                      },
                 });
                  }
