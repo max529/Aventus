@@ -8,7 +8,7 @@ import { aventusExtension } from '../../aventusDoc';
 import { compileScss, ScssCompilerResult } from '../../../aventusSCSS/compiler/compileScss';
 import { AVENTUS_DEF_BASE_PATH } from '../../../libLoader';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
-import { CompileComponentResult, configTS, CustomClassInfo, HTMLDoc, ItoPrepare, SCSSDoc, TYPES } from './def';
+import { CompileComponentResult, configTS, CustomClassInfo, CustomFieldModel, HTMLDoc, ItoPrepare, SCSSDoc, TYPES } from './def';
 import { loadFields, transpileMethod, transpileMethodNoRun } from './utils';
 import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -129,7 +129,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	}
 	let dependances: string[] = [];
 	let toPrepare: ItoPrepare = {
-		variablesPerso: {},
+		variablesInView: {},
 		eventsPerso: [],
 		pressEvents: {},
 		allFields: {},
@@ -266,26 +266,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						var _id = _getId(el);
 						var value = el.attribs[key].split('.');
 						let varName = value[0];
-						var selectorFctTxt = `get ${varName} () {
-                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="$id"]'));
-                        if(list.length == 1){
-                            list = list[0]
-                        }
-                        return list;
-                    }\r\n`
-						if (varName.endsWith("[]")) {
-							varName = varName.replace("[]", "");
-							selectorFctTxt = `get ${varName} () {
-                            var list = Array.from(this.shadowRoot.querySelectorAll('[_id="$id"]'));
-                            return list;
-                        }\r\n`
-						}
 
-						if (!toPrepare.variablesPerso.hasOwnProperty(varName)) {
+						if (!toPrepare.variablesInView.hasOwnProperty(varName)) {
 							if (value.length == 1) {
-								toPrepare.variablesPerso[varName] = selectorFctTxt.replace(/\$id/g, _id);
+								toPrepare.variablesInView[varName] = _id;
 							} else {
-								toPrepare.variablesPerso[varName] = ''
+								toPrepare.variablesInView[varName] = ''
 							}
 						}
 
@@ -412,7 +398,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					else if (key == "in") {
 						inFound = true;
 						if (dependances.length == 0) {
-							toPrepare.variablesPerso[el.attribs[key].split(".")[0]] = '';
+							toPrepare.variablesInView[el.attribs[key].split(".")[0]] = '';
 						}
 						inName = el.attribs[key];
 					}
@@ -529,25 +515,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 		}
 
-		const _selectedEl = () => {
-			var selectedElTxt = '';
-			var recuSelectedEl = (current, root) => {
-				for (var key in current) {
-					if (typeof (current[key]) == 'object') {
-						result.diagnostics.push(createErrorTs(document, 'dont know when to use this kind'));
-						// selectedElTxt += root + '.' + key + ' = {};\r\n';
-						// recuSelectedEl(current[key], root + '.' + key);
-					} else {
-						selectedElTxt += root + '.' + key + ' = ' + current[key] + ';\r\n';
-					}
-				}
-			}
-			for (var key in toPrepare.variablesPerso) {
-				selectedElTxt += toPrepare.variablesPerso[key]
-			}
-			template = template.replace(/\$mapSelectedEl/g, selectedElTxt);
-
-		}
+		
 		const _constructor = () => {
 			let constructorBody = classInfo.constructorBody;
 			if (constructorBody.length > 0) {
@@ -564,19 +532,21 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			}
 		}
 		const _createFields = () => {
-			var upgradeAttributes = "";
-			var getterSetter = "";
-			var attributesChanged = {};
-			var attributesChangedTxt = ''
-			var defaultValue = '';
-			var variablesWatched: string[] = [];
-			var variablesWatchedTxt = '';
-			var variablesSimple = "";
+			let upgradeAttributes = "";
+			let getterSetter = "";
+			let attributesChanged = {};
+			let attributesChangedTxt = ''
+			let defaultValue = '';
+			let variablesWatched: string[] = [];
+			let variablesWatchedTxt = '';
+			let variablesSimple = "";
 			let listBool: string[] = [];
 			let statesTxt = "";
 			let variableProxyTxt = "";
 			let variableProxyInit = "";
 			let variableProxy = {};
+			let variablesInViewStatic = '';
+			let variablesInViewDynamic = '';
 
 
 			const _createAttribute = (field: FieldModel, args: any[] = []) => {
@@ -800,8 +770,8 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					foundedMutable.push(field.name);
 				}
 			}
-			const _createSimpleVariable = (field: FieldModel) => {
-				if (!toPrepare.variablesPerso.hasOwnProperty(field.name)) {
+			const _createSimpleVariable = (field: CustomFieldModel) => {
+				if (!toPrepare.variablesInView.hasOwnProperty(field.name)) {
 					let value = "undefined";
 					if (field.hasOwnProperty('valueConstraint')) {
 						if (field.valueConstraint != null && field.valueConstraint.hasOwnProperty("value")) {
@@ -809,6 +779,39 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}\r\n`;
+				}
+				else {
+					let id = toPrepare.variablesInView[field.name];
+					if (id != "") {
+						let isArray: boolean = false;
+						if (field.type?.typeKind == TypeKind.ARRAY) {
+							isArray = true;
+						}
+						if (field.propType == "viewElement") {
+							if (field.arguments && field.arguments[0] && field.arguments[0]["useLive"]) {
+								if (isArray) {
+									variablesInViewDynamic += `get ${field.name} () {
+										var list = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));
+										return list;
+									}\r\n`
+								}
+								else {
+									variablesInViewDynamic += `get ${field.name} () {
+										return this.shadowRoot.querySelector('[_id="${id}"]');
+									}\r\n`
+								}
+								return;
+							}
+						}
+
+						if (isArray) {
+							variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));\r\n`
+						}
+						else {
+							variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');\r\n`
+						}
+
+					}
 				}
 			}
 			const _createStates = (field) => {
@@ -958,7 +961,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					attributesChanged[fieldName] = stringToAdd;
 				}
 			}
-			let listToCheck = Object.keys(toPrepare.variablesPerso);
+			let listToCheck = Object.keys(toPrepare.variablesInView);
 			for (let fieldName in toPrepare.allFields) {
 				let field = toPrepare.allFields[fieldName];
 				let index = listToCheck.indexOf(field.name);
@@ -987,6 +990,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							_createMutableVariable(field, decorator.arguments);
 						}
 					}
+				}
+				else if (field.propType == "viewElement") {
+					_createSimpleVariable(field);
 				}
 				else if (field.propType == "simple") {
 					_createSimpleVariable(field);
@@ -1022,6 +1028,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			}
 
 			//#region writing into template
+			template = template.replace(/\$variablesInViewDynamic/g, variablesInViewDynamic);
+			if(variablesInViewStatic.length > 0){
+				variablesInViewStatic = `__mapSelectedElement() { super.__mapSelectedElement(); ${variablesInViewStatic}}`;
+			}
+			template = template.replace(/\$variablesInViewStatic/g, variablesInViewStatic);
+
 			if (statesTxt.length > 0) {
 				statesTxt = `__createStates() { super.__createStates(); let that2 = this; ${statesTxt} }`
 			}
@@ -1440,7 +1452,6 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		template = template.replace(/\$template/g, body); // .replace is needed to remove odd unicode char at the start of the string
 		template = template.replace(/\$style/g, toPrepare.style);
 		template = template.replace(/\$maxId/g, toPrepare.idElement + "");
-		_selectedEl();
 		_constructor();
 		_createTranslations();
 		_createFields();

@@ -1,5 +1,8 @@
 import { AvOption } from "../option/option.wcl.avt";
 
+@Debugger({
+    writeCompiled: true
+})
 export class AvSelect extends AvFormElement<string> implements DefaultComponent {
 
     //#region static
@@ -21,6 +24,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
     hider: AvHideable;
     options: HTMLDivElement;
     baseEl: HTMLDivElement;
+    
     //#endregion
 
 
@@ -32,8 +36,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
     //#region constructor
     constructor() {
         super();
-        this.hider = this.shadowRoot.querySelector<AvHideable>("av-hideable");
-        this.options = this.hider.children[0] as HTMLDivElement;
+       
     }
     //#endregion
 
@@ -90,9 +93,9 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
     protected override postCreation(): void {
         let valueAttr = this.getAttribute("value");
-        if(valueAttr){
+        if(valueAttr) {
             this.value = valueAttr;
-            this.removeAttribute("value")
+            this.removeAttribute("value");
         }
         var list = this.children;
         for(var i = 0; i < list.length; i++) {

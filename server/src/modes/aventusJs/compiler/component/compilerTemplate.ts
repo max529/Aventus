@@ -36,7 +36,8 @@ export var compilerTemplate = `class $classname extends $parentClass {
         temp.push(["$classname", $maxId])
         return temp;
     }
-    $mapSelectedEl
+    $variablesInViewDynamic
+    $variablesInViewStatic
     $registerOnChange
     $constructor
 

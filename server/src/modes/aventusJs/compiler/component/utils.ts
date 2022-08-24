@@ -62,6 +62,16 @@ export function loadFields(classInfo: ClassModel, isBase: boolean): { [key: stri
 				found = true;
 				break;
 			}
+			else if (decorator.name == "viewElement") {
+				result[field.name] = {
+					...field,
+					propType: 'viewElement',
+					inParent: !isBase,
+					arguments: decorator.arguments
+				}
+				found = true;
+				break;
+			}
 		}
 		if (!found) {
 			result[field.name] = {

@@ -6,7 +6,7 @@ import { customCssProperty } from '../../../aventusSCSS/CSSNode';
 export interface CompileComponentResult {
 	success: boolean,
 	diagnostics: Diagnostic[],
-	result:{
+	result: {
 		nameCompiled: string,
 		nameDoc: string,
 		src: string,
@@ -17,10 +17,11 @@ export interface CompileComponentResult {
 	}
 }
 
-declare type FieldType = 'attribute' | 'mutable' | 'state' | 'simple';
+declare type FieldType = 'attribute' | 'mutable' | 'state' | 'viewElement' | 'simple';
 export interface CustomFieldModel extends FieldModel {
 	propType: FieldType,
 	inParent: boolean,
+	arguments?: any[],
 }
 declare interface DebuggerConfig {
 	writeCompiled?: boolean
@@ -30,7 +31,7 @@ export declare interface CustomClassInfo {
 	overrideView?: boolean
 }
 export declare interface ItoPrepare {
-	variablesPerso: {},
+	variablesInView: {},
 	eventsPerso: toPrepareEventPerson[],
 	pressEvents: {},
 	allFields: { [key: string]: CustomFieldModel },

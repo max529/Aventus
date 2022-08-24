@@ -1,6 +1,7 @@
 declare function attribute<T>(onChange: (arg: T) => void);
 declare function attribute();
 declare function mutable();
+declare function viewElement(config:ViewElementConfig);
 declare function mutable<T>(onChange: (arg: T, action: MutableAction, path: string, value: any) => void);
 declare function IgnoreForceIdentifier();
 declare function overrideView(target: any);
