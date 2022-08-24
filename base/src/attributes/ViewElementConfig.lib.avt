@@ -1,0 +1,5 @@
+
+export interface ViewElementConfig {
+	/** if set the component ll do a query selector else the component is the one loaded on first render */
+	useLive?:boolean
+}

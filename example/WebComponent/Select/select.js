@@ -20,8 +20,7 @@ class AvSelect extends AvFormElement {
 						else{
 							//this.__mutable["value_display"] = undefined;
 						}
-					}    __prepareVariables() { super.__prepareVariables(); if(this.hider === undefined) {this.hider = undefined;}if(this.options === undefined) {this.options = undefined;} }
-    __prepareMutablesActions() {
+					}    __prepareMutablesActions() {
 					this.__mutableActions["value_display"] = [];
 						this.__mutableActionsCb["value_display"] = (action, path, value) => {
 							for (let fct of this.__mutableActions["value_display"]) {
@@ -59,8 +58,8 @@ class AvSelect extends AvFormElement {
         <path d="M0 0h24v24H0z" fill="none"></path>
     </svg>
 </div>
-<av-hideable>
-    <div class="container">
+<av-hideable _id="avselect_3">
+    <div class="container" _id="avselect_4">
         <slot></slot>
     </div>
 </av-hideable>`,
@@ -76,8 +75,8 @@ class AvSelect extends AvFormElement {
         <path d="M0 0h24v24H0z" fill="none"></path>
     </svg>
 </div>
-<av-hideable>
-    <div class="container">
+<av-hideable _id="avselect_3">
+    <div class="container" _id="avselect_4">
         <slot></slot>
     </div>
 </av-hideable>`
@@ -95,16 +94,16 @@ class AvSelect extends AvFormElement {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvSelect", 3])
+        temp.push(["AvSelect", 5])
         return temp;
     }
     get baseEl () {
-                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avselect_1"]'));
-                        if(list.length == 1){
-                            list = list[0]
-                        }
-                        return list;
-                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
+										return this.shadowRoot.querySelector('[_id="avselect_1"]');
+									}get test () {
+										var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avselect_0"]'));
+										return list;
+									}    __mapSelectedElement() { super.__mapSelectedElement(); this.hider = this.shadowRoot.querySelector('[_id="avselect_3"]');this.options = this.shadowRoot.querySelector('[_id="avselect_4"]');}
+    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avselect_0'].length;i++){
 									this._components['avselect_0'][i].innerHTML = ""+this.label+"".toString();
 								}
@@ -113,7 +112,7 @@ class AvSelect extends AvFormElement {
 									this._components['avselect_2'][i].innerHTML = ""+this.value_display+"".toString();
 								}
 							}}) }
-    __endConstructor() { super.__endConstructor(); (() => {    this.hider = this.shadowRoot.querySelector("av-hideable");    this.options = this.hider.children[0];})() }
+    __endConstructor() { super.__endConstructor(); (() => {})() }
     getClassName() {
         return "AvSelect";
     }

@@ -49,6 +49,7 @@ interface AnimationOptions {    animate?: Function;    stopped?: Function;   
 interface DtScrollablePositions {    vertical: {        value: number;        max: number;    };    horizontal: {        value: number;        max: number;    };}
 interface AvHideableOptions {    canHide?: () => Promise<boolean>;    beforeHide?: () => Promise<void>;    afterHide?: () => Promise<void>;    noHideItems?: HTMLElement[];    container?: HTMLElement;}
 interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultComponent {    states?: States;    [key: string]: any;    getStateManagerName?(): string | undefined;}declare class WebComponent extends HTMLElement implements DefaultComponent {    static get observedAttributes(): {};    private _first;    private _isReady;    get isReady(): boolean;    private _translations;    private currentState;    private statesList;    private _components;    private __onChangeFct;    private getSlugFct;    private __mutable;    private __mutableActions;    private __prepareForCreate;    private __prepareForUpdate;    private __loopTemplate;    private __mutableActionsCb;    constructor();    private __prepareVariables;    private __prepareMutablesActions;    private __initMutables;    private __prepareForLoop;    private __getLangTranslations;    private __prepareTranslations;    private __setTranslations;    private __getStyle;    private __getHtml;    private __prepareTemplate;    private __createStates;    protected getDefaultStateCallbacks(): State;    private __getMaxId;    private __selectElementNeeded;    private __mapSelectedElement;    private __registerOnChange;    private __endConstructor;    private connectedCallback;    private __defaultValue;    private __upgradeAttributes;    private __listBoolProps;    private __upgradeProperty;    private __addEvents;    private __applyTranslations;    private __getTranslation;    getStateManagerName(): string | undefined;    private __subscribeState;    private attributeChangedCallback;    protected postCreation(): void;    private _unsubscribeState;}
+interface ViewElementConfig {    /** if set the component ll do a query selector else the component is the one loaded on first render */    useLive?: boolean;}
 interface DebuggerConfig {    writeCompiled?: boolean;}
 declare enum MutableAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
 interface IData {}
@@ -59,6 +60,7 @@ declare class ColorData implements Data {    r: number;    g: number;    b: n
 declare function attribute<T>(onChange: (arg: T) => void);
 declare function attribute();
 declare function mutable();
+declare function viewElement(config:ViewElementConfig);
 declare function mutable<T>(onChange: (arg: T, action: MutableAction, path: string, value: any) => void);
 declare function IgnoreForceIdentifier();
 declare function overrideView(target: any);
