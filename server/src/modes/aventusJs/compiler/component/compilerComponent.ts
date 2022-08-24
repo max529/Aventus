@@ -969,7 +969,10 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					listToCheck.splice(index, 1);
 				}
 				if (field.inParent) {
-
+					if(toPrepare.variablesInView.hasOwnProperty(field.name)){
+						// allow override value
+						_createSimpleVariable(field);
+					}
 					continue;
 				}
 				if (field.propType == "state") {
