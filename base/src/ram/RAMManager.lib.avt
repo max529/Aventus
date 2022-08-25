@@ -1,6 +1,4 @@
-export interface IRAMManager { }
-
-export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManager {
+export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -11,7 +9,7 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
         return this.allRams[this.name] as T;
     }
 
-    private records: { [key: number]: U; };
+    private records: { [key: number]: R; };
 
     public abstract getPrimaryKey(): string;
 
@@ -29,26 +27,35 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
         this.records = {};
     }
 
+    protected abstract transformInToOut(item: U): R;
     //#region add
-    addList(list: U[]) {
-        this.beforeAddList(list);
+    async addList(list: U[]): Promise<R[]> {
+        let result: R[] = [];
+        await this.beforeAddList(list);
         for(let item of list) {
-            this.add(item);
+            let resultItem = await this.add(item);
+            if(resultItem) {
+                result.push(resultItem);
+            }
         }
-        this.afterAddList(list);
+        await this.afterAddList(result);
+        return result;
     }
-    add<R extends U>(item: R) {
+    async add(item: U): Promise<R | undefined> {
         let key = this.getId(item);
         if(key) {
-            this.beforeAddItem(item);
-            this.records[key] = item;
-            this.afterAddItem(item);
+            let createdItem = this.transformInToOut(item);
+            await this.beforeAddItem(createdItem);
+            this.records[key] = createdItem;
+            await this.afterAddItem(createdItem);
+            return createdItem;
         }
+        return undefined;
     }
-    beforeAddList(list: U[]) { }
-    beforeAddItem(item: U) { }
-    afterAddItem(item: U) { }
-    afterAddList(list: U[]) { }
+    async beforeAddList(list: U[]): Promise<void> { }
+    async beforeAddItem(item: R): Promise<void> { }
+    async afterAddItem(item: R): Promise<void> { }
+    async afterAddList(list: R[]): Promise<void> { }
     //#endregion
 
     //#region update
@@ -57,7 +64,7 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
         for(let item of list) {
             this.update(item);
         }
-        this.afterAddList(list);
+        this.afterUpdateList(list);
     }
     update(item: U) {
         let key = this.getId(item);
@@ -108,15 +115,28 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
     //#endregion
 
     //#region get
-    getById(id: number) {
+    async getById(id: number): Promise<R> {
         if(this.records[id]) {
             return this.records[id];
         }
         return undefined;
     }
-    abstract getAll<R extends U>(): { [primaryKey: number]: R; };
-    getList(): U[] {
-        return Object.values(this.records);
+    async getByIds(ids:number[]):Promise<R[]> {
+        
+    }
+    async getAll(): Promise<{ [primaryKey: number]: R; }> {
+        return this.records;
+    }
+    async getList(): Promise<U[]> {
+        let data = await this.getAll();
+        return Object.values(data);
     }
     //#endregion
+}
+
+export abstract class AvRAMManager<T extends IRAMManager, U> extends AvGenericRAMManager<T, U, U>{
+    protected transformInToOut(item: U): U {
+        return item;
+    }
+
 }

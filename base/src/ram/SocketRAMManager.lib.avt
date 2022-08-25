@@ -1,0 +1,26 @@
+import { AvRAMManager } from "./RAMManager.ram.avt";
+
+export interface SocketRAMManagerObject {
+    update(newData: {}): Promise<{}>;
+    onUpdate(callback: Function);
+    offUpdate(callback: Function);
+    delete();
+    onDelete(callback: Function);
+    offDelete(callback: Function);
+    _publish(type, data);
+    _subscribers: {
+        updated: Function[],
+        deleted: Function[];
+    };
+}
+
+export class SocketRAMManager<T, U> extends AvGenericRAMManager<T, U, U & SocketRAMManagerObject> {
+    public static defaultSocketName: string | undefined = undefined;
+
+
+   
+
+    private _getSocketName(): string | undefined {
+        return SocketRAMManager.defaultSocketName;
+    }
+}

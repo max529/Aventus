@@ -16,7 +16,7 @@ export interface SocketRAMManagerObject {
     };
 }
 
-export abstract class SocketRAMManager<T extends Data> implements IRAMManager {
+export abstract class SocketRAMManager2<T extends Data> implements IRAMManager {
     public static defaultSocketName: string | undefined = undefined;
 
 	public types: { [key: string]: string } = {};
@@ -37,7 +37,7 @@ export abstract class SocketRAMManager<T extends Data> implements IRAMManager {
     }
 
     private _getSocketName() {
-        return SocketRAMManager.defaultSocketName;
+        return SocketRAMManager2.defaultSocketName;
     }
 
 	constructor() {
