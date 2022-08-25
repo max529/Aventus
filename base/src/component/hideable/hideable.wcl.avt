@@ -17,13 +17,14 @@ export class AvHideable extends WebComponent implements DefaultComponent {
     //#region variables
     private oldParent: HTMLElement = undefined;
     @mutable((target: AvHideable) => {
-        target.dispatchEvent(new CustomEvent("toggle_visibility", { detail: { visible: target.isVisible } }));
+        target.onVisibilityChangeCallbacks.forEach(callback => callback(target.isVisible));
     })
     private isVisible: boolean = false;
     private options: AvHideableOptions;
     private checkCloseBinded: (e: Event) => {};
     private pressManager: PressManager;
-    content: HTMLDivElement;
+    private content: HTMLDivElement;
+    private onVisibilityChangeCallbacks: ((isVisible: boolean) => void)[] = [];
     //#endregion
 
 
@@ -104,6 +105,14 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     getVisibility(): boolean {
         return this.isVisible;
+    }
+
+    onVisibilityChange(callback: (isVisible: boolean) => void) {
+        this.onVisibilityChangeCallbacks.push(callback);
+    }
+
+    offVisibilityChange(callback: (isVisible: boolean) => void) {
+        this.onVisibilityChangeCallbacks = this.onVisibilityChangeCallbacks.filter(cb => cb !== callback);
     }
 
     private loadCSSVariables() {

@@ -30,8 +30,7 @@ export class AvForm extends WebComponent implements DefaultComponent {
 
     //#region variables
     private fields: AvFormElement<any>[] = [];
-    private submitElement: HTMLElement;
-    private submitPressInstance: PressManager;
+    private submits: { element: HTMLElement, pressInstance: PressManager }[] = [];
     //#endregion
 
 
@@ -51,7 +50,6 @@ export class AvForm extends WebComponent implements DefaultComponent {
             return;
         }
 
-        this.loading = true;
         const data = {};
 
         this.fields.forEach(field => {
@@ -77,6 +75,8 @@ export class AvForm extends WebComponent implements DefaultComponent {
 
             this.dispatchEvent(customEvent);
         } else {
+            this.loading = true;
+
             const formData = new FormData();
             for (const key in data) {
                 formData.append(key, data[key]);
@@ -96,17 +96,26 @@ export class AvForm extends WebComponent implements DefaultComponent {
      * Set the element that will perform the submit action on click.
      */
     public registerSubmit(submitElement: HTMLElement) {
-        if (this.submitPressInstance) {
-            this.submitPressInstance.destroy();
-        }
-
-        this.submitElement = submitElement;
-        this.submitPressInstance = new PressManager({
-            element: this.submitElement,
-            onPress: () => {
-                this.submit();
-            }
+        this.submits.push({
+            element: submitElement,
+            pressInstance: new PressManager({
+                element: submitElement,
+                onPress: () => {
+                    this.submit();
+                }
+            })
         });
+    }
+
+    /**
+     * Remove a registered submit element.
+     */
+    public unregisterSubmit(submitElement: HTMLElement) {
+        const index = this.submits.findIndex(submit => submit.element === submitElement);
+        if (index !== -1) {
+            this.submits[index].pressInstance.destroy();
+            this.submits.splice(index, 1);
+        }
     }
 
     /**
@@ -145,6 +154,12 @@ export class AvForm extends WebComponent implements DefaultComponent {
         });
 
         return valid;
+    }
+
+    public setFocus() {
+        if (this.fields.length > 0) {
+            this.fields[0].setFocus();
+        }
     }
 	//#endregion
 }

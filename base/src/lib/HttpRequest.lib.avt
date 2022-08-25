@@ -86,4 +86,32 @@ export class HttpRequest {
             
         }
     }
+
+    public static get(url: string): Promise<any> {
+        return fetch(url, {
+            method: "GET"
+        });
+    }
+
+    public static async post(url: string, data: {}): Promise<any> {
+        let formData = new FormData();
+        for(let key in data) {
+            formData.append(key, data[key]);
+        }
+
+        const response = await fetch(url, {
+            method: "POST",
+            body: formData
+        });
+
+        const content = await response.json();
+        return new Promise((resolve, reject) => {
+            if(response.ok) {
+                resolve(content);
+            }
+            else {
+                reject(content);
+            }
+        });
+    }
 }

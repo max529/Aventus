@@ -27,7 +27,7 @@ export class Socket {
             options.routes = {};
         }
         if(!options.socketName) {
-            options.socketName = "";
+            options.socketName = this.getSocketName();
         }
 
         this.options = options;
@@ -40,10 +40,15 @@ export class Socket {
             name = "";
         }
         if(!this.__instances.hasOwnProperty(name)) {
-            this.__instances[name] = new Socket();
+            let temp: any = { class: this };
+            this.__instances[name] = new temp["class"]();
             this.__instances[name].init({ log: true });
         }
         return this.__instances[name];
+    }
+
+    protected getSocketName(): string {
+        return "";
     }
 
     addRoute(newRoute: SocketRoute) {

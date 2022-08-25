@@ -37,7 +37,7 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
         }
         this.afterAddList(list);
     }
-    add(item: U) {
+    add<R extends U>(item: R) {
         let key = this.getId(item);
         if(key) {
             this.beforeAddItem(item);
@@ -114,9 +114,7 @@ export abstract class RAMManager<T extends IRAMManager, U> implements IRAMManage
         }
         return undefined;
     }
-    getAll(): { [primaryKey: number]: U; } {
-        return this.records;
-    }
+    abstract getAll<R extends U>(): { [primaryKey: number]: R; };
     getList(): U[] {
         return Object.values(this.records);
     }
