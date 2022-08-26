@@ -1,6 +1,8 @@
+import { IData } from "../data/IData.data.avt";
+
 export interface IRAMManager { }
 
-export abstract class AvGenericRAMManager<U, R extends U> implements IRAMManager {
+export abstract class AvGenericRAMManager<U extends IData, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -210,7 +212,7 @@ export abstract class AvGenericRAMManager<U, R extends U> implements IRAMManager
     //#endregion
 }
 
-export abstract class AvRAMManager<U> extends AvGenericRAMManager<U, U>{
+export abstract class AvRAMManager<U extends IData> extends AvGenericRAMManager<U, U>{
     protected transformElementInStorable(item: U): U {
         return item;
     }
