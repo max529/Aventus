@@ -3,13 +3,13 @@ import { Socket } from "../lib/Socket.lib.avt";
 import { AvGenericRAMManager, AvRAMManager } from "./RAMManager.lib.avt";
 
 
-export interface SocketRAMManagerObject<R> {
-    update(newData: {}): Promise<R & SocketRAMManagerObject<R>>;
-    onUpdate(callback: (item: R & SocketRAMManagerObject<R>) => void);
-    offUpdate(callback: (item: R & SocketRAMManagerObject<R>) => void);
+export interface SocketRAMManagerObject<U> {
+    update(newData: {}): Promise<U & SocketRAMManagerObject<U>>;
+    onUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void);
+    offUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void);
     delete(): Promise<void>;
-    onDelete(callback: (item: R & SocketRAMManagerObject<R>) => void);
-    offDelete(callback: (item: R & SocketRAMManagerObject<R>) => void);
+    onDelete(callback: (item: U & SocketRAMManagerObject<U>) => void);
+    offDelete(callback: (item: U & SocketRAMManagerObject<U>) => void);
 }
 
 export interface SocketRAMManagerRoutes {
@@ -39,7 +39,7 @@ export interface SocketRAMManagerRouteNotPlanned<U extends IData> {
 }
 
 
-export abstract class GenericSocketRAMManager<T, U extends IData, R extends U & SocketRAMManagerObject<U>> extends AvGenericRAMManager<T, U, R> {
+export abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends AvGenericRAMManager<U, R> {
     private socketActions: {
         get: string;
         getAll: string;
@@ -63,6 +63,8 @@ export abstract class GenericSocketRAMManager<T, U extends IData, R extends U & 
         if(this.constructor == GenericSocketRAMManager) {
             throw "can't instanciate an abstract class";
         }
+
+        this.init();
     }
     public getPrimaryKey(): string {
         return 'id';
@@ -180,7 +182,7 @@ export abstract class GenericSocketRAMManager<T, U extends IData, R extends U & 
         }
         return undefined;
     }
-    protected override async beforeCreateItem(item: U, fromList: boolean): Promise<U> {
+    protected override beforeCreateItem(item: U, fromList: boolean): Promise<U> {
         return new Promise<U>((resolve, reject) => {
             if(!fromList) {
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.create.request, item, {
@@ -443,7 +445,6 @@ export abstract class GenericSocketRAMManager<T, U extends IData, R extends U & 
         };
         return this.addCustomFunctions(socketObj);
     }
-    protected abstract defineCustomFunctionsName(): string[];
     protected abstract addCustomFunctions(item: U & SocketRAMManagerObject<U>): R;
 
 
@@ -459,49 +460,8 @@ export abstract class GenericSocketRAMManager<T, U extends IData, R extends U & 
 }
 
 
-export abstract class SocketRAMManager<T, U extends IData> extends GenericSocketRAMManager<T, U, U & SocketRAMManagerObject<U>> {
-    protected defineCustomFunctionsName(): string[] {
-        return [];
-    }
+export abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, U & SocketRAMManagerObject<U>> {
     protected addCustomFunctions(item: U & SocketRAMManagerObject<U>): U & SocketRAMManagerObject<U> {
         return item;
     }
-}
-
-
-// test
-export class Obj {
-    id: number;
-    name: string;
-}
-// simple ram
-export class TestRAM extends SocketRAMManager<TestRAM, Obj>{
-    protected getObjectName(): string {
-        throw new Error("Method not implemented.");
-    }
-}
-// complexe with extension
-export interface ObjExtensionRAM extends Obj, SocketRAMManagerObject<Obj> {
-    switchOn(): boolean;
-}
-export class TestRAM2 extends GenericSocketRAMManager<TestRAM2, Obj, ObjExtensionRAM> {
-    protected getObjectName(): string {
-        throw new Error("Method not implemented.");
-    }
-    protected defineCustomFunctionsName(): string[] {
-       return ['switchOn']
-    }
-    protected addCustomFunctions(item: Obj & SocketRAMManagerObject<Obj>): ObjExtensionRAM {
-        let extension = {
-            switchOn:() => {
-                return true;
-            }
-        }
-        let result: ObjExtensionRAM = {
-            ...item,
-            ...extension
-        }
-        return result;
-    }
-
 }
