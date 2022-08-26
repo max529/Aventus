@@ -309,24 +309,26 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
                         if (f.name === "$") {
                             clazz.annotations = f.annotations;
                         } else {
-                            if (f.name.charAt(0) !== "$" || f.name === "$ref") {
-                                fields[f.name] = f;
-                                clazz.fields.push(f);
-                            } else {
-                                var targetField = f.name.substr(1);
-                                var of = fields[targetField];
-                                if (!of) {
-                                    if (f.name !== "$$") {
-                                        var overridings = clazz.annotationOverridings[targetField];
-                                        if (!overridings) {
-                                            overridings = [];
-                                        }
-                                        clazz.annotationOverridings[targetField] = overridings.concat(f.annotations);
-                                    }
-                                } else {
-                                    of.annotations = f.annotations;
-                                }
-                            }
+                            fields[f.name] = f;
+                            clazz.fields.push(f);
+                            // if (f.name.charAt(0) !== "$" || f.name === "$ref") {
+                            //     fields[f.name] = f;
+                            //     clazz.fields.push(f);
+                            // } else {
+                            //     var targetField = f.name.substr(1);
+                            //     var of = fields[targetField];
+                            //     if (!of) {
+                            //         if (f.name !== "$$") {
+                            //             var overridings = clazz.annotationOverridings[targetField];
+                            //             if (!overridings) {
+                            //                 overridings = [];
+                            //             }
+                            //             clazz.annotationOverridings[targetField] = overridings.concat(f.annotations);
+                            //         }
+                            //     } else {
+                            //         of.annotations = f.annotations;
+                            //     }
+                            // }
                         }
                     }
                 }
@@ -392,14 +394,25 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
     return {
         name: f.name["text"],
         type: buildType(f.type, path),
-        annotations: f.name["text"].charAt(0) === "$" ? buildInitializer(f.initializer) : [],
+        annotations: [],
         documentation: jsDocTxt,
-        valueConstraint: f.name["text"].charAt(0) !== "$" ? buildConstraint(f.initializer) : undefined,
+        valueConstraint: buildConstraint(f.initializer),
         optional: f.questionToken != null,
         decorators: (f.decorators && f.decorators.length) ? f.decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
         start: f.pos,
         end: f.end
     };
+    // return {
+    //     name: f.name["text"],
+    //     type: buildType(f.type, path),
+    //     annotations: f.name["text"].charAt(0) === "$" ? buildInitializer(f.initializer) : [],
+    //     documentation: jsDocTxt,
+    //     valueConstraint: f.name["text"].charAt(0) !== "$" ? buildConstraint(f.initializer) : undefined,
+    //     optional: f.questionToken != null,
+    //     decorators: (f.decorators && f.decorators.length) ? f.decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
+    //     start: f.pos,
+    //     end: f.end
+    // };
 }
 
 function buildMethod(md: ts.MethodDeclaration, content: any, path: string): MethodModel {

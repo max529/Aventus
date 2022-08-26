@@ -58,7 +58,6 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	}
 	let view = getView().replace(/<!--[\s\S]*?-->/g, '').trim();
 	let realScriptContent = readFileSync(componentPath, 'utf8');
-	let script = realScriptContent.trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
 	let stylePath = getStylePath();
 	let style: ScssCompilerResult;
 	if (stylePath != "") {
@@ -182,7 +181,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					for (let name of importTemp.clauses) {
 						if (name == jsonStruct.classes[0].extends[0].typeName) {
 							let newPath = importTemp.absPathString;
-							let parentScript = readFileSync(newPath, 'utf8').trim().replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+							let parentScript = readFileSync(newPath, 'utf8');
 							newPath = newPath.replace(/\\/g, "/");
 							let parentStructure = parseStruct(parentScript, {}, newPath);
 							_loadParent(parentStructure, false);
@@ -1100,7 +1099,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			for (let method of classInfo.methods) {
 				if (!method.isAbstract) {
 					//remove comment 
-					method.text = method.text.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+					method.text = method.text.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
 					// remove manual type
 					let regexRemoveType = new RegExp(method.name + "\\(.*?\\)(:( *){((\\s|\\S)*?)})", "g")
 					let matchType = regexRemoveType.exec(method.text);

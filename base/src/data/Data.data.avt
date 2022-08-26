@@ -3,3 +3,7 @@ import { IData } from "./IData.data.avt";
 export interface Data extends IData {
 
 }
+
+export interface CSharpData extends Data, IData {
+    $type: string;
+}
