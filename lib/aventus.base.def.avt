@@ -52,7 +52,8 @@ interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultCompo
 interface ViewElementConfig {    /** if set the component ll do a query selector else the component is the one loaded on first render */    useLive?: boolean;}
 interface DebuggerConfig {    writeCompiled?: boolean;}
 declare enum MutableAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
-interface IData {}interface Data extends IData {}interface CSharpData extends IData {    $type: string;}
+interface IData {}
+interface Data extends IData {}interface CSharpData extends Data, IData {    $type: string;}
 declare class Coordinate implements Data {    x: number;    y: number;}
 declare enum ColorTypes {    rgb = 0,    hex = 1,    rgba = 2,    unkown = 3}
 declare class ColorData implements Data {    r: number;    g: number;    b: number;}
