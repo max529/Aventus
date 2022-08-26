@@ -1,6 +1,6 @@
 export interface IRAMManager { }
 
-export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U> implements IRAMManager {
+export abstract class AvGenericRAMManager<U, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -210,7 +210,7 @@ export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U>
     //#endregion
 }
 
-export abstract class AvRAMManager<T extends IRAMManager, U> extends AvGenericRAMManager<T, U, U>{
+export abstract class AvRAMManager<U> extends AvGenericRAMManager<U, U>{
     protected transformElementInStorable(item: U): U {
         return item;
     }
