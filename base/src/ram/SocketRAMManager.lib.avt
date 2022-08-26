@@ -101,7 +101,7 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
 
         let temp: { [key: string]: any; } = {};
         for(const [key, name] of Object.entries(this.socketActions)) {
-            this.socketRoutes[key] = {
+            temp[key] = {
                 request: `${this.getObjectName()}/${name}`,
                 multiple: `${this.getObjectName()}/${name}/multiple`,
                 success: `${this.getObjectName()}/${name}/success`,
