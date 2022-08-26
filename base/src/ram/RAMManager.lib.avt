@@ -1,3 +1,5 @@
+export interface IRAMManager { }
+
 export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
@@ -8,125 +10,199 @@ export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U>
         }
         return this.allRams[this.name] as T;
     }
-
-    private records: { [key: number]: R; };
+    
+    protected records: { [key: number]: R; };
 
     public abstract getPrimaryKey(): string;
 
-    private getId(item: U): string | undefined {
+    protected getId(item: U): number | undefined {
         if(item[this.getPrimaryKey()] !== undefined) {
-            return item[this.getPrimaryKey()] + "";
+            return item[this.getPrimaryKey()];
         }
         console.error("can't found key " + this.getPrimaryKey() + " inside ", item);
         return undefined;
     }
     protected constructor() {
-        if(this.constructor == RAMManager) {
+        if(this.constructor == AvGenericRAMManager) {
             throw "can't instanciate an abstract class";
         }
         this.records = {};
     }
 
-    protected abstract transformInToOut(item: U): R;
-    //#region add
-    async addList(list: U[]): Promise<R[]> {
+    protected abstract transformElementInStorable(item: U): R;
+    //#region create
+    async createList(list: U[]): Promise<R[]> {
         let result: R[] = [];
-        await this.beforeAddList(list);
+        list = await this.beforeCreateList(list);
         for(let item of list) {
-            let resultItem = await this.add(item);
+            let resultItem = await this._create(item, true);
             if(resultItem) {
                 result.push(resultItem);
             }
         }
-        await this.afterAddList(result);
+        result = await this.afterCreateList(result);
         return result;
     }
-    async add(item: U): Promise<R | undefined> {
+    async create(item: U, ...args: any[]): Promise<R | undefined> {
+        return await this._create(item, false);
+    }
+    private async _create(item: U, fromList: boolean): Promise<R | undefined> {
         let key = this.getId(item);
         if(key) {
-            let createdItem = this.transformInToOut(item);
-            await this.beforeAddItem(createdItem);
+            item = await this.beforeCreateItem(item, fromList);
+            let createdItem = this.transformElementInStorable(item);
             this.records[key] = createdItem;
-            await this.afterAddItem(createdItem);
-            return createdItem;
+            this.records[key] = await this.afterCreateItem(createdItem, fromList);
+            return this.records[key];
         }
         return undefined;
     }
-    async beforeAddList(list: U[]): Promise<void> { }
-    async beforeAddItem(item: R): Promise<void> { }
-    async afterAddItem(item: R): Promise<void> { }
-    async afterAddList(list: R[]): Promise<void> { }
+    protected async beforeCreateList(list: U[]): Promise<U[]> {
+        return list;
+    }
+    protected async beforeCreateItem(item: U, fromList: boolean): Promise<U> {
+        return item;
+    }
+    protected async afterCreateItem(item: R, fromList: boolean): Promise<R> {
+        return item;
+    }
+    protected async afterCreateList(list: R[]): Promise<R[]> {
+        return list;
+    }
     //#endregion
 
     //#region update
-    updateList(list: U[]) {
-        this.beforeUpdateList(list);
+    async updateList(list: U[]): Promise<R[]> {
+        let result: R[] = [];
+        list = await this.beforeUpdateList(list);
         for(let item of list) {
-            this.update(item);
+            let resultItem = await this._update(item, true);
+            if(resultItem) {
+                result.push(resultItem);
+            }
         }
-        this.afterUpdateList(list);
+        result = await this.afterUpdateList(result);
+        return result;
     }
-    update(item: U) {
-        let key = this.getId(item);
+    async update(item: U, ...args: any[]): Promise<R | undefined> {
+        return await this._update(item, false);
+    }
+    private async _update(item: U, fromList: boolean): Promise<R | undefined> {
+        let key = await this.getId(item);
         if(key) {
             if(this.records[key]) {
-                this.beforeUpdateItem(item);
-                // TODO do this to found update field for Proxy element, but must find a better way to do that
-                // this.records[key] = {
-                //     ...this.records[key],
-                //     ...item
-                // };
-                this.records[key] = item;
-                this.afterUpdateItem(item);
+                item = await this.beforeUpdateItem(item, fromList);
+                this.updateDataInRAM(item);
+                this.records[key] = await this.afterUpdateItem(this.records[key], fromList);
+                return this.records[key];
             }
             else {
                 console.error("can't update the item " + key + " because it wasn't found inside ram");
             }
-
-        }
-    }
-    beforeUpdateList(list: U[]) { }
-    beforeUpdateItem(item: U) { }
-    afterUpdateItem(item: U) { }
-    afterUpdateList(list: U[]) { }
-    //#endregion
-
-    //#region delete
-    deleteList(list: U[]) {
-        this.beforeDeleteList(list);
-        for(let item of list) {
-            this.delete(item);
-        }
-        this.afterDeleteList(list);
-    }
-    delete(item: U) {
-        let key = this.getId(item);
-        if(key && this.records[key]) {
-            let oldItem = this.records[key];
-            this.beforeDeleteItem(oldItem);
-            delete this.records[key];
-            this.afterDeleteItem(oldItem);
-        }
-    }
-    beforeDeleteList(list: U[]) { }
-    beforeDeleteItem(item: U) { }
-    afterDeleteItem(item: U) { }
-    afterDeleteList(list: U[]) { }
-    //#endregion
-
-    //#region get
-    async getById(id: number): Promise<R> {
-        if(this.records[id]) {
-            return this.records[id];
         }
         return undefined;
     }
-    async getByIds(ids:number[]):Promise<R[]> {
-        
+    protected async beforeUpdateList(list: U[]): Promise<U[]> {
+        return list;
     }
-    async getAll(): Promise<{ [primaryKey: number]: R; }> {
+    protected async beforeUpdateItem(item: U, fromList: boolean): Promise<U> {
+        return item;
+    }
+    protected async afterUpdateItem(item: R, fromList: boolean): Promise<R> {
+        return item;
+    }
+    protected async afterUpdateList(list: R[]): Promise<R[]> {
+        return list;
+    }
+
+    protected updateDataInRAM(newData: U) {
+        let dataInRAM = this.records[this.getId(newData)];
+        let oldKeys: { [key: string]: string; } = {};
+        for(let key in dataInRAM) {
+            oldKeys[key] = key;
+        }
+
+        for(const [key, value] of Object.entries(newData)) {
+            dataInRAM[key] = value;
+            delete oldKeys[key];
+        }
+
+        for(let keyMissing of Object.keys(oldKeys)) {
+            delete dataInRAM[keyMissing];
+        }
+    }
+    //#endregion
+
+    //#region delete
+    async deleteList(list: U[]): Promise<void> {
+        await this.beforeDeleteList(list);
+        for(let item of list) {
+            await this._delete(item, true);
+        }
+        await this.afterDeleteList(list);
+    }
+    async delete(item: U, ...args: any[]): Promise<void> {
+        return await this._delete(item, false);
+    }
+    async deleteById(id: number): Promise<void> {
+        let item = this.records[id];
+        if(item) {
+            return await this._delete(item, false);
+        }
+    }
+    private async _delete(item: U, fromList: boolean): Promise<void> {
+        let key = await this.getId(item);
+        if(key && this.records[key]) {
+            let oldItem = this.records[key];
+            await this.beforeDeleteItem(oldItem, fromList);
+            delete this.records[key];
+            await this.afterDeleteItem(oldItem, fromList);
+        }
+    }
+    protected async beforeDeleteList(list: U[]): Promise<void> { }
+    protected async beforeDeleteItem(item: U, fromList: boolean): Promise<void> { }
+    protected async afterDeleteItem(item: U, fromList: boolean): Promise<void> { }
+    protected async afterDeleteList(list: U[]): Promise<void> { }
+    //#endregion
+
+    //#region get
+    async get(id: number): Promise<R> {
+        return await this.getById(id);
+    }
+    async getById(id: number): Promise<R> {
+        await this.beforeGetById(id);
+        if(this.records[id]) {
+            let result = this.records[id];
+            await this.afterGetById(result);
+            return result;
+        }
+        return undefined;
+    }
+    protected async beforeGetById(id: number): Promise<void> { }
+    protected async afterGetById(item: R): Promise<void> { }
+
+    async getByIds(ids: number[]): Promise<R[]> {
+        let result: R[] = [];
+        await this.beforeGetByIds(ids);
+        for(let id of ids) {
+            if(this.records[id]) {
+                result.push(this.records[id]);
+            }
+        }
+        await this.afterGetByIds(result);
+        return result;
+    }
+    protected async beforeGetByIds(ids: number[]): Promise<void> { }
+    protected async afterGetByIds(items: R[]): Promise<void> { }
+
+    async getAll(): Promise<{ [key: number]: R; }> {
+        await this.beforeGetAll();
+        await this.afterGetAll(this.records);
         return this.records;
     }
+    protected async beforeGetAll(): Promise<void> { }
+    protected async afterGetAll(result: { [key: number]: R; }): Promise<void> { }
+
     async getList(): Promise<U[]> {
         let data = await this.getAll();
         return Object.values(data);
@@ -135,7 +211,7 @@ export abstract class AvGenericRAMManager<T extends IRAMManager, U, R extends U>
 }
 
 export abstract class AvRAMManager<T extends IRAMManager, U> extends AvGenericRAMManager<T, U, U>{
-    protected transformInToOut(item: U): U {
+    protected transformElementInStorable(item: U): U {
         return item;
     }
 

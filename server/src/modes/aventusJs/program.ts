@@ -469,9 +469,11 @@ export class AventusJSProgram {
 							let insertIndex = 0;
 							for (let dependanceName of currentDoc.dependances) {
 								if (docUriByTypes[dependanceName]) {
-									let indexDep = _loadFileImport(docUriByTypes[dependanceName]);
-									if (indexDep >= 0 && indexDep > insertIndex) {
-										insertIndex = indexDep;
+									if (docUriByTypes[dependanceName] != uri) {
+										let indexDep = _loadFileImport(docUriByTypes[dependanceName]);
+										if (indexDep >= 0 && indexDep > insertIndex) {
+											insertIndex = indexDep;
+										}
 									}
 								}
 							}

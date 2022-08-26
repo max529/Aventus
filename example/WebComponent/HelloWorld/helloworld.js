@@ -34,8 +34,19 @@ class AvHelloWorld extends WebComponent {
         temp.push(["AvHelloWorld", 2])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.helloEl = this.shadowRoot.querySelector('[_id="avhelloworld_0"]');this.worldEl = this.shadowRoot.querySelector('[_id="avhelloworld_1"]');}
-    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['hello_clicked'] = []this.__onChangeFct['hello_clicked'].push((path) => {if("hello_clicked".startsWith(path)){
+    get helloEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avhelloworld_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }get worldEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avhelloworld_1"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['hello_clicked'] = []this.__onChangeFct['hello_clicked'].push((path) => {if("hello_clicked".startsWith(path)){
 									for(var i = 0;i<this._components['avhelloworld_0'].length;i++){
 									this._components['avhelloworld_0'][i].innerHTML = "Hello "+this.hello_clicked+"".toString();
 								}
@@ -49,8 +60,8 @@ class AvHelloWorld extends WebComponent {
     __addEvents(ids = null) { super.__addEvents(ids); 
                 new PressManager({
                     "element": this._components['avhelloworld_0'],
-                    "onPress": (e, pressInstance) => {
-                        this.onHelloClicked(e, pressInstance);
+                    "onPress": (e) => {
+                        this.onHelloClicked(e, this);
                      },
                 });
                  }

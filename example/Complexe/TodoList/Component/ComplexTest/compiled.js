@@ -171,8 +171,19 @@ class AvComplexTest extends WebComponent {
         temp.push(["AvComplexTest", 6])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.salut = this.shadowRoot.querySelector('[_id="avcomplextest_0"]');this.valueTest = this.shadowRoot.querySelector('[_id="avcomplextest_2"]');}
-    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
+    get salut () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avcomplextest_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }get valueTest () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avcomplextest_2"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
 									for(var i = 0;i<this._components['avcomplextest_0'].length;i++){
 									this._components['avcomplextest_0'][i].innerHTML = ""+this.testvariable+"".toString();
 								}

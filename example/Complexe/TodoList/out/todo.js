@@ -207,15 +207,20 @@ class AvTodoCreation extends WebComponent {
         temp.push(["AvTodoCreation", 2])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avtodocreation_0"]');}
-    getClassName() {
+    get inputEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodocreation_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    getClassName() {
         return "AvTodoCreation";
     }
     __addEvents(ids = null) { super.__addEvents(ids); 
                 new PressManager({
                     "element": this._components['avtodocreation_1'],
-                    "onPress": (e, pressInstance) => {
-                        this.addTodo(e, pressInstance);
+                    "onPress": (e) => {
+                        this.addTodo(e, this);
                      },
                 });
                  }
@@ -248,8 +253,19 @@ class AvTodo extends WebComponent {
         temp.push(["AvTodo", 2])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.listEl = this.shadowRoot.querySelector('[_id="avtodo_0"]');this.creationEl = this.shadowRoot.querySelector('[_id="avtodo_1"]');}
-    getClassName() {
+    get listEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodo_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }get creationEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avtodo_1"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    getClassName() {
         return "AvTodo";
     }
      postCreation(){this.creationEl.todoList = this.listEl;}}
@@ -293,8 +309,13 @@ class AvInput extends AvFormElement {
         temp.push(["AvInput", 2])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avinput_1"]');}
-    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
+    get inputEl () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avinput_1"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avinput_0'].length;i++){
 									this._components['avinput_0'][i].innerHTML = ""+this.label+"".toString();
 								}
@@ -486,8 +507,19 @@ class AvComplexTest extends WebComponent {
         temp.push(["AvComplexTest", 6])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.salut = this.shadowRoot.querySelector('[_id="avcomplextest_0"]');this.valueTest = this.shadowRoot.querySelector('[_id="avcomplextest_2"]');}
-    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
+    get salut () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avcomplextest_0"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }get valueTest () {
+                        var list = Array.from(this.shadowRoot.querySelectorAll('[_id="avcomplextest_2"]'));
+                        if(list.length == 1){
+                            list = list[0]
+                        }
+                        return list;
+                    }    __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
 									for(var i = 0;i<this._components['avcomplextest_0'].length;i++){
 									this._components['avcomplextest_0'][i].innerHTML = ""+this.testvariable+"".toString();
 								}
