@@ -143,9 +143,12 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     }
 
-    async hide(force?: boolean) {
+    async hide(options?: {
+        force?: boolean,
+        target?: Element
+    }) { // convert params to options
         if(this.isVisible) {
-            if(force || await this.options.canHide()) {
+            if(options.force || await this.options.canHide(options.target)) {
                 await this.options.beforeHide();
                 this.isVisible = false;
                 this.style.display = 'none';
@@ -164,7 +167,9 @@ export class AvHideable extends WebComponent implements DefaultComponent {
                 return;
             }
         }
-        this.hide();
+        this.hide({
+            target: realTargetEl
+        });
     }
 
 
