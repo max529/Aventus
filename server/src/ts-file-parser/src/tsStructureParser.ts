@@ -238,8 +238,9 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
                     documentation: [],
                 };
                 let jsDocTxt: string[] = [];
-                if (e.decorators && e.decorators.length) {
-                    enumInstance.decorators = e.decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
+                const decorators = ts.canHaveDecorators(e) ? ts.getDecorators(e) : undefined;
+                if (decorators) {
+                    enumInstance.decorators = decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
                 }
                 if (e["jsDoc"]) {
                     for (let jsDoc of e["jsDoc"]) {
@@ -275,8 +276,9 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
             clazz.start = c.pos;
             clazz.end = c.end;
             clazz.content = content.substring(c.pos, c.end);
-            if (c.decorators && c.decorators.length) {
-                clazz.decorators = c.decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
+            const decorators = ts.canHaveDecorators(c) ? ts.getDecorators(c) : undefined;
+            if (decorators) {
+                clazz.decorators = decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
             }
 
             clazz.moduleName = currentModule;
@@ -391,6 +393,7 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
             jsDocTxt.push(jsDoc.comment);
         }
     }
+    const decorators = ts.canHaveDecorators(f) ? ts.getDecorators(f) : undefined;
     return {
         name: f.name["text"],
         type: buildType(f.type, path),
@@ -398,7 +401,7 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
         documentation: jsDocTxt,
         valueConstraint: buildConstraint(f.initializer),
         optional: f.questionToken != null,
-        decorators: (f.decorators && f.decorators.length) ? f.decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
+        decorators: (decorators) ? decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
         start: f.pos,
         end: f.end
     };
