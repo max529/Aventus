@@ -1,5 +1,5 @@
 process.env["AVENTUS_CLI"] = "true";
-process.env["aventus_server_folder"] = __dirname+"/../../../..";
+process.env["aventus_server_folder"] = __dirname+"/../../..";
 
 import { jsMode } from '../../server/src/mode';
 import { pathToUri } from '../../server/src/modes/aventusJs/utils';

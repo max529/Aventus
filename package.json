@@ -165,7 +165,8 @@
 		"compile:server": "tsc -b ./server/",
 		"webpack": "npm run clean && webpack --mode production --config ./client/webpack.config.js && webpack --mode production --config ./server/webpack.config.js",
 		"clean": "rimraf client/out && rimraf server/out",
-		"package": "npx vsce package"
+		"package": "npx vsce package",
+		"package:cli": "rimraf cli/out && webpack --mode production --config ./cli/webpack.config.js"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.68.0",
