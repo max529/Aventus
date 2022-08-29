@@ -1,4 +1,3 @@
-
 export interface AnimationOptions {
     animate?: Function,
     stopped?: Function,
@@ -6,7 +5,8 @@ export interface AnimationOptions {
 }
 
 export class AnimationManager {
-    static baseFps: number = 60;
+    static FPS_DEFAULT: number = 15;
+
     private options: AnimationOptions;
     private nextFrame: number;
     private fpsInterval: number;
@@ -20,7 +20,7 @@ export class AnimationManager {
             options.stopped = () => { };
         }
         if(!options.fps) {
-            options.fps = AnimationManager.baseFps;
+            options.fps = AnimationManager.FPS_DEFAULT;
         }
         this.options = options;
         this.fpsInterval = 1000 / this.options.fps;

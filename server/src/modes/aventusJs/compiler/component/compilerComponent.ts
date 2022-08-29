@@ -1107,7 +1107,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						method.text = method.text.replace(matchType[1], "");
 					}
 
-					let regexMethod = /{((\s|\S)*)}/g;
+					let regexMethod = /\).*?{((\s|\S)*)}/g;
 					let match = regexMethod.exec(method.text)
 					if (match) {
 						let methodTxt = ts.transpile(match[1], configTS).trim();

@@ -10,6 +10,7 @@ export interface DefaultComponent {
     states?: States;
     [key: string]: any; // index signature to remove error
     getStateManagerName?(): string | undefined;
+    getClassName(): string;
 }
 
 export class WebComponent extends HTMLElement implements DefaultComponent {
@@ -37,6 +38,7 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     private __prepareForUpdate: [] = [];
     private __loopTemplate: { [key: string]: () => string; } = {};
     private __mutableActionsCb: { [key: string]: (type: MutableAction, path: string, element: any) => void; } = {};
+    getClassName: () => string;
 
     constructor() {
         super();

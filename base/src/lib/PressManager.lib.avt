@@ -185,7 +185,7 @@ export class PressManager {
                 if(this.options.onLongPress) {
                     this.state.oneActionTriggered = true;
                     this.options.onLongPress(e, this);
-                    this.triggerEventToParent(this.actionsName.longPress);
+                    this.triggerEventToParent(this.actionsName.longPress, e);
                 }
                 else {
                     this.emitTriggerFunction("longpress", e);
@@ -222,7 +222,7 @@ export class PressManager {
                         this.nbPress = 0;
                         if(this.options.onDblPress) {
                             this.options.onDblPress(e, this);
-                            this.triggerEventToParent(this.actionsName.dblPress);
+                            this.triggerEventToParent(this.actionsName.dblPress, e);
                         }
                         else {
                             this.emitTriggerFunction("dblpress", e);
@@ -236,7 +236,7 @@ export class PressManager {
                             if(this.options.onPress) {
                                 this.state.oneActionTriggered = true;
                                 this.options.onPress(e, this);
-                                this.triggerEventToParent(this.actionsName.press);
+                                this.triggerEventToParent(this.actionsName.press, e);
                             }
                             else {
                                 this.emitTriggerFunction("press", e);
@@ -250,7 +250,7 @@ export class PressManager {
                     if(this.options.onPress) {
                         this.state.oneActionTriggered = true;
                         this.options.onPress(e, this);
-                        this.triggerEventToParent(this.actionsName.press);
+                        this.triggerEventToParent(this.actionsName.press, e);
                     }
                     else {
                         this.emitTriggerFunction("press", e);
@@ -275,7 +275,7 @@ export class PressManager {
                     this.state.isMoving = true;
                     if(this.options.onDragStart) {
                         this.options.onDragStart(this.downEventSaved, this);
-                        this.triggerEventToParent(this.actionsName.drag);
+                        this.triggerEventToParent(this.actionsName.drag, e);
                     }
                     else {
                         this.emitTriggerFunction("dragstart", this.downEventSaved);
@@ -292,7 +292,7 @@ export class PressManager {
             }
         }
     }
-    private triggerEventToParent(eventName: string) {
+    private triggerEventToParent(eventName: string, pointerEvent: PointerEvent) {
         if(this.element.parentNode) {
             this.element.parentNode.dispatchEvent(new CustomEvent("pressaction_trigger", {
                 bubbles: true,
@@ -300,7 +300,8 @@ export class PressManager {
                 composed: true,
                 detail: {
                     target: this.element,
-                    eventName: eventName
+                    eventName: eventName,
+                    realEvent: pointerEvent
                 }
             }));
         }
@@ -313,7 +314,7 @@ export class PressManager {
             e.stopPropagation();
             e.detail.state.oneActionTriggered = true;
             this.options.onPress(e.detail.realEvent, this);
-            this.triggerEventToParent(this.actionsName.press);
+            this.triggerEventToParent(this.actionsName.press, e.detail.realEvent);
         }
     }
     private childDblPress(e: InternalPointerEvent) {
@@ -323,7 +324,7 @@ export class PressManager {
                 e.detail.state.oneActionTriggered = true;
             }
             this.options.onDblPress(e.detail.realEvent, this);
-            this.triggerEventToParent(this.actionsName.dblPress);
+            this.triggerEventToParent(this.actionsName.dblPress, e.detail.realEvent);
         }
     }
     private childLongPress(e: InternalPointerEvent) {
@@ -331,7 +332,7 @@ export class PressManager {
             e.stopPropagation();
             e.detail.state.oneActionTriggered = true;
             this.options.onLongPress(e.detail.realEvent, this);
-            this.triggerEventToParent(this.actionsName.longPress);
+            this.triggerEventToParent(this.actionsName.longPress, e.detail.realEvent);
         }
     }
     private childDragStart(e: InternalPointerEvent) {
@@ -342,7 +343,7 @@ export class PressManager {
             e.detail.customFcts.onDrag = this.options.onDrag;
             e.detail.customFcts.onDragEnd = this.options.onDragEnd;
             this.options.onDragStart(e.detail.realEvent, this);
-            this.triggerEventToParent(this.actionsName.drag);
+            this.triggerEventToParent(this.actionsName.drag, e.detail.realEvent);
         }
     }
     // #endregion
