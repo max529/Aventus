@@ -28,7 +28,7 @@ Event.prototype.realTarget = function(){
         if (i == 50) {
             debugger;
         }
-        if (el.shadowRoot) {
+        if (el.shadowRoot && e.pageX && e.pageY) {
             var newEl = el.shadowRoot.elementFromPoint(e.pageX, e.pageY);
             if (newEl && newEl != el) {
                 return _realTarget(e, newEl, i + 1);

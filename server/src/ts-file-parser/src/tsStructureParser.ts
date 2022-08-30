@@ -375,8 +375,8 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
                     }
                     else if (x.kind == ts.SyntaxKind.DeclareKeyword) {
 
-                    }
-                    else {
+                    } else if (x.kind == ts.SyntaxKind.Decorator) {
+                    } else {
                         throw new Error("Unknown token class modifiers " + x.kind);
                     }
                 });

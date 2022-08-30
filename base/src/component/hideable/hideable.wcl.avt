@@ -1,4 +1,4 @@
-import { PressManager } from "../../lib/PressManager.lib.avt";
+import { InternalPointerEvent, PressManager } from "../../lib/PressManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../lib/WebComponent.lib.avt";
 import { AvHideableOptions } from "./hideableOptions.lib.avt";
 
@@ -143,9 +143,12 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     }
 
-    async hide(force?: boolean) {
+    async hide(options?: {
+        force?: boolean,
+        target?: Element
+    }) {
         if(this.isVisible) {
-            if(force || await this.options.canHide()) {
+            if(options?.force || await this.options.canHide(options?.target)) {
                 await this.options.beforeHide();
                 this.isVisible = false;
                 this.style.display = 'none';
@@ -157,14 +160,23 @@ export class AvHideable extends WebComponent implements DefaultComponent {
         }
     }
 
-    private checkClose(e: Event) {
-        var realTargetEl = e.realTarget();
+    private checkClose(e: PointerEvent | InternalPointerEvent) {
+        let realTargetEl: Element;
+
+        if (e instanceof PointerEvent) {
+            realTargetEl = e.realTarget();
+        } else {
+            realTargetEl = e.detail.realEvent.realTarget();
+        }
+
         for(var i = 0; i < this.options.noHideItems.length; i++) {
             if(this.options.noHideItems[i].containsChild(realTargetEl)) {
                 return;
             }
         }
-        this.hide();
+        this.hide({
+            target: realTargetEl
+        });
     }
 
 

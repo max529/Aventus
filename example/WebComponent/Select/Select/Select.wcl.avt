@@ -89,7 +89,9 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
         this.value = opt.value;
         this.value_display = opt.innerHTML;
         this.onValueChanged();
-        this.hider.hide(true);
+        this.hider.hide({
+            force: true
+        });
     }
 
     protected override postCreation(): void {

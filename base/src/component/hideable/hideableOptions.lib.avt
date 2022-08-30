@@ -1,5 +1,5 @@
 export interface AvHideableOptions {
-    canHide?: () => Promise<boolean>;
+    canHide?: (target?: Element) => Promise<boolean>;
     beforeHide?: () => Promise<void>;
     afterHide?: () => Promise<void>;
     noHideItems?: HTMLElement[];
