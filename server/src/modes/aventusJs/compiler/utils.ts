@@ -4,6 +4,7 @@ import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import * as aventusConfig from '../../../config'
 import { ClassModel, EnumDeclaration, parseStruct } from '../../../ts-file-parser'
+import { compilerOptions } from '../config'
 import { getFolder, uriToPath } from '../utils'
 
 export function createErrorTs(currentDoc: TextDocument, msg: string): Diagnostic {
@@ -122,11 +123,8 @@ export function compileTs(txt: string): { compiled: string, doc: string } {
 		compiled: "",
 		doc: ""
 	}
-	let configTS: ts.CompilerOptions = {
-		"noImplicitOverride": false,
-		"target": ts.ScriptTarget.ES2015,
-	};
-	result.compiled = ts.transpile(txt, configTS);
+	
+	result.compiled = ts.transpile(txt, compilerOptions);
 	result.doc = compileDocTs(txt);
 	// Loop through all the input files
 	return result;
@@ -137,8 +135,7 @@ export function compileDocTs(txt: string) {
 		getCompilationSettings: () => {
 			return {
 				allowJs: true,
-				declaration: true,
-				emitDeclarationOnly: true
+				declaration: true
 			}
 		},
 		getScriptFileNames: () => ["temp.js"],
