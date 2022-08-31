@@ -39,7 +39,7 @@ class AvHelloWorld extends WebComponent {
 									for(var i = 0;i<this._components['avhelloworld_0'].length;i++){
 									this._components['avhelloworld_0'][i].innerHTML = "Hello "+this.hello_clicked+"".toString();
 								}
-							}})this.__onChangeFct['word_clicked'] = []this.__onChangeFct['word_clicked'].push((path) => {((target) => {    target.worldEl.innerHTML = "world " + target.word_clicked;})(this)}) }
+							}})this.__onChangeFct['word_clicked'] = []this.__onChangeFct['word_clicked'].push((path) => {((target) => {    target.worldEl.innerHTML = "world " + target.word_clicked;})(this);}) }
     __endConstructor() { super.__endConstructor(); (() => {    new PressManager({        element: this.worldEl,        onPress: () => {            this.word_clicked++;        }    });})() }
     getClassName() {
         return "AvHelloWorld";

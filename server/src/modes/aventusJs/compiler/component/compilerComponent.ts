@@ -681,7 +681,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 
 				if (args.length > 0) {
-					attributesChanged[field.name] += transpileMethod(args[0], ["this"]) + '\r\n';
+					attributesChanged[field.name] += transpileMethod(args[0], ["this"]) + ';\r\n';
 				}
 
 				// html DOC
@@ -925,8 +925,8 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						if (current.hasOwnProperty('prop')) {
 							//prop
 							let prop = current.prop as string;
-							if (toPrepare.allFields[prop]) {
-								let propType = toPrepare.allFields[prop].type?.typeName.toLowerCase();
+							if (toPrepare.allFields[fieldName]) {
+								let propType = toPrepare.allFields[fieldName].type?.typeName.toLowerCase();
 
 								if (propType == TYPES.string || propType == TYPES.number || propType == TYPES.date || propType == TYPES.datetime) {
 									stringToAdd += `if(${check.join("||")}){
@@ -957,7 +957,11 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							}`;
 						}
 					}
-					attributesChanged[fieldName] = stringToAdd;
+					if (attributesChanged[fieldName]) {
+						attributesChanged[fieldName] += stringToAdd;
+					} else {
+						attributesChanged[fieldName] = stringToAdd;
+					}
 				}
 			}
 			let listToCheck = Object.keys(toPrepare.variablesInView);

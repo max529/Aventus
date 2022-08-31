@@ -52,7 +52,7 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
     };
     private gotAllRecords: boolean = false;
     private subscribers: SocketRAMManagerSubscribers<U, R>;
-    private recordsSubscribers: { [key: number]: SocketRAMManagerSubscribers<U, R>; };
+    private recordsSubscribers: { [key: number]: SocketRAMManagerSubscribers<U, R>; } = {};
     private socketRoutes: SocketRAMManagerRoutes;
 
     public static defaultSocketName: string | undefined = undefined;

@@ -5,12 +5,12 @@ export interface AnimationOptions {
 }
 
 export class AnimationManager {
-    static FPS_DEFAULT: number = 15;
+    static FPS_DEFAULT: number = 60;
 
     private options: AnimationOptions;
     private nextFrame: number;
     private fpsInterval: number;
-    private continueAnimation: boolean;
+    private continueAnimation: boolean = false;
 
     constructor(options: AnimationOptions) {
         if(!options.animate) {
@@ -30,16 +30,16 @@ export class AnimationManager {
         let now = window.performance.now();
         let elapsed = now - this.nextFrame;
         if(elapsed <= this.fpsInterval) {
-            requestAnimationFrame(this.animate);
+            requestAnimationFrame(() => this.animate());
             return;
         }
         this.nextFrame = now - (elapsed % this.fpsInterval);
 
         setTimeout(() => {
-            this.animate();
+            this.options.animate();
         }, 0);
         if(this.continueAnimation) {
-            requestAnimationFrame(this.animate);
+            requestAnimationFrame(() => this.animate());
         }
         else {
             this.options.stopped();
