@@ -13,7 +13,7 @@ export interface DefaultComponent {
     getClassName(): string;
 }
 
-export class WebComponent extends HTMLElement implements DefaultComponent {
+export abstract class WebComponent extends HTMLElement implements DefaultComponent {
     static get observedAttributes() {
         return [];
     }
@@ -38,7 +38,10 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     private __prepareForUpdate: [] = [];
     private __loopTemplate: { [key: string]: () => string; } = {};
     private __mutableActionsCb: { [key: string]: (type: MutableAction, path: string, element: any) => void; } = {};
-    getClassName: () => string;
+    
+    public getClassName(): string {
+        return this.constructor.name;
+    };
 
     constructor() {
         super();
@@ -60,10 +63,10 @@ export class WebComponent extends HTMLElement implements DefaultComponent {
     }
     private __prepareVariables() { }
     private __prepareMutablesActions() {
-        if (Object.keys(this.__mutableActions).length > 0) {
-            if (!this.__mutable) {
+        if(Object.keys(this.__mutableActions).length > 0) {
+            if(!this.__mutable) {
                 this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
-                    console.log("mutation for "+this.nodeName, type, path, element, this);
+                    console.log("mutation for " + this.nodeName, type, path, element, this);
                     let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
                     action(type, path, element);
                 });
