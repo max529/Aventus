@@ -29,17 +29,17 @@ export function compileValidatorRAM(document: TextDocument, config: AventusConfi
 		if (!classTemp.isExported) {
 			diagnostics.push(createErrorTsPos(document, 'Class must start with "export"', classTemp.start, classTemp.end));
 		}
-
-		let foundData = false;
-		for (let implement of classTemp.implements) {
-			if (implement.typeName == 'IRAMManager') {
-				foundData = true;
-				break;
+		if (!classTemp.isInterface) {
+			let foundData = false;
+			for (let implement of classTemp.implements) {
+				if (implement.typeName == 'IRAMManager') {
+					foundData = true;
+					break;
+				}
 			}
-		}
-
-		if (!foundData) {
-			diagnostics.push(createErrorTsPos(document, 'Class must implement IRAMManager', classTemp.start, classTemp.end));
+			if (!foundData) {
+				diagnostics.push(createErrorTsPos(document, 'Class must implement IRAMManager', classTemp.start, classTemp.end));
+			}
 		}
 	}
 	return diagnostics;

@@ -12,7 +12,8 @@ import {
 export const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g;
 
 export function simplifyPath(importPathTxt, currentPath) {
-    if(importPathTxt.startsWith("custom://")){
+    importPathTxt = decodeURIComponent(importPathTxt);
+    if (importPathTxt.startsWith("custom://")) {
         return importPathTxt;
     }
     let currentDir = decodeURIComponent(currentPath).replace("file:///", "").split("/");
@@ -26,13 +27,38 @@ export function simplifyPath(importPathTxt, currentPath) {
                 importPath.splice(i, 1);
                 i--;
             }
-            else{
+            else {
                 break;
             }
         }
     }
     let finalPathToImport = "";
     for (let i = 0; i < currentDirPath.length; i++) {
+        finalPathToImport += '../';
+    }
+    if (finalPathToImport == "") {
+        finalPathToImport += "./";
+    }
+    finalPathToImport += importPath.join("/");
+    return finalPathToImport;
+}
+export function getImportPath(fileSourcePath, fileToImportPath): string {
+    let currentDirPath = normalize(fileSourcePath).split("\\");
+    let importPath = normalize(fileToImportPath).split("\\");
+    for (let i = 0; i < currentDirPath.length; i++) {
+        if (importPath.length > i) {
+            if (currentDirPath[i] == importPath[i]) {
+                currentDirPath.splice(i, 1);
+                importPath.splice(i, 1);
+                i--;
+            }
+            else {
+                break;
+            }
+        }
+    }
+    let finalPathToImport = "";
+    for (let i = 0; i < currentDirPath.length - 1; i++) {
         finalPathToImport += '../';
     }
     if (finalPathToImport == "") {
@@ -229,7 +255,7 @@ export function repeat(value: string, count: number) {
 
 
 export function pathToUri(path: string): string {
-    return "file:///" + path.replace(":", "%3A").replace(/\\/g, '/');
+    return "file:///" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
 }
 export function uriToPath(uri: string): string {
     return decodeURIComponent(uri.replace("file:///", ""));

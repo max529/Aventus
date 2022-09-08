@@ -572,7 +572,7 @@ export class AventusJSProgram {
 						if (build.namespace) {
 							finalDtxt = "export declare namespace " + build.namespace + "{\r\n" + finalDtxt.replace(/declare /g, '') + "}\r\n";
 						}
-						finalDtxt = "// region js //\r\n" + finalDtxt;
+						finalDtxt = "// version " + build.version + "\r\n// region js //\r\n" + finalDtxt;
 						finalDtxt += "// end region js //\r\n";
 						finalDtxt += "// region css //\r\n";
 						finalDtxt += JSON.stringify(this.SCSSDoc) + "\r\n";
@@ -826,6 +826,9 @@ export class AventusJSProgram {
 				let htmlContent = JSON.parse(htmlToImport[1]);
 				modes.htmlMode.addDefinition(pathToImport, htmlContent)
 			}
+		}
+		else {
+			console.log("can't found "+pathToImport);
 		}
 	}
 }

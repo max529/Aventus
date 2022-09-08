@@ -13,19 +13,21 @@ import {
 	ServerOptions,
 	TransportKind
 } from 'vscode-languageclient';
+import { resourceLimits } from 'worker_threads';
 import { BuildQuickPick } from './quickPick';
 import { AventusPeview } from './webview/preview';
 
 let client: LanguageClient;
 const allBuilds: { [key: string]: string[] } = {};
 const allStatics: { [key: string]: string[] } = {};
+const allAvData: { [key: string]: string[] } = {};
 
 export function activate(context: vscode.ExtensionContext) {
 	let btn = vscode.window.createStatusBarItem("last-compiled-info", vscode.StatusBarAlignment.Right, 1000);
 	btn.text = "";
 	btn.show();
 
-	
+
 	// The server is implemented in node
 	const serverModule = context.asAbsolutePath(
 		path.join('server', 'out', 'server.js')
@@ -51,11 +53,49 @@ export function activate(context: vscode.ExtensionContext) {
 		documentSelector: [{ scheme: 'file', language: "Aventus Ts" }, { scheme: 'file', language: "Aventus HTML" }, { scheme: 'file', language: 'Aventus SCSS' }],
 		middleware: {
 			executeCommand: async (command, args, next) => {
-				if (command == "aventus.createComponent") {
-					const result = await vscode.window.showInputBox({
-						title: "Please provide a component name",
+				if (command == "aventus.create") {
+					let toDisplay: BuildQuickPick[] = [
+						new BuildQuickPick("Init", "Create a project"),
+						new BuildQuickPick("Component", "Create a component"),
+						new BuildQuickPick("Data", "Create a data"),
+						new BuildQuickPick("Library", "Create a library"),
+						new BuildQuickPick("RAM", "Create a RAM"),
+					];
+					const result = await vscode.window.showQuickPick(toDisplay, {
+						placeHolder: 'What do you want to create',
+						canPickMany: false,
 					});
-					args.push(result);
+					if (result) {
+						args.push(result);
+						if (result.label == "Init") {
+							const name = await vscode.window.showInputBox({
+								title: "Please provide a name for your project",
+							});
+							args.push(name);
+						}
+						else if(result.label == "RAM"){
+							let dataToLink: BuildQuickPick[] = [];
+							for (let uri in allAvData) {
+								for (let name of allAvData[uri]) {
+									dataToLink.push(new BuildQuickPick(name, uri));
+								}
+							}
+							const resultData = await vscode.window.showQuickPick(dataToLink, {
+								placeHolder: 'Data for the RAM',
+								canPickMany: false,
+							});
+							if (resultData) {
+								args.push(resultData);
+							}
+						}
+						else {
+							const name = await vscode.window.showInputBox({
+								title: "Please provide a name for your " + result.label,
+							});
+							args.push(name);
+						}
+					}
+
 				}
 				else if (command == "aventus.compile") {
 					let toDisplay: BuildQuickPick[] = [];
@@ -136,13 +176,19 @@ export function activate(context: vscode.ExtensionContext) {
 			if (s < 10) {
 				s = '0' + s;
 			}
-			btn.text = "Aventus: Compiled at " + h + ":" + m + ":" + s;
+			btn.text = "Aventus: " + buildName + " compiled at " + h + ":" + m + ":" + s;
 		});
 		client.onNotification("aventus/registerBuild", (builds: [string[], string]) => {
 			allBuilds[builds[1]] = builds[0];
 		});
 		client.onNotification("aventus/unregisterBuild", (uri: string) => {
 			delete allBuilds[uri];
+		});
+		client.onNotification("aventus/registerData", (datas: [string[], string]) => {
+			allAvData[datas[1]] = datas[0];
+		});
+		client.onNotification("aventus/unregisterData", (uri: string) => {
+			delete allAvData[uri];
 		});
 		client.onNotification("aventus/registerStatic", (statics: [string[], string]) => {
 			allStatics[statics[1]] = statics[0];

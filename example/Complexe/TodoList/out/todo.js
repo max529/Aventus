@@ -1,5 +1,5 @@
-class AvTodoData {    constructor() {        this.id = 0;        this.name = "";        this.state = AvTodoState.Waiting;    }}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
-class AvLight {    constructor() {        this.name = "";        this.value = 0;        this.color = "";        this.values = [];    }}
+class AvTodoData {    id = 0;    name = "";    state = AvTodoState.Waiting;}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
+class AvLight {    name = "";    value = 0;    color = "";    values = [];}
 
 class AvTodoList extends WebComponent {
     get 'items'() {

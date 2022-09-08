@@ -38,7 +38,6 @@ export interface SocketRAMManagerRouteNotPlanned<U extends IData> {
     callback: (response: { data?: U[]; }) => void;
 }
 
-
 export abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends AvGenericRAMManager<U, R> {
     private socketActions: {
         get: string;
@@ -459,9 +458,9 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
 
 }
 
-
-export abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, U & SocketRAMManagerObject<U>> {
-    protected addCustomFunctions(item: U & SocketRAMManagerObject<U>): U & SocketRAMManagerObject<U> {
+export type SocketRAMManagerItem<U extends IData> = U & SocketRAMManagerObject<U>;
+export abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, SocketRAMManagerItem<U>> {
+    protected addCustomFunctions(item: SocketRAMManagerItem<U>): SocketRAMManagerItem<U> {
         return item;
     }
 }

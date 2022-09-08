@@ -13,7 +13,7 @@ export const compilerOptions: ts.CompilerOptions = {
 	experimentalDecorators: true,
 	noImplicitOverride: true,
 	strictPropertyInitialization: true,
-	noImplicitReturns:true,
+	noImplicitReturns: true,
 };
 export const completionOptions: ts.GetCompletionsAtPositionOptions = {
 	includeExternalModuleExports: true,
@@ -65,6 +65,7 @@ export const formatingOptions: ts.FormatCodeSettings = {
 
 export interface AventusConfigBuild {
 	name: string,
+	version: string,
 	inputPath: string[],
 	inputPathRegex?: RegExp
 	outputFile: string,

@@ -13,6 +13,7 @@ import { compileValidatorRAM } from './compiler/ram/compilerValidator';
 import { compileRAM } from './compiler/ram/compilerRAM';
 import { parseStruct } from '../../ts-file-parser';
 import { existsSync, readFileSync } from 'fs';
+import { connectionWithClient } from '../../mode';
 
 export enum AventusType {
 	Component,
@@ -47,7 +48,7 @@ export class AventusDoc {
 	public classNamesDoc: string[];
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
-	private lastCompiledWebComponent : CompileComponentResult | undefined = undefined;
+	private lastCompiledWebComponent: CompileComponentResult | undefined = undefined;
 	constructor(document: TextDocument, program: AventusJSProgram) {
 		this.document = document;
 		this.program = program;
@@ -85,15 +86,15 @@ export class AventusDoc {
 		return AventusType.Unknow;
 	}
 
-	doValidation(config: AventusConfig, program:AventusJSProgram): Diagnostic[] {
+	doValidation(config: AventusConfig, program: AventusJSProgram): Diagnostic[] {
 		let compileError: Diagnostic[] = [];
 
 		if (this.type == AventusType.Component) {
 			let compiled = compileComponent(this.document, config, program);
-			if(compiled.success){
+			if (compiled.success) {
 				this.lastCompiledWebComponent = compiled;
 			}
-			else{
+			else {
 				compileError = compiled.diagnostics;
 			}
 		} else if (this.type == AventusType.Lib) {
@@ -110,7 +111,7 @@ export class AventusDoc {
 		if (!this.hasError) {
 			try {
 
-				let newCompiledTxt: { nameCompiled: string | string[], nameDoc: string | string[], src: string, doc: string, dependances: string[], htmlDoc?: HTMLDoc, scssVars?:SCSSDoc } | undefined;
+				let newCompiledTxt: { nameCompiled: string | string[], nameDoc: string | string[], src: string, doc: string, dependances: string[], htmlDoc?: HTMLDoc, scssVars?: SCSSDoc } | undefined;
 				if (this.type == AventusType.Component && this.lastCompiledWebComponent) {
 					newCompiledTxt = this.lastCompiledWebComponent.result;
 					if (newCompiledTxt.htmlDoc) {
@@ -174,7 +175,9 @@ export class AventusDoc {
 						this.compiledTxt = newCompiledTxt.src;
 
 						console.info(classNameTxt + " compiled");
-
+						if (this.type == AventusType.Data) {
+							connectionWithClient?.sendNotification("aventus/registerData", [this.classNamesScript, this.path]);
+						}
 						this.program.build();
 					}
 					return true;
@@ -202,5 +205,8 @@ export class AventusDoc {
 
 	remove() {
 		//this.watcher.close();
+		if (this.type == AventusType.Data) {
+			connectionWithClient?.sendNotification("aventus/unregisterData", this.path);
+		}
 	}
 }

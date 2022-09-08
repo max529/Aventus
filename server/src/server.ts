@@ -17,9 +17,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { AventusJSMode } from './modes/aventusJs/mode';
 import { AventusJSONMode } from './modes/aventusJSON/mode';
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync } from 'fs';
-import { CreateComponent } from './cmds/createComponent';
 import { pathToUri, uriToPath } from './modes/aventusJs/utils';
-import { ConvertComponent } from './cmds/convertComponent';
 import { PreviewComponent } from './cmds/previewComponent';
 import { BuildProject } from './cmds/buildProject';
 import { StaticExport } from './cmds/staticExport';
@@ -28,6 +26,7 @@ import { AventusHTMLMode } from './modes/aventusHTML/mode';
 import { AventusSCSSMode } from './modes/aventusSCSS/mode';
 import * as aventusConfig from './config';
 import * as modes from './mode';
+import { Create } from './cmds/create';
 
 
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -110,8 +109,7 @@ modes.connectionWithClient?.onInitialize((_params: InitializeParams) => {
 			},
 			executeCommandProvider: {
 				commands: [
-					CreateComponent.cmd,
-					ConvertComponent.cmd,
+					Create.cmd,
 					PreviewComponent.cmd,
 					BuildProject.cmd,
 					StaticExport.cmd,
@@ -279,11 +277,8 @@ modes.connectionWithClient?.onDocumentFormatting(async (textDocumentPosition, to
 	return null;
 })
 modes.connectionWithClient?.onExecuteCommand(async (params) => {
-	if (params.command == CreateComponent.cmd) {
-		new CreateComponent(params);
-	}
-	else if (params.command == ConvertComponent.cmd) {
-		new ConvertComponent(params);
+	if (params.command == Create.cmd) {
+		new Create(params);
 	}
 	else if (params.command == PreviewComponent.cmd) {
 		new PreviewComponent(params);

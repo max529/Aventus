@@ -61,6 +61,10 @@ export class AventusJSONMode {
 						type: "object",
 						properties: {
 							"name": { type: "string" },
+							"version": {
+								type: "string",
+								pattern : "^[0-9]+\.[0-9]+\.[0-9]+$"
+							},
 							"inputPath": {
 								type: "array",
 								items: { type: "string" },
@@ -214,9 +218,15 @@ export class AventusJSONMode {
 				if (!inputPath.startsWith("/")) {
 					slash = "/";
 				}
-				if (inputPath.endsWith("/")) {
-					inputPath += "*"
+				let splitedInput = inputPath.split("/");
+				if(splitedInput[splitedInput.length -  1] == "" || splitedInput[splitedInput.length -  1] == "*"){
+					splitedInput[splitedInput.length -  1] = "*"
 				}
+				else if(splitedInput[splitedInput.length -  1].indexOf(".") == -1){
+					// its a folder but without end slash
+					splitedInput.push("*");
+				}
+				inputPath = splitedInput.join("/");
 				let regTemp = normalize(uriToPath(baseDir) + slash + inputPath).replace(/\\/g, '\\/').replace("*", ".*");
 				regexs.push("(^" + regTemp + "$)");
 			}
