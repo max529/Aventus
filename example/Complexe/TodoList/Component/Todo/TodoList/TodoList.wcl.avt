@@ -13,7 +13,7 @@ export class AvTodoList extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-    @mutable()
+    @watch()
     items: AvTodoData[] = [];
     //#endregion
 

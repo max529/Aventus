@@ -17,7 +17,7 @@ export class AvComplexTest extends WebComponent implements DefaultComponent {
 
 
 	//#region variables
-	@mutable()
+	@watch()
 	data: AvLight[] = [];
 
 	salut: HTMLElement;

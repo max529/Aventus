@@ -1,5 +1,5 @@
 import { AvForm } from "../form/form.wcl.avt";
-import { MutableAction } from "../../../data/MutableAction.data.avt";
+import { WatchAction } from "../../../data/WatchAction.data.avt";
 import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.avt";
 
 export abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
@@ -29,10 +29,10 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
     /**
      * Value to use inside your component
      */
-    @mutable()
+    @watch()
     value: T = this.getDefaultValue();
 
-    @mutable((target: AvFormElement<T>) => {
+    @watch((target: AvFormElement<T>) => {
         console.log("Display errors");
         target.displayErrors();
     })

@@ -1,9 +1,9 @@
+import { IData } from "../../data/IData.data.avt";
 import { WebComponent, DefaultComponent } from "../../lib/WebComponent.lib.avt";
-import { Data } from "../../data/Data.data.avt";
 import { SocketRAMManagerObject } from "../../ram/SocketRAMManager.lib.avt";
 
 
-export abstract class DisplayElement<T extends Data> extends WebComponent implements DefaultComponent {
+export abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
 	//#region variables
 	currentInstance: T & SocketRAMManagerObject<T>;
 	eventsFunctions: { "onUpdate": (data:T) => void, "onDelete": (data:T) => void } = {

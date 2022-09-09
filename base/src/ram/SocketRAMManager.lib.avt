@@ -268,7 +268,6 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
         return undefined;
     }
     //#endregion
-
     //#region delete
     public override async delete(item: U, cbError?: (response: any) => void): Promise<void> {
         try {

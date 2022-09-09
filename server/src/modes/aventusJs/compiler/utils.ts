@@ -3,7 +3,7 @@ import * as ts from 'typescript'
 import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import * as aventusConfig from '../../../config'
-import { ClassModel, EnumDeclaration, parseStruct } from '../../../ts-file-parser'
+import { AliasNode, ClassModel, EnumDeclaration, parseStruct } from '../../../ts-file-parser'
 import { compilerOptions } from '../config'
 import { getFolder, uriToPath } from '../utils'
 
@@ -24,7 +24,17 @@ export function createErrorTsPos(currentDoc: TextDocument, msg: string, start: n
 		message: ts.flattenDiagnosticMessageText(msg, '\n')
 	}
 }
-
+export function removeComments(txt: string): string {
+	let regex = /(\".*?\"|\'.*?\')|(\/\*.*?\*\/|\/\/[^\r\n]*$)/gm
+	txt = txt.replace(regex, (match, grp1, grp2) => {
+		if(grp2){
+			return "";
+		}
+		return grp1;
+	})
+	return txt;
+	return txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+}
 export function removeWhiteSpaceLines(txt: string) {
 	return txt.replace(/^(?:[\t ]*(?:\r?\n|\r))+/gm, '');
 }
@@ -46,13 +56,14 @@ export function genericCompile(document: TextDocument) {
 	let classesNameDoc: string[] = [];
 	let debugTxt = "";
 	let dependances: string[] = [];
+
 	struct.classes.forEach(cls => {
 		cls.extends.forEach(extension => {
 			if (dependances.indexOf(extension.typeName) == -1) {
 				dependances.push(extension.typeName);
 			}
 		})
-		let classContent = removeDecoratorFromClassContent(cls);
+		let classContent = removeComments(removeDecoratorFromClassContent(cls));
 		classContent = replaceFirstExport(classContent);
 		let result = compileTs(classContent);
 
@@ -78,7 +89,7 @@ export function genericCompile(document: TextDocument) {
 		}
 	});
 	struct.enumDeclarations.forEach(enm => {
-		let enumContent = removeDecoratorFromClassContent(enm);
+		let enumContent = removeComments(removeDecoratorFromClassContent(enm));
 		enumContent = replaceFirstExport(enumContent);
 		let result = compileTs(enumContent);
 		if (result.compiled.length > 0) {
@@ -99,6 +110,19 @@ export function genericCompile(document: TextDocument) {
 					}
 				}
 			}
+		}
+	})
+	struct.aliases.forEach(alias => {
+		let aliasContent = removeComments(alias.content);
+		aliasContent = replaceFirstExport(aliasContent);
+		let result = compileTs(aliasContent);
+		if (result.compiled.length > 0) {
+			scriptTxt += result.compiled;
+			classesNameSript.push(alias.name);
+		}
+		if (result.doc.length > 0) {
+			classesNameDoc.push(alias.name);
+			docTxt += result.doc;
 		}
 	})
 
@@ -123,7 +147,7 @@ export function compileTs(txt: string): { compiled: string, doc: string } {
 		compiled: "",
 		doc: ""
 	}
-	
+
 	result.compiled = ts.transpile(txt, compilerOptions);
 	result.doc = compileDocTs(txt);
 	// Loop through all the input files
@@ -177,5 +201,5 @@ export function compileDocTs(txt: string) {
 }
 
 export function replaceFirstExport(txt: string): string {
-	return txt.replace(/^(\/\*(\s|\S)*?\*\/\s*)?export\s+/, "");
+	return txt.replace(/^\s*export\s+(class|interface|enum|type|abstract)/m, "$1");
 }

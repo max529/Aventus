@@ -1,4 +1,4 @@
-import { MutableAction } from "../data/MutableAction.data.avt";
+import { WatchAction } from "../data/WatchAction.data.avt";
 import { State, StateManager, States } from "./StateManager.lib.avt";
 
 
@@ -32,12 +32,12 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private __onChangeFct: { [key: string]: ((path: string) => void)[]; } = {};
     private getSlugFct: { [key: string]: () => string; };
 
-    private __mutable: any;
-    private __mutableActions: {} = {};
+    private __watch: any;
+    private __watchActions: {} = {};
     private __prepareForCreate: [] = [];
     private __prepareForUpdate: [] = [];
     private __loopTemplate: { [key: string]: () => string; } = {};
-    private __mutableActionsCb: { [key: string]: (type: MutableAction, path: string, element: any) => void; } = {};
+    private __watchActionsCb: { [key: string]: (type: WatchAction, path: string, element: any) => void; } = {};
     
     public getClassName(): string {
         return this.constructor.name;
@@ -52,8 +52,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         this._isReady = false;
         this.__prepareVariables();
         this.__prepareTranslations();
-        this.__prepareMutablesActions();
-        this.__initMutables();
+        this.__prepareWatchesActions();
+        this.__initWatches();
         this.__prepareTemplate();
         this.__selectElementNeeded();
         this.__registerOnChange();
@@ -62,18 +62,17 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         this.__endConstructor();
     }
     private __prepareVariables() { }
-    private __prepareMutablesActions() {
-        if(Object.keys(this.__mutableActions).length > 0) {
-            if(!this.__mutable) {
-                this.__mutable = Object.transformIntoWatcher({}, (type, path, element) => {
-                    console.log("mutation for " + this.nodeName, type, path, element, this);
-                    let action = this.__mutableActionsCb[path.split(".")[0]] || this.__mutableActionsCb[path.split("[")[0]];
+    private __prepareWatchesActions() {
+        if(Object.keys(this.__watchActions).length > 0) {
+            if(!this.__watch) {
+                this.__watch = Object.transformIntoWatcher({}, (type, path, element) => {
+                    let action = this.__watchActionsCb[path.split(".")[0]] || this.__watchActionsCb[path.split("[")[0]];
                     action(type, path, element);
                 });
             }
         }
     }
-    private __initMutables() { }
+    private __initWatches() { }
     private __prepareForLoop() { }
     //#region translation
     private __getLangTranslations() {

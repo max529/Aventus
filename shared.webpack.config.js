@@ -50,6 +50,11 @@ module.exports = function withDefaults(/**@type WebpackConfig*/extConfig) {
 			path: path.join(extConfig.context, 'out'),
 			libraryTarget: "commonjs",
 		},
+		ignoreWarnings:[
+			{
+				module:/^.*typescript\.js$/
+			}
+		],
 		// yes, really source maps
 		devtool: 'source-map'
 	};

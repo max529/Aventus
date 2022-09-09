@@ -18,7 +18,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
 
     //#region variables
-    @mutable()
+    @watch()
     value_display: string = "";
 
     hider: AvHideable;

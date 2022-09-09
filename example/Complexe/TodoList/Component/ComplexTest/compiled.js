@@ -6,24 +6,14 @@ class AvComplexTest extends WebComponent {
                     set 'testvariable'(val) {
                         this.setAttribute('testvariable',val);
                     }get 'data'() {
-						return this.__mutable["data"];
+						return this.__watch["data"];
 					}
 					set 'data'(val) {
-						/*if (this.__mutable["data"]) {
-							this.__mutable["data"].__unsubscribe(this.__mutableActionsCb["data"]);
-						}*/
-						this.__mutable["data"] = val;
-						if (val) {
-							//this.__mutable["data"] = Object.transformIntoWatcher(val, this.__mutableActionsCb["data"]);
-							//this.__mutableActionsCb["data"](MutableAction.SET, '', this.__mutable["data"]);
-						}
-						else{
-							//this.__mutable["data"] = undefined;
-						}
-					}    __prepareMutablesActions() {
-					this.__mutableActions["data"] = [];
-						this.__mutableActionsCb["data"] = (action, path, value) => {
-							for (let fct of this.__mutableActions["data"]) {
+						this.__watch["data"] = val;
+					}    __prepareWatchesActions() {
+					this.__watchActions["data"] = [];
+						this.__watchActionsCb["data"] = (action, path, value) => {
+							for (let fct of this.__watchActions["data"]) {
 								fct(this, action, path, value);
 							}
 							if(this.__onChangeFct["data"]){
@@ -37,9 +27,9 @@ class AvComplexTest extends WebComponent {
 									}*/
 								}
 							}
-						}					super.__prepareMutablesActions();
-				}__initMutables() {
-					super.__initMutables();
+						}					super.__prepareWatchesActions();
+				}__initWatches() {
+					super.__initWatches();
 					this["data"] = [];
 				}
     __getStyle() {

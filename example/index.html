@@ -16,12 +16,12 @@
             value: 2,
             nested: []
         }, (type, path, value) => {
-            console.log("obj", MutableAction[type], path, value);
+            console.log("obj", WatchAction[type], path, value);
         })
         var nestedObj = Object.transformIntoWatcher({
             color: "blue"
         }, (type, path, value) => {
-            console.log("nested", MutableAction[type], path, value);
+            console.log("nested", WatchAction[type], path, value);
         })
         var nestedObj2 = {
             color: 'blue2'

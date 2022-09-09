@@ -1,7 +1,7 @@
 import { scssMode } from '../../../../mode';
 import { ArrayType, ClassModel, DefaultClassModel, FieldModel, ImportNode, Module, parseStruct, TypeKind } from '../../../../ts-file-parser';
 import { AventusConfig } from '../../config';
-import { compileDocTs, createErrorTs, createErrorTsPos, removeDecoratorFromClassContent, removeWhiteSpaceLines, replaceFirstExport } from '../utils';
+import { compileDocTs, createErrorTs, createErrorTsPos, removeComments, removeDecoratorFromClassContent, removeWhiteSpaceLines, replaceFirstExport } from '../utils';
 import { compilerTemplate } from './compilerTemplate';
 import * as cheerio from 'cheerio';
 import { aventusExtension } from '../../aventusDoc';
@@ -464,7 +464,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		_recuCheck($._root);
 	}
 	const _prepareFile = () => {
-		const foundedMutable: string[] = [];
+		const foundedWatch: string[] = [];
 		const _createTemplateHtml = () => {
 			let body = $('body').html()?.replace('&#xFEFF;', '');
 			if (!body) {
@@ -692,7 +692,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				}
 
 			}
-			const _createMutableVariable = (field: FieldModel, args: any[] = []) => {
+			const _createWatchVariable = (field: FieldModel, args: any[] = []) => {
 				if (field.type) {
 					if (field.type.typeKind == TypeKind.BASIC) {
 
@@ -703,7 +703,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					}
 					let value = "";
 					if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
-						result.diagnostics.push(createErrorTsPos(document, "A mutable prop must be initialized", field.start, field.end));
+						result.diagnostics.push(createErrorTsPos(document, "A watchable prop must be initialized", field.start, field.end));
 					}
 					else {
 						// constraint is a function
@@ -725,14 +725,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					if (value == '"undefined"') { value = "undefined" }
-					let mutableAction = `this.__mutableActions["${field.name}"] = []`;
-					let txtMutableFct = "";
+					let watchAction = `this.__watchActions["${field.name}"] = []`;
+					let txtWatchFct = "";
 					if (args.length > 0) {
-						txtMutableFct = transpileMethodNoRun(args[0]);
+						txtWatchFct = transpileMethodNoRun(args[0]);
 					}
-					mutableAction = `this.__mutableActions["${field.name}"] = [${txtMutableFct}];
-						this.__mutableActionsCb["${field.name}"] = (action, path, value) => {
-							for (let fct of this.__mutableActions["${field.name}"]) {
+					watchAction = `this.__watchActions["${field.name}"] = [${txtWatchFct}];
+						this.__watchActionsCb["${field.name}"] = (action, path, value) => {
+							for (let fct of this.__watchActions["${field.name}"]) {
 								fct(this, action, path, value);
 							}
 							if(this.__onChangeFct["${field.name}"]){
@@ -748,25 +748,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							}
 						}`;
 					getterSetter += `get '${field.name}'() {
-						return this.__mutable["${field.name}"];
+						return this.__watch["${field.name}"];
 					}
 					set '${field.name}'(val) {
-						/*if (this.__mutable["${field.name}"]) {
-							this.__mutable["${field.name}"].__unsubscribe(this.__mutableActionsCb["${field.name}"]);
-						}*/
-						this.__mutable["${field.name}"] = val;
-
-						if (val) {
-							//this.__mutable["${field.name}"] = Object.transformIntoWatcher(val, this.__mutableActionsCb["${field.name}"]);
-							//this.__mutableActionsCb["${field.name}"](MutableAction.SET, '', this.__mutable["${field.name}"]);
-						}
-						else{
-							//this.__mutable["${field.name}"] = undefined;
-						}
+						this.__watch["${field.name}"] = val;
 					}\r\n`;
-					variableProxy[field.name] = `${mutableAction}`;
+					variableProxy[field.name] = `${watchAction}`;
 					variableProxyInit += `this["${field.name}"] = ${value};`;
-					foundedMutable.push(field.name);
+					foundedWatch.push(field.name);
 				}
 			}
 			const _createSimpleVariable = (field: CustomFieldModel) => {
@@ -990,10 +979,10 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					}
 					continue;
 				}
-				else if (field.propType == "mutable") {
+				else if (field.propType == "watch") {
 					for (let decorator of field.decorators) {
-						if (decorator.name == "mutable") {
-							_createMutableVariable(field, decorator.arguments);
+						if (decorator.name == "watch") {
+							_createWatchVariable(field, decorator.arguments);
 						}
 					}
 				}
@@ -1085,17 +1074,17 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			}
 
 			if (variableProxyTxt.length > 0) {
-				variableProxyTxt = `__prepareMutablesActions() {
+				variableProxyTxt = `__prepareWatchesActions() {
 					${variableProxyTxt}
-					super.__prepareMutablesActions();
+					super.__prepareWatchesActions();
 				}`
 
-				variableProxyTxt += `\r\n__initMutables() {
-					super.__initMutables();
+				variableProxyTxt += `\r\n__initWatches() {
+					super.__initWatches();
 					${variableProxyInit}
 				}`
 			}
-			template = template.replace(/\$mutables/g, variableProxyTxt);
+			template = template.replace(/\$watches/g, variableProxyTxt);
 			//#endregion
 		}
 		const _createMethods = () => {
@@ -1215,7 +1204,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			for (var key in toPrepare.loop) {
 				let item = toPrepare.loop[key];
 				let firstInNamePart = item.__inName.split(".")[0];
-				if (foundedMutable.indexOf(firstInNamePart) == -1) {
+				if (foundedWatch.indexOf(firstInNamePart) == -1) {
 					let found = false;
 					for (let dependance of item.__dependances) {
 						if (toPrepare.loop[dependance].__itemName == firstInNamePart) {
@@ -1224,7 +1213,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					if (!found) {
-						result.diagnostics.push(createErrorTs(document, 'variable ' + firstInNamePart + ' inside in of for loop must be mutable'));
+						result.diagnostics.push(createErrorTs(document, 'variable ' + firstInNamePart + ' inside in of for loop must be watchable'));
 					}
 				}
 				loopTxt += `this.__loopTemplate['${key}'] = \`${item.__template}\`;\r\n`;
@@ -1483,7 +1472,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	let struct = parseStruct(realScriptContent, {}, componentPath);
 	let doc = "";
 	if (struct.classes.length == 1) {
-		let classContent = removeDecoratorFromClassContent(struct.classes[0]);
+		let classContent = removeComments(removeDecoratorFromClassContent(struct.classes[0]));
 		classContent = replaceFirstExport(classContent);
 		doc = compileDocTs(classContent);
 	}

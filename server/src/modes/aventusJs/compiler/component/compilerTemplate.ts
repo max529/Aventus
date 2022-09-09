@@ -3,7 +3,7 @@ export var compilerTemplate = `class $classname extends $parentClass {
     $isAbstract
     $getterSetter
     $variables
-    $mutables
+    $watches
     $allLangs
     $translations
 

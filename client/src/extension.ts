@@ -62,14 +62,14 @@ export function activate(context: vscode.ExtensionContext) {
 						new BuildQuickPick("RAM", "Create a RAM"),
 					];
 					const result = await vscode.window.showQuickPick(toDisplay, {
-						placeHolder: 'What do you want to create',
+						placeHolder: 'What do you want to create?',
 						canPickMany: false,
 					});
 					if (result) {
 						args.push(result);
 						if (result.label == "Init") {
 							const name = await vscode.window.showInputBox({
-								title: "Please provide a name for your project",
+								title: "Provide a name for your project",
 							});
 							args.push(name);
 						}
@@ -90,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
 						}
 						else {
 							const name = await vscode.window.showInputBox({
-								title: "Please provide a name for your " + result.label,
+								title: "Provide a name for your " + result.label,
 							});
 							args.push(name);
 						}

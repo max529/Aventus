@@ -197,7 +197,7 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
             if (u.name) {
                 var aliasName = u.name.text;
                 var type = buildType(u.type, mpth);
-                module.aliases.push({ name: aliasName, type: type });
+                module.aliases.push({ name: aliasName, type: type, content:content.substring(x.pos, x.end) });
             }
 
             //return;

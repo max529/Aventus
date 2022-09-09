@@ -16,7 +16,7 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     //#region variables
     private oldParent: HTMLElement = undefined;
-    @mutable((target: AvHideable) => {
+    @watch((target: AvHideable) => {
         target.onVisibilityChangeCallbacks.forEach(callback => callback(target.isVisible));
     })
     private isVisible: boolean = false;

@@ -1,8 +1,8 @@
 declare function attribute<T>(onChange: (arg: T) => void);
 declare function attribute();
-declare function mutable();
+declare function watch();
 declare function viewElement(config:ViewElementConfig);
-declare function mutable<T>(onChange: (arg: T, action: MutableAction, path: string, value: any) => void);
+declare function watch<T>(onChange: (arg: T, action: WatchAction, path: string, value: any) => void);
 declare function IgnoreForceIdentifier();
 declare function overrideView(target: any);
 declare function Debugger(config: DebuggerConfig);

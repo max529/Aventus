@@ -63,7 +63,7 @@ export class AventusJSONMode {
 							"name": { type: "string" },
 							"version": {
 								type: "string",
-								pattern : "^[0-9]+\.[0-9]+\.[0-9]+$"
+								pattern: "^[0-9]+\.[0-9]+\.[0-9]+$"
 							},
 							"inputPath": {
 								type: "array",
@@ -80,9 +80,10 @@ export class AventusJSONMode {
 									properties: {
 										"definition": { type: "string" },
 										"src": { type: "string" },
-									}
+										"libraryName": { type: "string" }
+									},
+									required: ["definition"]
 								},
-								required: ["definition"]
 							},
 							"namespace": { type: "string" }
 						},
@@ -219,10 +220,10 @@ export class AventusJSONMode {
 					slash = "/";
 				}
 				let splitedInput = inputPath.split("/");
-				if(splitedInput[splitedInput.length -  1] == "" || splitedInput[splitedInput.length -  1] == "*"){
-					splitedInput[splitedInput.length -  1] = "*"
+				if (splitedInput[splitedInput.length - 1] == "" || splitedInput[splitedInput.length - 1] == "*") {
+					splitedInput[splitedInput.length - 1] = "*"
 				}
-				else if(splitedInput[splitedInput.length -  1].indexOf(".") == -1){
+				else if (splitedInput[splitedInput.length - 1].indexOf(".") == -1) {
 					// its a folder but without end slash
 					splitedInput.push("*");
 				}

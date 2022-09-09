@@ -1,5 +1,5 @@
 import { WebComponent, DefaultComponent } from "../../lib/WebComponent.lib.avt";
-import { MutableAction } from "../../data/MutableAction.data.avt";
+import { WatchAction } from "../../data/WatchAction.data.avt";
 
 /**
  * Generate a loop 
@@ -44,10 +44,10 @@ export class AvFor extends WebComponent implements DefaultComponent {
     private forInside: { [key: string]: AvFor[]; } = {};
     private maxIndex: number = 0;
 
-    private mutableElement: any;
-    private mutableActionArray: ((target: HTMLElement, type: MutableAction, path: string, element: any) => void)[];
-    private mutableObjectArray: any;
-    private mutableObjectName: string;
+    private watchElement: any;
+    private watchActionArray: ((target: HTMLElement, type: WatchAction, path: string, element: any) => void)[];
+    private watchObjectArray: any;
+    private watchObjectName: string;
     //#endregion
 
 
@@ -74,31 +74,31 @@ export class AvFor extends WebComponent implements DefaultComponent {
                 let inParts = this.in.split(".");
                 let firstPart = inParts.splice(0, 1)[0];
 
-                if(this.parent["__mutableActions"].hasOwnProperty(firstPart)) {
-                    this.mutableActionArray = this.parent["__mutableActions"][firstPart];
-                    this.mutableObjectArray = this.parent["__mutable"];
-                    this.mutableObjectName = firstPart;
+                if(this.parent["__watchActions"].hasOwnProperty(firstPart)) {
+                    this.watchActionArray = this.parent["__watchActions"][firstPart];
+                    this.watchObjectArray = this.parent["__watch"];
+                    this.watchObjectName = firstPart;
                 }
                 else {
                     for(let parentFor of parentsFor) {
                         if(parentFor.item == firstPart) {
                             this.parentFor = parentFor as AvFor;
-                            this.mutableActionArray = this.parentFor.mutableActionArray;
-                            this.mutableObjectArray = this.parentFor.mutableObjectArray;
-                            this.mutableObjectName = this.parentFor.mutableObjectName;
+                            this.watchActionArray = this.parentFor.watchActionArray;
+                            this.watchObjectArray = this.parentFor.watchObjectArray;
+                            this.watchObjectName = this.parentFor.watchObjectName;
                             this.otherPart = inParts;
                             break;
                         }
                     }
                 }
 
-                if(this.mutableActionArray) {
-                    let fctCb = (target: HTMLElement, type: MutableAction, path: string, element: any) => {
-                        path = path.replace(this.mutableObjectName, "");
-                        if(type == MutableAction.SET || path == this.getParentKey()) {
+                if(this.watchActionArray) {
+                    let fctCb = (target: HTMLElement, type: WatchAction, path: string, element: any) => {
+                        path = path.replace(this.watchObjectName, "");
+                        if(type == WatchAction.SET || path == this.getParentKey()) {
                             this.reset();
-                            this.mutableElement = element;
-                            let currentCreate = Object.prepareByPath(this.mutableElement, this.getParentKey());
+                            this.watchElement = element;
+                            let currentCreate = Object.prepareByPath(this.watchElement, this.getParentKey());
                             if(currentCreate.canApply) {
                                 if(Array.isArray(currentCreate.objToApply)) {
                                     for(let i = 0; i < currentCreate.objToApply.length; i++) {
@@ -123,34 +123,34 @@ export class AvFor extends WebComponent implements DefaultComponent {
                                 let pathToUse = testPath[1];
                                 let matchTemp = path.match(regexNumberLoop);
                                 if(matchTemp) {
-                                    if(type == MutableAction.CREATED) {
+                                    if(type == WatchAction.CREATED) {
                                         this.createForElement(element, pathToUse);
                                     }
-                                    else if(type == MutableAction.UPDATED) {
+                                    else if(type == WatchAction.UPDATED) {
                                         this.updateForElement(element, pathToUse);
                                     }
-                                    else if(type == MutableAction.DELETED) {
+                                    else if(type == WatchAction.DELETED) {
                                         this.deleteForElement(element, pathToUse);
                                     }
                                 }
                                 else {
-                                    if(type == MutableAction.CREATED) {
+                                    if(type == WatchAction.CREATED) {
                                         this.updateForElement(element, pathToUse);
                                     }
-                                    else if(type == MutableAction.UPDATED) {
+                                    else if(type == WatchAction.UPDATED) {
                                         this.updateForElement(element, pathToUse);
                                     }
-                                    else if(type == MutableAction.DELETED) {
+                                    else if(type == WatchAction.DELETED) {
                                         this.updateForElement(undefined, pathToUse);
                                     }
                                 }
                             }
                         }
                     };
-                    this.mutableActionArray.push(fctCb);
+                    this.watchActionArray.push(fctCb);
 
-                    if(this.mutableObjectArray[this.mutableObjectName]) {
-                        fctCb(this.parentElement, MutableAction.SET, '', this.mutableObjectArray[this.mutableObjectName]);
+                    if(this.watchObjectArray[this.watchObjectName]) {
+                        fctCb(this.parentElement, WatchAction.SET, '', this.watchObjectArray[this.watchObjectName]);
                     }
                 }
                 else {
@@ -257,7 +257,7 @@ export class AvFor extends WebComponent implements DefaultComponent {
             }
         }
         else {
-            this.createForElement(this.mutableElement[index], idendity);
+            this.createForElement(this.watchElement[index], idendity);
         }
     }
     /**

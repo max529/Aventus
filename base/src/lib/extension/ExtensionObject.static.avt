@@ -388,7 +388,7 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                         else {
                             pathToSend = prop;
                         }
-                        cb(MutableAction[type], pathToSend, value);
+                        cb(WatchAction[type], pathToSend, value);
                     });
                 }
             }

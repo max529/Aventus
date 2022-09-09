@@ -14,8 +14,8 @@ export class AvTodoItem extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-    @mutable((target:AvTodoData, action:MutableAction, path:string, value:any) => {
-        console.log(MutableAction[action], path)
+    @watch((target:AvTodoData, action:WatchAction, path:string, value:any) => {
+        console.log(WatchAction[action], path)
     })
     item: AvTodoData = new AvTodoData();
 	//#endregion

@@ -41,6 +41,7 @@ export interface ReturnTypeDeclaration {
 export interface AliasNode {
     name: string;
     type: TypeModel | undefined;
+    content: string;
 }
 
 export interface ImportNode {
@@ -56,7 +57,7 @@ export class EnumMemberDeclaration {
 }
 
 export class EnumDeclaration {
-    documentation: string[]  = [];
+    documentation: string[] = [];
     name: string = "";
     members: EnumMemberDeclaration[] = [];
     decorators: Decorator[] = [];

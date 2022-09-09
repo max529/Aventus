@@ -68,10 +68,10 @@ export class Create {
 							let className = identifier + nameObject + "RAM";
 							writeFileSync(newScriptPath, `import { ${nameObject} } from "${importPath}";
 
-export type ${classItemName} = ${nameObject} & ${classActionName};
-
-export interface ${classActionName} extends SocketRAMManagerObject<${nameObject}> {
-	// declare your custom function here
+declare module "${importPath}" {
+	export interface ${nameObject} {
+		// declare your functions here
+	}
 }
 
 export class ${className} extends GenericSocketRAMManager<${nameObject}, ${classItemName}> implements IRAMManager {
@@ -84,15 +84,9 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 		return "${nameObject}";
 	}
 	
-	protected addCustomFunctions(item: ${nameObject} & SocketRAMManagerObject<${nameObject}>): ${classItemName} {
-        let actions = {
-            // define your custom function here
-        };
-
-		return {
-			...item,
-			...actions
-		}
+	protected override addCustomFunctions(item: ${nameObject} & SocketRAMManagerObject<${nameObject}>): SocketRAMManagerItem<${nameObject}> {
+        // implement your functions here
+		return item;
     }
 }`);
 							jsMode.programManager.getProgram(newScriptPath);

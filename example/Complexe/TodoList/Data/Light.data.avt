@@ -1,4 +1,4 @@
-export class AvLight implements Data {
+export class AvLight implements IData {
     name: string = "";
     value: number = 0;
     color: string = "";

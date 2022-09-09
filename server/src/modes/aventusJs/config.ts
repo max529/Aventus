@@ -72,7 +72,7 @@ export interface AventusConfigBuild {
 	generateDefinition?: boolean
 	compileOnSave?: boolean
 	includeBase?: boolean,
-	include?: { definition: string, src?: string }[],
+	include?: { definition: string, src?: string, libraryName?: string }[],
 	namespace: "",
 }
 export interface AventusConfigStatic {

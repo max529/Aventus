@@ -155,7 +155,8 @@ export class StateManager {
             // We're with a regular subscribe
             if(_state.endsWith("/*")) {
                 // We need to replace the star with a regex that matches all numbers
-                _state = "^" + this._escapeRegExp(_state).replace("\*", "-?\\d+$"); // We replace the escaped star with the regex that matches all number
+                // We replace the escaped star with the regex that matches all number
+                _state = "^" + this._escapeRegExp(_state).replace("\*", "-?\\d+$"); 
             } else {
                 let splittedState = _state.split("/");
                 let slug = splittedState.pop();

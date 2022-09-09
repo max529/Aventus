@@ -1,5 +1,6 @@
-import { Data } from "./Data.data.avt";
-export class Coordinate implements Data {
+import { IData } from "./IData.data.avt";
+
+export class Coordinate implements IData {
     x: number = 0;
     y: number = 0;
 }

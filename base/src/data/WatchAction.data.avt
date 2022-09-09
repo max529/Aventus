@@ -1,4 +1,4 @@
-export enum MutableAction {
+export enum WatchAction {
     SET,
     CREATED,
     UPDATED,

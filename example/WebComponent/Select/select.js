@@ -6,24 +6,14 @@ class AvSelect extends AvFormElement {
                     set 'label'(val) {
                         this.setAttribute('label',val);
                     }get 'value_display'() {
-						return this.__mutable["value_display"];
+						return this.__watch["value_display"];
 					}
 					set 'value_display'(val) {
-						/*if (this.__mutable["value_display"]) {
-							this.__mutable["value_display"].__unsubscribe(this.__mutableActionsCb["value_display"]);
-						}*/
-						this.__mutable["value_display"] = val;
-						if (val) {
-							//this.__mutable["value_display"] = Object.transformIntoWatcher(val, this.__mutableActionsCb["value_display"]);
-							//this.__mutableActionsCb["value_display"](MutableAction.SET, '', this.__mutable["value_display"]);
-						}
-						else{
-							//this.__mutable["value_display"] = undefined;
-						}
-					}    __prepareMutablesActions() {
-					this.__mutableActions["value_display"] = [];
-						this.__mutableActionsCb["value_display"] = (action, path, value) => {
-							for (let fct of this.__mutableActions["value_display"]) {
+						this.__watch["value_display"] = val;
+					}    __prepareWatchesActions() {
+					this.__watchActions["value_display"] = [];
+						this.__watchActionsCb["value_display"] = (action, path, value) => {
+							for (let fct of this.__watchActions["value_display"]) {
 								fct(this, action, path, value);
 							}
 							if(this.__onChangeFct["value_display"]){
@@ -37,9 +27,9 @@ class AvSelect extends AvFormElement {
 									}*/
 								}
 							}
-						}					super.__prepareMutablesActions();
-				}__initMutables() {
-					super.__initMutables();
+						}					super.__prepareWatchesActions();
+				}__initWatches() {
+					super.__initWatches();
 					this["value_display"] = "";
 				}
     __getStyle() {

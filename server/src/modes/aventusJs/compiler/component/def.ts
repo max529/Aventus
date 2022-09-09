@@ -17,7 +17,7 @@ export interface CompileComponentResult {
 	}
 }
 
-declare type FieldType = 'attribute' | 'mutable' | 'state' | 'viewElement' | 'simple';
+declare type FieldType = 'attribute' | 'watch' | 'state' | 'viewElement' | 'simple';
 export interface CustomFieldModel extends FieldModel {
 	propType: FieldType,
 	inParent: boolean,

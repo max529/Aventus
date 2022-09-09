@@ -445,10 +445,12 @@ export class AventusJSProgram {
 					let compsTxt: string[] = [];
 					let dataTxt: string[] = [];
 					let ramTxt: string[] = [];
+					let socketTxt: string[] = [];
 					let libsTxtDoc: string[] = [];
 					let compsTxtDoc: string[] = [];
 					let dataTxtDoc: string[] = [];
 					let ramTxtDoc: string[] = [];
+					let socketTxtDoc: string[] = [];
 					let classesNameScript: string[] = [];
 					let classesNameDoc: string[] = [];
 					if (build.inputPathRegex) {
@@ -532,6 +534,10 @@ export class AventusJSProgram {
 									ramTxt.push(doc.getCompiledTxt())
 									ramTxtDoc.push(doc.getDocTxt())
 								}
+								else if (doc.getType() == AventusType.Socket) {
+									socketTxt.push(doc.getCompiledTxt())
+									socketTxtDoc.push(doc.getDocTxt())
+								}
 							}
 						}
 					}
@@ -549,6 +555,7 @@ export class AventusJSProgram {
 					finalTxt += libsTxt.join("\r\n") + "\r\n";
 					finalTxt += dataTxt.join("\r\n") + "\r\n";
 					finalTxt += ramTxt.join("\r\n") + "\r\n";
+					finalTxt += socketTxt.join("\r\n") + "\r\n";
 					finalTxt += compsTxt.join("\r\n") + "\r\n";
 					finalTxt = finalTxt.trim();
 					if (build.namespace) {
@@ -568,9 +575,10 @@ export class AventusJSProgram {
 						finalDtxt += libsTxtDoc.join("\r\n") + "\r\n";
 						finalDtxt += dataTxtDoc.join("\r\n") + "\r\n";
 						finalDtxt += ramTxtDoc.join("\r\n") + "\r\n";
+						finalDtxt += socketTxtDoc.join("\r\n") + "\r\n";
 						finalDtxt += compsTxtDoc.join("\r\n") + "\r\n";
 						if (build.namespace) {
-							finalDtxt = "export declare namespace " + build.namespace + "{\r\n" + finalDtxt.replace(/declare /g, '') + "}\r\n";
+							finalDtxt = "declare namespace " + build.namespace + "{\r\n" + finalDtxt.replace(/declare /g, '') + "}\r\n";
 						}
 						finalDtxt = "// version " + build.version + "\r\n// region js //\r\n" + finalDtxt;
 						finalDtxt += "// end region js //\r\n";
@@ -780,6 +788,7 @@ export class AventusJSProgram {
 		return undefined;
 	}
 	private loadDef(pathToImport: string) {
+		// add import from web
 		pathToImport = normalize(pathToImport);
 		let uriToImport = pathToUri(pathToImport.replace(/\\/g, '/'));
 		if (existsSync(pathToImport) && statSync(pathToImport).isFile()) {
@@ -792,7 +801,7 @@ export class AventusJSProgram {
 					this.filesLoaded[document.uri] = new AventusDoc(document, this);
 
 					try {
-						let structJs = parseStruct(document.getText(), {}, AVENTUS_DEF_BASE_PATH);
+						let structJs = parseStruct(document.getText(), {}, pathToImport);
 						structJs.classes.forEach(classInfo => {
 							// Check if classInfo implements DefaultComponent
 							let foundDefaultComponent = false;

@@ -14,12 +14,15 @@ import { compileRAM } from './compiler/ram/compilerRAM';
 import { parseStruct } from '../../ts-file-parser';
 import { existsSync, readFileSync } from 'fs';
 import { connectionWithClient } from '../../mode';
+import { compileValidatorSocket } from './compiler/socket/compilerValidator';
+import { compileSocket } from './compiler/socket/compilerSocket';
 
 export enum AventusType {
 	Component,
 	Lib,
 	Data,
 	RAM,
+	Socket,
 	Static,
 	Definition,
 	Unknow
@@ -31,6 +34,7 @@ export const aventusExtension = {
 	Data: ".data.avt",
 	Lib: ".lib.avt",
 	RAM: ".ram.avt",
+	Socket: ".socket.avt",
 	Static: ".static.avt",
 	Definition: ".def.avt"
 }
@@ -82,6 +86,9 @@ export class AventusDoc {
 		else if (this.path.endsWith(aventusExtension.Definition)) {
 			return AventusType.Definition;
 		}
+		else if (this.path.endsWith(aventusExtension.Socket)) {
+			return AventusType.Socket;
+		}
 		console.log("unknow extension " + this.path);
 		return AventusType.Unknow;
 	}
@@ -103,6 +110,8 @@ export class AventusDoc {
 			compileError = compileValidatorData(this.document, config);
 		} else if (this.type == AventusType.RAM) {
 			compileError = compileValidatorRAM(this.document, config);
+		} else if (this.type == AventusType.Socket) {
+			compileError = compileValidatorSocket(this.document, config);
 		}
 		return compileError
 	}
@@ -126,6 +135,8 @@ export class AventusDoc {
 					newCompiledTxt = compileData(this, config);
 				} else if (this.type == AventusType.RAM) {
 					newCompiledTxt = compileRAM(this.document, config);
+				} else if (this.type == AventusType.Socket) {
+					newCompiledTxt = compileSocket(this.document, config);
 				} else if (this.type == AventusType.Static) {
 					let filename = this.document.uri.split("/")
 					newCompiledTxt = {
