@@ -1,6 +1,7 @@
 class AvTodoData {    id = 0;    name = "";    state = AvTodoState.Waiting;}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
 class AvLight {    name = "";    value = 0;    color = "";    values = [];}
 
+
 class AvTodoList extends WebComponent {
     get 'items'() {
 						return this.__watch["items"];

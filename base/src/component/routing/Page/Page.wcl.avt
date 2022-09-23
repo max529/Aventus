@@ -1,0 +1,35 @@
+import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
+
+export abstract class AvPage extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    @attribute()
+    public show: boolean;
+    //#endregion
+
+
+    //#region variables
+
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    public abstract defineTitle(): string;
+	//#endregion
+	
+}

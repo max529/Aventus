@@ -1,0 +1,52 @@
+import { StateManager } from "../../../lib/StateManager.lib.avt";
+import { PressManager } from "../../../lib/PressManager.lib.avt";
+import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
+
+export class AvRouterLink extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+    @attribute()
+    public state: string = "";
+    //#endregion
+
+
+    //#region variables
+
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    protected override postCreation(): void {
+        StateManager.getInstance("navigation").subscribe(this.state, {
+            active: () => {
+                this.classList.add("active");
+            },
+            inactive: () => {
+                this.classList.remove("active");
+            }
+        });
+        new PressManager({
+            element: this,
+            onPress: () => {
+                StateManager.getInstance("navigation").setActiveState(this.state);
+            }
+        });
+    }
+	//#endregion
+	
+}

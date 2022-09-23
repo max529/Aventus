@@ -1,0 +1,77 @@
+import { AvForm } from "../../form/form/form.wcl.avt";
+import { StateManager } from "../../../lib/StateManager.lib.avt";
+import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
+import { AvHideable } from "../../hideable/hideable.wcl.avt";
+import { AvPage } from "../Page/Page.wcl.avt";
+
+export abstract class AvRouter extends WebComponent implements DefaultComponent {
+
+    //#region static
+
+    //#endregion
+
+
+    //#region props
+
+    //#endregion
+
+
+    //#region variables
+    private oldPage: AvPage;
+    //#endregion
+
+
+    //#region states
+
+    //#endregion
+
+
+    //#region constructor
+
+    //#endregion
+
+
+    //#region methods
+    protected abstract defineRoutes(): { [key: string]: new () => AvPage; };
+
+    private register(): void {
+        let routes = this.defineRoutes();
+
+        for(let key in routes) {
+            this.initRoute(key, new routes[key]());
+        }
+    }
+    private initRoute(path: string, element: AvPage) {
+        this.shadowRoot.appendChild(element);
+        StateManager.getInstance("navigation").subscribe(path, {
+            active: (currentState) => {
+                if(this.oldPage && this.oldPage != element) {
+                    this.oldPage.show = false;
+                }
+                element.show = true;
+                this.oldPage = element;
+                if(window.location.pathname != currentState) {
+                    let newUrl = window.location.origin + currentState;
+                    window.history.pushState({}, element.defineTitle(), currentState);
+                }
+            }
+        });
+    }
+    protected override postCreation(): void {
+        this.register();
+        if(window.localStorage.getItem("navigation_url")) {
+            StateManager.getInstance("navigation").setActiveState(window.localStorage.getItem("navigation_url"));
+			window.localStorage.removeItem("navigation_url")
+        }
+        else {
+            StateManager.getInstance("navigation").setActiveState(window.location.pathname);
+        }
+		window.onpopstate = (e) => {
+			if(window.location.pathname != StateManager.getInstance("navigation").getActiveState()) {
+				StateManager.getInstance("navigation").setActiveState(window.location.pathname);
+			}
+		}
+    }
+	//#endregion
+	
+}

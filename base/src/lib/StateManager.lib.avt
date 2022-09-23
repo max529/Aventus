@@ -9,15 +9,15 @@ export interface States {
 }
 
 export class StateManager {
-    logLevel: number = 0; // 0 = error only / 1 = errors and warning / 2 = error, warning and logs (not implemented)
-    _activeState = undefined;
-    _activeParams = undefined;
-    _activeSlug = undefined;
-    _callbackList = {};
-    _subscribersMutliple = {};
-    _subscribers = {};
-    _isNumberRegex = /^-?\d+$/;
-    _callbackFunctions = {};
+    public logLevel: number = 0; // 0 = error only / 1 = errors and warning / 2 = error, warning and logs (not implemented)
+    private _activeState = undefined;
+    private _activeParams = undefined;
+    private _activeSlug = undefined;
+    private _callbackList = {};
+    private _subscribersMutliple = {};
+    private _subscribers = {};
+    private _isNumberRegex = /^-?\d+$/;
+    private _callbackFunctions = {};
 
     private constructor() {
 
@@ -144,7 +144,7 @@ export class StateManager {
      * @param {string} string - The state to format
      * @returns {Object} - The state, the formated state and if it's a regex state or not
      */
-    _prepareStateString(string) {
+    private _prepareStateString(string) {
         let _state = string;
         let stateToTest = _state; //Here we keep the state before escaping it to test it with the states list we have and maybe throw an error
         let bypassTest = false;
@@ -174,7 +174,7 @@ export class StateManager {
      * @param {string} string The string to escape
      * @returns An escaped string
      */
-    _escapeRegExp(string) {
+    private _escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); // $& means the whole matched string
     }
     /**
@@ -182,7 +182,7 @@ export class StateManager {
      * @param {string} state The state to extract the slug from
      * @returns {string|undefined} The slug of the state or undefined if the state don't have one
      */
-    _getSlugFromState(state) {
+    private _getSlugFromState(state) {
         let slug = state.split("/").pop();
         if(this._isNumberRegex.test(slug)) {
             return parseInt(slug);
@@ -193,7 +193,7 @@ export class StateManager {
     /**
      * Save the current info (state/params) in cache
      */
-    _saveDataInCache() {
+    private _saveDataInCache() {
 
         if(!this._activeParams || Object.keys(this._activeParams).length == 0) {
             if(localStorage["disableStorage"] == null) {
@@ -391,7 +391,7 @@ export class StateManager {
         }
         return false;
     }
-    _log(logMessage, type) {
+    private _log(logMessage, type) {
         if(type === "error") {
             console.error(logMessage);
         } else if(type === "warning" && this.logLevel > 0) {

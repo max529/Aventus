@@ -1,4 +1,4 @@
-import { normalize } from "path";
+import { normalize, sep } from "path";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     CompletionItemKind,
@@ -255,9 +255,16 @@ export function repeat(value: string, count: number) {
 
 
 export function pathToUri(path: string): string {
+    if(sep === "/"){
+        return "file://" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
+    }
     return "file:///" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
 }
 export function uriToPath(uri: string): string {
+    if(sep === "/"){
+        // linux system
+        return decodeURIComponent(uri.replace("file://", ""));
+    }
     return decodeURIComponent(uri.replace("file:///", ""));
 }
 //#endregion
