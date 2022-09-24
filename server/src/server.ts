@@ -86,6 +86,7 @@ modes.connectionWithClient?.onInitialize((_params: InitializeParams) => {
 	if (_params.workspaceFolders) {
 		Workspaces = _params.workspaceFolders;
 	}
+	
 	restart();
 
 	documents.onDidClose(e => {

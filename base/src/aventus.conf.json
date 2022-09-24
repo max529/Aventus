@@ -20,11 +20,7 @@
             "includeBase": false,
             "generateDefinition": true,
             "outputFile": "../../lib/aventus.base.js",
-            "include": [
-                {
-                    "definition": "./definition/custom.def.avt"
-                }
-            ]
+            "include": []
         }
     ]
 }

@@ -1,5 +1,6 @@
-declare function attribute<T>(onChange: (arg: T) => void);
 declare function attribute();
+declare function property<T>(onChange: (arg: T) => void);
+declare function property();
 declare function watch();
 declare function viewElement(config:ViewElementConfig);
 declare function watch<T>(onChange: (arg: T, action: WatchAction, path: string, value: any) => void);

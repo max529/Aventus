@@ -12,7 +12,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
     //#region props
 
-    @attribute()
+    @property()
     label: string;
     //#endregion
 

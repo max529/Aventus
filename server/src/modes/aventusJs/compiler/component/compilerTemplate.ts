@@ -1,5 +1,6 @@
 export var compilerTemplate = `class $classname extends $parentClass {
     $watchingAttributes
+    $variablesStatic
     $isAbstract
     $getterSetter
     $variables

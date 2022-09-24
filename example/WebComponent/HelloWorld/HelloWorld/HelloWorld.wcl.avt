@@ -9,10 +9,10 @@ export class AvHelloWorld extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @attribute()
+    @property()
     hello_clicked: number = 0;
 
-    @attribute((target: AvHelloWorld) => {
+    @property((target: AvHelloWorld) => {
         target.worldEl.innerHTML = "world " + target.word_clicked;
     })
     word_clicked: number = 0;

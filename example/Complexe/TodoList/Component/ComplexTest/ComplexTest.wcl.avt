@@ -11,7 +11,7 @@ export class AvComplexTest extends WebComponent implements DefaultComponent {
 
 
 	//#region props
-    @attribute()
+    @property()
     testvariable: string = "test";
 	//#endregion
 

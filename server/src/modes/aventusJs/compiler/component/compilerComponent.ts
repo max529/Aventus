@@ -252,15 +252,21 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		}
 		let pressEventMap = {
 			[specialTagLower + '-press']: "onPress",
+			['@press']: "onPress",
 			[specialTagLower + '-longpress']: "onLongPress",
+			['@longpress']: "onLongPress",
 			[specialTagLower + '-drag']: "onDrag",
+			['@drag']: "onDrag",
 			[specialTagLower + '-press-stop']: "onStop",
+			['@press-stop']: "onStop",
 			[specialTagLower + '-press-start']: "onStart",
+			['@press-start']: "onStart",
 			[specialTagLower + '-longpress-delay']: "delay",
+			['@longpress-delay']: "delay",
 		};
 		const _checkAttribut = (el) => {
 			for (var key in el.attribs) {
-				if (key === specialTagLower + '-element') {
+				if (key === specialTagLower + '-element' || key === "@element") {
 					const _addElement = () => {
 						var _id = _getId(el);
 						var value = el.attribs[key].split('.');
@@ -283,14 +289,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					let pressEvent = createPressEvent(el);
 					pressEvent[pressEventMap[key]] = value;
 				}
-				else if (key.startsWith(specialTagLower + '-')) {
+				else if (key.startsWith(specialTagLower + '-') || key.startsWith("@")) {
 					var _addClick = () => {
 						var _id = _getId(el);
 						var value = el.attribs[key];
 						toPrepare.eventsPerso.push({
 							componentId: _id,
 							value: value,
-							event: key.replace(specialTagLower + '-', '')
+							event: key.replace(specialTagLower + '-', '').replace("@", '')
 						});
 						$(el).removeAttr(key);
 					}
@@ -514,7 +520,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 		}
 
-		
+
 		const _constructor = () => {
 			let constructorBody = classInfo.constructorBody;
 			if (constructorBody.length > 0) {
@@ -546,15 +552,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			let variableProxy = {};
 			let variablesInViewStatic = '';
 			let variablesInViewDynamic = '';
+			let variablesStatic = "";
 
 
-			const _createAttribute = (field: FieldModel, args: any[] = []) => {
+			const _createAttribute = (field: FieldModel) => {
 				if (!field.type) {
 					return;
 				}
 				let type = field.type.typeName.toLowerCase();
 				if (!TYPES.hasOwnProperty(type)) {
-					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as property", field.start, field.end));
+					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as attribute", field.start, field.end));
 				}
 				if (field.name.toLowerCase() != field.name) {
 					result.diagnostics.push(createErrorTsPos(document, "an attribute must be in lower case", field.start, field.end));
@@ -576,6 +583,147 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 					}
 					else {
+						if (defaultValueProp === undefined) {
+							return;
+						}
+						if (!defaultValueProp) { defaultValueProp = "" }
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }\r\n";
+						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', '" + defaultValueProp + "'); }\r\n";
+					}
+				}
+				_createDefaultValue(field.name, field.valueConstraint?.value);
+
+				var _createGetterSetter = (key) => {
+					key = key.toLowerCase();
+					if (type == TYPES.string) {
+						getterSetter += `get '${key}'() {
+                        return this.getAttribute('${key}');
+                    }
+                    set '${key}'(val) {
+                        this.setAttribute('${key}',val);
+                    }\r\n`;
+					} else if (type == TYPES.number) {
+						getterSetter += `get '${key}'() {
+                        return Number(this.getAttribute('${key}'));
+                    }
+                    set '${key}'(val) {
+                        this.setAttribute('${key}',val);
+                    }\r\n`;
+					}
+					else if (type == TYPES.boolean) {
+						listBool.push('"' + key + '"');
+						getterSetter += `get '${key}'() {
+                        return this.hasAttribute('${key}');
+                    }
+                    set '${key}'(val) {
+                        if(val === 1 || val === 'true' || val === ''){
+                            val = true;
+                        }
+                        else if(val === 0 || val === 'false' || val === null || val === undefined){
+                            val = false;
+                        }
+                        if(val !== false && val !== true){
+                            console.error("error setting boolean in ${key}");
+                            val = false;
+                        }
+                        if (val) {
+                            this.setAttribute('${key}', 'true');
+                        } else{
+                            this.removeAttribute('${key}');
+                        }
+                    }\r\n`;
+					}
+					else if (type == TYPES.date) {
+						getterSetter += `
+                        get '${key}'() {
+                            if(!this.hasAttribute('${key}')) {
+                                return luxon.DateTime.now();
+                            }
+                            return luxon.DateTime.fromISO(this.getAttribute('${key}'));
+                        }
+                        set '${key}'(val) {
+                            if (val instanceof luxon.DateTime) {
+                                this.setAttribute('${key}', val.toISODate());
+                            } else if(val instanceof Date){
+                                val = luxon.DateTime.fromJSDate(val);
+                                this.setAttribute('${key}', val.toISODate());
+                            } else if (typeof val === 'string') {
+                                val = luxon.DateTime.fromISO(val);
+                                this.setAttribute('${key}', val.toISODate());
+                            } else {
+                                throw new Error("Invalid date");
+                            }
+                        }
+                        `;
+					}
+					else if (type == TYPES.datetime) {
+						getterSetter += `
+                        get '${key}'() {
+                            if(!this.hasAttribute('${key}')) {
+                                return luxon.DateTime.now();
+                            }
+                            return luxon.DateTime.fromISO(this.getAttribute('${key}'));
+                        }
+                        set '${key}'(val) {
+                            if (val instanceof luxon.DateTime) {
+                                this.setAttribute('${key}', val.toISO());
+                            } 
+                            else if(val instanceof Date){
+                                val = luxon.DateTime.fromJSDate(val);
+                                this.setAttribute('${key}', val.toISO());
+                            }
+                            else if (typeof val === 'string') {
+                                val = luxon.DateTime.fromISO(val);
+                                this.setAttribute('${key}', val.toISO());
+                            } else {
+                                throw new Error("Invalid date");
+                            }
+                        }
+                        `;
+					}
+				}
+				_createGetterSetter(field.name);
+
+
+				// html DOC
+				htmlDoc[baliseName].attributes[field.name] = {
+					name: field.name,
+					description: field.documentation.join("\r\n"),
+					values: []
+				}
+
+			}
+			const _createProperty = (field: FieldModel, args: any[] = []) => {
+				if (!field.type) {
+					return;
+				}
+				let type = field.type.typeName.toLowerCase();
+				if (!TYPES.hasOwnProperty(type)) {
+					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as property", field.start, field.end));
+				}
+				if (field.name.toLowerCase() != field.name) {
+					result.diagnostics.push(createErrorTsPos(document, "a property must be in lower case", field.start, field.end));
+				}
+				var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
+					key = key.toLowerCase();
+					if (type == TYPES.boolean) {
+						if (defaultValueProp) {
+							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }\r\n";
+						} else {
+							//If default set to false, we refresh the attribute to set it to false and not undefined
+							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }\r\n";
+						}
+					}
+					else if (type == TYPES.date || type == TYPES.datetime) {
+						if (!defaultValueProp) { defaultValueProp = "" }
+						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', " + defaultValueProp + "); }\r\n";
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }\r\n";
+
+					}
+					else {
+						if (defaultValueProp === undefined) {
+							return;
+						}
 						if (!defaultValueProp) { defaultValueProp = "" }
 						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }\r\n";
 						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', '" + defaultValueProp + "'); }\r\n";
@@ -766,7 +914,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							value = JSON.stringify(field.valueConstraint.value);
 						}
 					}
-					variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}\r\n`;
+					if (field.isStatic) {
+						variablesStatic += `static ${field.name} = ${value};\r\n`;
+					}
+					else {
+						variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}\r\n`;
+					}
 				}
 				else {
 					let id = toPrepare.variablesInView[field.name];
@@ -961,7 +1114,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					listToCheck.splice(index, 1);
 				}
 				if (field.inParent) {
-					if(toPrepare.variablesInView.hasOwnProperty(field.name)){
+					if (toPrepare.variablesInView.hasOwnProperty(field.name)) {
 						// allow override value
 						_createSimpleVariable(field);
 					}
@@ -972,9 +1125,13 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					continue;
 				}
 				else if (field.propType == "attribute") {
+					_createAttribute(field);
+					continue;
+				}
+				else if (field.propType == "property") {
 					for (let decorator of field.decorators) {
-						if (decorator.name == "attribute") {
-							_createAttribute(field, decorator.arguments);
+						if (decorator.name == "property") {
+							_createProperty(field, decorator.arguments);
 						}
 					}
 					continue;
@@ -1023,8 +1180,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			}
 
 			//#region writing into template
+			template = template.replace(/\$variablesStatic/g, variablesStatic);
 			template = template.replace(/\$variablesInViewDynamic/g, variablesInViewDynamic);
-			if(variablesInViewStatic.length > 0){
+			if (variablesInViewStatic.length > 0) {
 				variablesInViewStatic = `__mapSelectedElement() { super.__mapSelectedElement(); ${variablesInViewStatic}}`;
 			}
 			template = template.replace(/\$variablesInViewStatic/g, variablesInViewStatic);

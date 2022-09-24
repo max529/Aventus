@@ -14,7 +14,7 @@ export abstract class AvPage extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-
+    
     //#endregion
 
 

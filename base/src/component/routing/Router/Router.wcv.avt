@@ -1,1 +1,3 @@
-<slot></slot>
+<slot name="before"></slot>
+<div class="content" av-element="contentEl"></div>
+<slot name="after"></slot>

@@ -118,6 +118,8 @@ export interface FieldModel {
     optional: boolean;
     start: number;
     end: number;
+    isStatic: Boolean,
+    isPrivate: Boolean,
 }
 
 export interface MethodModel {

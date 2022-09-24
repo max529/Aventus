@@ -197,7 +197,7 @@ export function parseStruct(content: string, modules: { [path: string]: Module }
             if (u.name) {
                 var aliasName = u.name.text;
                 var type = buildType(u.type, mpth);
-                module.aliases.push({ name: aliasName, type: type, content:content.substring(x.pos, x.end) });
+                module.aliases.push({ name: aliasName, type: type, content: content.substring(x.pos, x.end) });
             }
 
             //return;
@@ -394,7 +394,7 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
         }
     }
     const decorators = ts.canHaveDecorators(f) ? ts.getDecorators(f) : undefined;
-    return {
+    let field: FieldModel = {
         name: f.name["text"],
         type: buildType(f.type, path),
         annotations: [],
@@ -403,8 +403,33 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
         optional: f.questionToken != null,
         decorators: (decorators) ? decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
         start: f.pos,
-        end: f.end
+        end: f.end,
+        isPrivate: false,
+        isStatic: false
     };
+    if (f.modifiers) {
+        f.modifiers.forEach(x => {
+            let nothingToDo = [
+                ts.SyntaxKind.ReadonlyKeyword,
+                ts.SyntaxKind.ConstKeyword,
+                ts.SyntaxKind.OverrideKeyword,
+                ts.SyntaxKind.PublicKeyword,
+                ts.SyntaxKind.Decorator
+            ]
+            if (x.kind === ts.SyntaxKind.StaticKeyword) {
+                field.isStatic = true;
+            } else if (x.kind === ts.SyntaxKind.PrivateKeyword) {
+                field.isPrivate = true;
+            } else if (x.kind === ts.SyntaxKind.ProtectedKeyword) {
+                field.isPrivate = true;
+            }
+            else if (nothingToDo.indexOf(x.kind) != -1) { }
+            else {
+                throw new Error("Unknown token field modifiers " + x.kind);
+            }
+        });
+    }
+    return field;
     // return {
     //     name: f.name["text"],
     //     type: buildType(f.type, path),
@@ -623,7 +648,7 @@ function parseName(n: ts.Expression): string {
         var m: ts.PropertyAccessExpression = <ts.PropertyAccessExpression>n;
         return parseName(m.expression) + "." + parseName(m.name);
     }
-    if(n.kind == ts.SyntaxKind.ThisKeyword){
+    if (n.kind == ts.SyntaxKind.ThisKeyword) {
         return "this";
     }
     throw new Error("Only simple identifiers are supported now");

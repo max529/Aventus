@@ -53,6 +53,15 @@ export function loadFields(classInfo: ClassModel, isBase: boolean): { [key: stri
 				found = true;
 				break;
 			}
+			else if (decorator.name == "property") {
+				result[field.name] = {
+					...field,
+					propType: 'property',
+					inParent: !isBase,
+				}
+				found = true;
+				break;
+			}
 			else if (decorator.name == "watch") {
 				result[field.name] = {
 					...field,

@@ -18,6 +18,7 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
 
     //#region variables
     private oldPage: AvPage;
+    public contentEl: HTMLDivElement;
     //#endregion
 
 
@@ -42,7 +43,7 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
         }
     }
     private initRoute(path: string, element: AvPage) {
-        this.shadowRoot.appendChild(element);
+        this.contentEl.appendChild(element);
         StateManager.getInstance("navigation").subscribe(path, {
             active: (currentState) => {
                 if(this.oldPage && this.oldPage != element) {
@@ -52,7 +53,8 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
                 this.oldPage = element;
                 if(window.location.pathname != currentState) {
                     let newUrl = window.location.origin + currentState;
-                    window.history.pushState({}, element.defineTitle(), currentState);
+                    document.title = element.defineTitle();
+                    window.history.pushState({}, element.defineTitle(), newUrl);
                 }
             }
         });

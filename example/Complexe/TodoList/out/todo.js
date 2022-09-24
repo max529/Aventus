@@ -283,7 +283,6 @@ class AvInput extends AvFormElement {
     getClassName() {
         return "AvInput";
     }
-    __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('label')){ this['label'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
     __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avinput_1') != -1) {
                     if (this._components['avinput_1']) {
