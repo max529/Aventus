@@ -81,6 +81,7 @@ export interface AventusConfigStatic {
 	inputPathFolder: string,
 	outputPath: string
 	outputPathFolder: string,
+	exportOnChange?: boolean,
 	colorsMap?: { [key: string]: string }
 }
 export interface AventusConfig {

@@ -7,7 +7,7 @@ import * as aventusConfig from '../../config';
 import * as modes from '../../mode';
 import { AventusDoc, aventusExtension, AventusType } from './aventusDoc';
 import { AventusConfig, compilerOptions, completionOptions, formatingOptions } from './config';
-import { convertRange, getFolder, pathToUri, simplifyPath, uriToPath } from './utils';
+import { convertRange, getFolder, getSectionEnd, getSectionStart, pathToUri, simplifyPath, uriToPath } from './utils';
 import {
 	Range,
 } from 'vscode-languageserver/node';
@@ -100,9 +100,9 @@ export class AventusJSProgramManager {
 			await program.generalRebuild();
 		}
 	}
-	public async createProgram(document: TextDocument): Promise<void> {
+	public async createProgram(configFile: TextDocument): Promise<void> {
 		let prog = new AventusJSProgram();
-		await prog.init(document);
+		await prog.init(configFile);
 		this.programs.push(prog);
 	}
 
@@ -599,7 +599,7 @@ export class AventusJSProgram {
 	public async compile(document: TextDocument) {
 		let config = this.getConfig();
 		if (config) {
-			await this.doValidation(document);
+			await this.doValidation(document, true);
 			this.filesLoaded[document.uri]?.compile(config)
 		}
 	}
@@ -620,7 +620,7 @@ export class AventusJSProgram {
 		let config = modes.jsonMode.getConfig(uri);
 		this.loadInclude();
 		for (let file in this.filesLoaded) {
-			nb += (await this.doValidation(this.filesLoaded[file].document)).length;
+			nb += (await this.doValidation(this.filesLoaded[file].document, true)).length;
 			if (config) {
 				this.filesLoaded[file].compile(config);
 			}
@@ -635,7 +635,7 @@ export class AventusJSProgram {
 		return config;
 	}
 
-	public async doValidation(document: TextDocument): Promise<Diagnostic[]> {
+	public async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc:boolean = false): Promise<Diagnostic[]> {
 		let diagnostics: Diagnostic[] = []
 		let tempDoc = new AventusDoc(document, this);
 		if (tempDoc.getType() == AventusType.Definition) {
@@ -664,10 +664,11 @@ export class AventusJSProgram {
 					}
 					else {
 						const languageService = this.getLanguageService();
+						
 						const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(document.uri);
 						const semanticDiagnostics: ts.Diagnostic[] = languageService.getSemanticDiagnostics(document.uri);
 
-						const compileError: Diagnostic[] = this.filesLoaded[document.uri].doValidation(config, this);
+						const compileError: Diagnostic[] = this.filesLoaded[document.uri].doValidation(config, this, virtualDoc);
 
 						diagnostics = syntaxDiagnostics.concat(semanticDiagnostics).map((diag: ts.Diagnostic): Diagnostic => {
 							return {
@@ -688,17 +689,19 @@ export class AventusJSProgram {
 							doc.hasError = true;
 						}
 					}
-					if (modes.connectionWithClient) {
-						modes.connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
-					}
-					else if (diagnostics.length > 0) {
-						console.log("---- Erreur ----");
-
-						console.log("file : " + document.uri.replace(this.baseDir, ""));
-						for (let diag of diagnostics) {
-							console.log(diag.message);
+					if (sendDiagnostic) {
+						if (modes.connectionWithClient) {
+							modes.connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
 						}
-						console.log("---- Erreur Fin ----");
+						else if (diagnostics.length > 0) {
+							console.log("---- Erreur ----");
+
+							console.log("file : " + document.uri.replace(this.baseDir, ""));
+							for (let diag of diagnostics) {
+								console.log(diag.message);
+							}
+							console.log("---- Erreur Fin ----");
+						}
 					}
 				} catch (e) { console.error(e) }
 			}
@@ -739,6 +742,12 @@ export class AventusJSProgram {
 							let finalPath = simplifyPath(newImport[1], document.uri);
 							action.description = "Add import from " + finalPath;
 							textChange.newText = textChange.newText.replace(newImport[1], finalPath);
+						}
+					}
+					else if (action.fixName === "fixClassDoesntImplementInheritedAbstractMember") {
+						let index = getSectionStart(document, "methods")
+						if (index != -1) {
+							textChange.span.start = index;
 						}
 					}
 					changes.push({
@@ -837,7 +846,7 @@ export class AventusJSProgram {
 			}
 		}
 		else {
-			console.log("can't found "+pathToImport);
+			console.log("can't found " + pathToImport);
 		}
 	}
 }

@@ -16,7 +16,13 @@ export function simplifyPath(importPathTxt, currentPath) {
     if (importPathTxt.startsWith("custom://")) {
         return importPathTxt;
     }
-    let currentDir = decodeURIComponent(currentPath).replace("file:///", "").split("/");
+    let currentDir: string[] = [];
+    if (sep === "/") {
+        currentDir = decodeURIComponent(currentPath).replace("file://", "").split("/");
+    }
+    else {
+        currentDir = decodeURIComponent(currentPath).replace("file:///", "").split("/");
+    }
     currentDir.pop();
     let currentDirPath = normalize(currentDir.join("/")).split("\\");
     let importPath = normalize(currentDir.join("/") + "/" + importPathTxt).split("\\");
@@ -255,17 +261,35 @@ export function repeat(value: string, count: number) {
 
 
 export function pathToUri(path: string): string {
-    if(sep === "/"){
+    if (sep === "/") {
         return "file://" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
     }
     return "file:///" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
 }
 export function uriToPath(uri: string): string {
-    if(sep === "/"){
+    if (sep === "/") {
         // linux system
         return decodeURIComponent(uri.replace("file://", ""));
     }
     return decodeURIComponent(uri.replace("file:///", ""));
+}
+
+type SectionType = "static" | "props" | "variables" | "states" | "constructor" | "methods";
+export function getSectionStart(document: TextDocument, sectionName: SectionType): number {
+    let regex = new RegExp("//#region " + sectionName + "(\\s|\\S)*?//#endregion")
+    let match = regex.exec(document.getText());
+    if (match) {
+        return match.index + 10 + sectionName.length;
+    }
+    return -1
+}
+export function getSectionEnd(document: TextDocument, sectionName: SectionType): number {
+    let regex = new RegExp("//#region " + sectionName + "(\\s|\\S)*?//#endregion")
+    let match = regex.exec(document.getText());
+    if (match) {
+        return match.index + match[0].length - 12;
+    }
+    return -1
 }
 //#endregion
 

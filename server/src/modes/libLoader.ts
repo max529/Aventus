@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { join, basename, dirname } from 'path';
+import { join, basename, dirname, sep } from 'path';
 import { fstatSync, readFileSync, existsSync } from 'fs';
 
 const contents: { [name: string]: string } = {};
@@ -32,7 +32,12 @@ export function loadLibrary(name: string): string {
 		libPath = AVENTUS_BASE_PATH;
 	}
 	else if (name.startsWith("file:///")) {
-		libPath = decodeURIComponent(name.replace("file:///", ""));
+		if (sep === "/") {
+			libPath = decodeURIComponent(name.replace("file://", ""));
+		}
+		else {
+			libPath = decodeURIComponent(name.replace("file:///", ""));
+		}
 		if (libPath.indexOf("/node_modules/@typescript") != -1) {
 			//showError = false;
 		}

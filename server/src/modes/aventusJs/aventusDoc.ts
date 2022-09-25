@@ -31,6 +31,7 @@ export const aventusExtension = {
 	ComponentLogic: ".wcl.avt",
 	ComponentView: ".wcv.avt",
 	ComponentStyle: ".wcs.avt",
+	Component: ".wc.avt",
 	Data: ".data.avt",
 	Lib: ".lib.avt",
 	RAM: ".ram.avt",
@@ -89,15 +90,16 @@ export class AventusDoc {
 		else if (this.path.endsWith(aventusExtension.Socket)) {
 			return AventusType.Socket;
 		}
+		
 		console.log("unknow extension " + this.path);
 		return AventusType.Unknow;
 	}
 
-	doValidation(config: AventusConfig, program: AventusJSProgram): Diagnostic[] {
+	doValidation(config: AventusConfig, program: AventusJSProgram, virtualDoc:boolean): Diagnostic[] {
 		let compileError: Diagnostic[] = [];
 
 		if (this.type == AventusType.Component) {
-			let compiled = compileComponent(this.document, config, program);
+			let compiled = compileComponent(this.document, config, program, virtualDoc);
 			if (compiled.success) {
 				this.lastCompiledWebComponent = compiled;
 			}

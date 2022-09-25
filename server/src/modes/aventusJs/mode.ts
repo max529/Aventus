@@ -46,9 +46,9 @@ export class AventusJSMode {
             this.listFiles[file.uri] = file
         }
     }
-    async doValidation(document: TextDocument) {
+    async doValidation(document: TextDocument, sendDiagnostic: boolean) {
         this.listFiles[document.uri] = document;
-        this.programManager.getProgram(document).doValidation(document);
+        return this.programManager.getProgram(document).doValidation(document, sendDiagnostic);
     }
     async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
         try {

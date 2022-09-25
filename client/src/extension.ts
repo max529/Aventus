@@ -50,7 +50,12 @@ export function activate(context: vscode.ExtensionContext) {
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: "Aventus Ts" }, { scheme: 'file', language: "Aventus HTML" }, { scheme: 'file', language: 'Aventus SCSS' }],
+		documentSelector: [
+			{ scheme: 'file', language: "Aventus Ts" }, 
+			{ scheme: 'file', language: "Aventus HTML" }, 
+			{ scheme: 'file', language: 'Aventus SCSS' },
+			{ scheme: 'file', language: 'Aventus WebComponent' },
+		],
 		middleware: {
 			executeCommand: async (command, args, next) => {
 				if (command == "aventus.create") {
@@ -68,12 +73,14 @@ export function activate(context: vscode.ExtensionContext) {
 					if (result) {
 						args.push(result);
 						if (result.label == "Init") {
+							let folderSplitted = args[0].path.split('/');
 							const name = await vscode.window.showInputBox({
 								title: "Provide a name for your project",
+								value: folderSplitted[folderSplitted.length - 1]
 							});
 							args.push(name);
 						}
-						else if(result.label == "RAM"){
+						else if (result.label == "RAM") {
 							let dataToLink: BuildQuickPick[] = [];
 							for (let uri in allAvData) {
 								for (let name of allAvData[uri]) {

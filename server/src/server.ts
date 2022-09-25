@@ -27,6 +27,7 @@ import { AventusSCSSMode } from './modes/aventusSCSS/mode';
 import * as aventusConfig from './config';
 import * as modes from './mode';
 import { Create } from './cmds/create';
+import { AventusWcMode } from './modes/aventusWc/mode';
 
 
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -37,6 +38,7 @@ export async function init(uris: string[]) {
 	let scriptFiles: TextDocument[] = [];
 	let viewFiles: TextDocument[] = [];
 	let styleFiles: TextDocument[] = [];
+	let wcFiles: TextDocument[] = [];
 	for (let i = 0; i < uris.length; i++) {
 		let workspacePath = uriToPath(uris[i])
 		let readWorkspace = (workspacePath) => {
@@ -57,6 +59,9 @@ export async function init(uris: string[]) {
 					else if(folderContent[i].endsWith(aventusExtension.ComponentStyle)){
 						styleFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdSCSS, 0, readFileSync(currentPath, 'utf8')));
 					}
+					else if(folderContent[i].endsWith(aventusExtension.Component)){
+						wcFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdWc, 0, readFileSync(currentPath, 'utf8')));
+					}
 					else if (folderContent[i].endsWith("." + aventusConfig.extension)) {
 						scriptFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdJs, 0, readFileSync(currentPath, 'utf8')));
 					}
@@ -70,6 +75,7 @@ export async function init(uris: string[]) {
 	await modes.jsMode.init(scriptFiles);
 	modes.htmlMode.init(viewFiles);
 	await modes.scssMode.init(styleFiles);
+	await modes.wcMode.init(wcFiles);
 	await modes.jsMode.programManager.resetProgram();
 }
 
@@ -146,7 +152,7 @@ documents.onDidSave((change) => {
 })
 
 
-function selectRightMode(textDocument: TextDocument): AventusJSMode | AventusJSONMode | AventusHTMLMode | AventusSCSSMode | undefined {
+function selectRightMode(textDocument: TextDocument): AventusJSMode | AventusJSONMode | AventusHTMLMode | AventusWcMode | AventusSCSSMode | undefined {
 	if (textDocument.uri.endsWith(aventusConfig.configFileName)) {
 		return modes.jsonMode;
 	}
@@ -155,6 +161,9 @@ function selectRightMode(textDocument: TextDocument): AventusJSMode | AventusJSO
 	}
 	else if(textDocument.languageId == aventusConfig.languageIdSCSS){
 		return modes.scssMode;
+	}
+	else if(textDocument.languageId == aventusConfig.languageIdWc){
+		return modes.wcMode;
 	}
 	else if (textDocument.languageId == aventusConfig.languageIdJs && !textDocument.uri.endsWith(aventusExtension.Definition)) {
 		return modes.jsMode;
@@ -180,7 +189,7 @@ async function validateTextDocument(textDocument: TextDocument) {
 				// check no new version has come in after in after the async op
 				let mode = selectRightMode(textDocument);
 				if (mode) {
-					mode.doValidation(textDocument);
+					mode.doValidation(textDocument, true);
 				}
 
 				// connectionVs.sendDiagnostics({ uri: latestTextDocument.uri, diagnostics });

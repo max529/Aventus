@@ -3,9 +3,10 @@ import { CompletionItem, CompletionList, Diagnostic, getLanguageService, Hover, 
 import { CodeAction, Definition, FormattingOptions, Range, TextEdit, _, _Connection } from "vscode-languageserver";
 import { jsMode, connectionWithClient } from '../../mode';
 import { createErrorTs } from '../aventusJs/compiler/utils';
-import { AventusConfig } from '../aventusJs/config';
-import { getFolder, uriToPath } from '../aventusJs/utils';
+import { AventusConfig, AventusConfigStatic } from '../aventusJs/config';
+import { getFolder, pathToUri, uriToPath } from '../aventusJs/utils';
 import { configFileName } from '../../config';
+import * as Chokidar from 'chokidar'
 
 export class AventusJSONMode {
 	schema: JSONSchema
@@ -13,7 +14,8 @@ export class AventusJSONMode {
 	private jsonSchemaUri = 'foo://aventus/conf.json';
 	private configs: { [key: string]: AventusConfig } = {}
 	private listFoundConfig: { [key: string]: TextDocument } = {}
-	private activateReload: boolean = false
+	private activateReload: boolean = false;
+	private listChokidar: { [key: string]: Chokidar.FSWatcher } = {}
 	constructor() {
 		this.schema = {
 			"$schema": this.jsonSchemaUri,
@@ -99,6 +101,7 @@ export class AventusJSONMode {
 							"name": { type: "string" },
 							"inputPath": { type: "string" },
 							"outputPath": { type: "string" },
+							"exportOnChange": { type: "boolean" },
 							"colorsMap": {
 								type: "object",
 								description: "Color to map when transpile svg"
@@ -244,23 +247,52 @@ export class AventusJSONMode {
 		if (config.static) {
 			for (let _static of config.static) {
 				statics.push(_static.name);
-				let slash = "";
-				if (!_static.inputPath.startsWith("/")) {
-					slash = "/";
-				}
-				_static.inputPathFolder = normalize(uriToPath(baseDir) + slash + _static.inputPath);
-				_static.inputPathFolder = _static.inputPathFolder.replace(/\\/g, '/')
-
-				slash = "";
-				if (!_static.outputPath.startsWith("/")) {
-					slash = "/";
-				}
-				_static.outputPathFolder = normalize(uriToPath(baseDir) + slash + _static.outputPath);
-				_static.outputPathFolder = _static.outputPathFolder.replace(/\\/g, '/')
+				this.prepareStatic(uri, _static);
 			}
 		}
 		connectionWithClient?.sendNotification("aventus/registerBuild", [builds, uriToPath(uri)]);
 		connectionWithClient?.sendNotification("aventus/registerStatic", [statics, uriToPath(uri)]);
 
+	}
+	private prepareStatic(configUri: string, _static: AventusConfigStatic) {
+		let baseDir = getFolder(configUri);
+		let slash = "";
+		if (!_static.inputPath.startsWith("/")) {
+			slash = "/";
+		}
+		_static.inputPathFolder = normalize(uriToPath(baseDir) + slash + _static.inputPath);
+		_static.inputPathFolder = _static.inputPathFolder.replace(/\\/g, '/')
+
+		slash = "";
+		if (!_static.outputPath.startsWith("/")) {
+			slash = "/";
+		}
+		_static.outputPathFolder = normalize(uriToPath(baseDir) + slash + _static.outputPath);
+		_static.outputPathFolder = _static.outputPathFolder.replace(/\\/g, '/');
+		if (_static.hasOwnProperty("exportOnChange") && !_static.exportOnChange) {
+			return;
+		}
+		if (!this.listChokidar[_static.inputPathFolder]) {
+			let watcher = Chokidar.watch(_static.inputPathFolder, {
+				ignored: /^\./,
+				persistent: true,
+				awaitWriteFinish: {
+					stabilityThreshold: 100,
+					pollInterval: 100
+				},
+
+			});
+			watcher.on('add', function (path) {
+				jsMode.programManager.getProgram(configUri, false).exportStatic(_static.name);
+			})
+			watcher.on('change', function (path) {
+				jsMode.programManager.getProgram(configUri, false).exportStatic(_static.name);
+			})
+			watcher.on('unlink', function (path) {
+				jsMode.programManager.getProgram(configUri, false).exportStatic(_static.name);
+			})
+			watcher.on('error', function (error) { })
+			this.listChokidar[_static.outputPathFolder] = watcher;
+		}
 	}
 }

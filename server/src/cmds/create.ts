@@ -1,8 +1,10 @@
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 import { connectionWithClient, jsMode, jsonMode } from '../mode';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
 import { getImportPath, pathToUri, uriToPath } from '../modes/aventusJs/utils';
+import * as aventusConfig from '../config';
 
 
 export class Create {
@@ -39,7 +41,9 @@ export class Create {
             "includeBase": true
         }
     ]
-}`)
+}`);
+						
+						jsMode.programManager.createProgram(TextDocument.create(pathToUri(baseFolder + "/aventus.conf.json"), aventusConfig.languageIdJs, 0, readFileSync(baseFolder + "/aventus.conf.json", 'utf8')));
 						connectionWithClient?.sendNotification("aventus/openfile", pathToUri(baseFolder + "/aventus.conf.json"))
 					}
 					else {
@@ -138,7 +142,7 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 	//#endregion
 	
 }`);
-								writeFileSync(newScriptPath + aventusExtension.ComponentStyle, ":host{\r\n\t\r\n}");
+								writeFileSync(newScriptPath + aventusExtension.ComponentStyle, ":host {\r\n\t\r\n}\r\n");
 								writeFileSync(newScriptPath + aventusExtension.ComponentView, "<slot></slot>");
 
 								jsMode.programManager.getProgram(newScriptPath + aventusExtension.ComponentLogic);

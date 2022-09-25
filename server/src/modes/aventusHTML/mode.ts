@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { getLanguageService as getHTMLLanguageService, IAttributeData, ITagData, IValueData, LanguageService } from 'vscode-html-languageservice'
-import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, FormattingOptions, Hover, Position, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, TextEdit } from 'vscode-languageserver';
 import { HTMLDoc } from '../aventusJs/compiler/component/def';
 import { Range } from 'vscode-languageserver/node'
 import { aventusExtension } from '../aventusJs/aventusDoc';
@@ -134,10 +134,11 @@ export class AventusHTMLMode {
 		}
 		return null;
 	}
-	async doValidation(document: TextDocument) {
-		if (connectionWithClient) {
+	async doValidation(document: TextDocument, sendDiagnostic: boolean) :  Promise<Diagnostic[]> {
+		if (connectionWithClient && sendDiagnostic) {
 			connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 		}
+		return [];
 	}
 	compile(document: TextDocument) {
 		let uriLogic = document.uri.replace(aventusExtension.ComponentView, aventusExtension.ComponentLogic);

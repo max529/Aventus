@@ -27,13 +27,12 @@ function resolvePath(loadingPath: string, currentFolder: string): string {
 	}
 	return "";
 }
-function loadFile(stylePath: string): {
+function loadFile(stylePath: string, text:string): {
 	state: 'ok' | 'ko',
 	content: string,
 	importedPath: string[]
 } {
 	let folderPath = getFolder(stylePath);
-	let text = readFileSync(stylePath, 'utf8');
 	//remove comment 
 	text = text.replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '$1')
 	let regex = /@import *?('|")(\S*?)('|");?/g;
@@ -50,7 +49,7 @@ function loadFile(stylePath: string): {
 			}
 		}
 		importedPath.push(pathToImport);
-		let newContent = loadFile(pathToImport);
+		let newContent = loadFile(pathToImport, readFileSync(pathToImport, 'utf8'));
 		if (newContent.state == "ko") {
 			return newContent;
 		}
@@ -74,8 +73,8 @@ export interface ScssCompilerResult {
 	importedPath: string[],
 	errorInfo: string
 }
-export function compileScss(stylePath): ScssCompilerResult {
-	let result = loadFile(stylePath);
+export function compileScss(stylePath, text:string): ScssCompilerResult {
+	let result = loadFile(stylePath, text);
 	if (result.state == "ko") {
 		return {
 			success: false,

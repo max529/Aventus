@@ -18,7 +18,7 @@ import { AventusJSProgram } from '../../program';
 const ts = require("typescript");
 
 
-export function compileComponent(document: TextDocument, config: AventusConfig, program: AventusJSProgram): CompileComponentResult {
+export function compileComponent(document: TextDocument, config: AventusConfig, program: AventusJSProgram, virtualDoc: boolean): CompileComponentResult {
 	let specialTag = config.identifier;
 	let specialTagLower = specialTag.toLowerCase();
 	let baliseName = "";
@@ -61,7 +61,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	let stylePath = getStylePath();
 	let style: ScssCompilerResult;
 	if (stylePath != "") {
-		style = compileScss(getStylePath());
+		style = compileScss(stylePath, readFileSync(stylePath, 'utf8'));
 		if (!style.success) {
 			result.diagnostics.push(createErrorTs(document, style.errorInfo));
 		}

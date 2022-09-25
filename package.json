@@ -49,6 +49,17 @@
 				}
 			},
 			{
+				"id": "Aventus WebComponent",
+				"extensions": [
+					"wc.avt"
+				],
+				"configuration": "./syntaxes/html-language-configuration.json",
+				"icon": {
+					"light": "./icons/icon.png",
+					"dark": "./icons/icon.png"
+				}
+			},
+			{
 				"id": "Aventus Ts",
 				"extensions": [
 					".wcl.avt",
@@ -84,6 +95,11 @@
 				"language": "Aventus SCSS",
 				"scopeName": "source.css.scss",
 				"path": "./syntaxes/scss.tmLanguage.json"
+			},
+			{
+				"language": "Aventus WebComponent",
+				"scopeName": "text.html1.basic",
+				"path": "./syntaxes/html.tmLanguage.json"
 			}
 		],
 		"configuration": {
@@ -154,6 +170,7 @@
 		"compile:client": "tsc -b ./client/",
 		"compile:server": "tsc -b ./server/",
 		"dev": "rimraf server/out && tsc -b -w ./server/",
+		"dev:client": "rimraf client/out && tsc -b -w ./client/",
 		"webpack": "npm run clean && webpack --mode production --config ./client/webpack.config.js && webpack --mode production --config ./server/webpack.config.js",
 		"clean": "rimraf client/out && rimraf server/out",
 		"package": "npx vsce package",
@@ -181,6 +198,7 @@
 		"@types/node": "16.x",
 		"babel-minify": "^0.5.2",
 		"cheerio": "^1.0.0-rc.11",
+		"chokidar": "^3.5.3",
 		"sass": "^1.53.0",
 		"typescript": "^4.8.2",
 		"uglify-js": "^3.17.1",

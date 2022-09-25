@@ -20,7 +20,7 @@ export class AventusSCSSMode {
 	async init(documents: TextDocument[]): Promise<void> {
 		this.customLanguageService = getSCSSLanguageService();
 		for (let doc of documents) {
-			await this.doValidation(doc);
+			await this.doValidation(doc, true);
 		}
 	}
 
@@ -51,13 +51,23 @@ export class AventusSCSSMode {
 		return null;
 	}
 
-	async doValidation(document: TextDocument): Promise<Diagnostic[]> {
+	async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc: boolean = false): Promise<Diagnostic[]> {
 		let diagnostics: Diagnostic[] = [];
 		if (this.customLanguageService) {
 			diagnostics = this.customLanguageService.doValidation(document, this.customLanguageService.parseStylesheet(document))
 			// care css-lcurlyexpected  => be sure to have utf-8 encoding
+			for (let i = 0; i < diagnostics.length; i++) {
+				if (diagnostics[i].code == "emptyRules") {
+					diagnostics.splice(i, 1);
+					i--;
+				}
+			}
 		}
-		let result = compileScss(uriToPath(document.uri));
+		let pathURL = document.uri;
+		if (virtualDoc) {
+			pathURL = document.uri.replace(aventusExtension.ComponentStyle, aventusExtension.Component);
+		}
+		let result = compileScss(uriToPath(document.uri), document.getText());
 		if (result.success) {
 			this.removeDependances(document);
 			this.dependancesFile[document.uri] = [];
@@ -75,7 +85,7 @@ export class AventusSCSSMode {
 				}
 			}
 		}
-		if (connectionWithClient) {
+		if (connectionWithClient && sendDiagnostic) {
 			connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
 		}
 		return diagnostics;
@@ -235,6 +245,7 @@ export class AventusSCSSMode {
 		}
 		return result;
 	}
+	// TODO add a linter to order all property
 
 	public addDefinition(uri: string, doc: SCSSDoc): void {
 		this.documentationInfoDef[uri] = doc;

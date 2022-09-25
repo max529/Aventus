@@ -10,6 +10,12 @@
 
 const path = require('path');
 const merge = require('merge-options');
+const { IgnorePlugin } = require('webpack');
+
+const optionalPlugins = [];
+if (process.platform !== "darwin") {
+	optionalPlugins.push(new IgnorePlugin({ resourceRegExp: /^fsevents$/ }));
+}
 
 module.exports = function withDefaults(/**@type WebpackConfig*/extConfig) {
 
@@ -18,11 +24,11 @@ module.exports = function withDefaults(/**@type WebpackConfig*/extConfig) {
 		mode: 'none', // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
 		target: 'node', // extensions run in a node context
 		node: {
-			__dirname: false // leave the __dirname-behaviour intact
+			__dirname: false, // leave the __dirname-behaviour intact
 		},
 		resolve: {
 			mainFields: ['module', 'main'],
-			extensions: ['.ts', '.js'] // support ts-files and js-files
+			extensions: ['.ts', '.js'], // support ts-files and js-files
 		},
 		module: {
 			rules: [{
@@ -50,10 +56,13 @@ module.exports = function withDefaults(/**@type WebpackConfig*/extConfig) {
 			path: path.join(extConfig.context, 'out'),
 			libraryTarget: "commonjs",
 		},
-		ignoreWarnings:[
+		ignoreWarnings: [
 			{
-				module:/^.*typescript\.js$/
+				module: /^.*typescript\.js$/
 			}
+		],
+		plugins: [
+			...optionalPlugins,
 		],
 		// yes, really source maps
 		devtool: 'source-map'
