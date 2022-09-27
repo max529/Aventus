@@ -14,7 +14,7 @@ import {
 	TransportKind
 } from 'vscode-languageclient';
 import { resourceLimits } from 'worker_threads';
-import { BuildQuickPick } from './quickPick';
+import { BuildQuickPick, QuickPick } from './quickPick';
 import { AventusPeview } from './webview/preview';
 
 let client: LanguageClient;
@@ -51,26 +51,20 @@ export function activate(context: vscode.ExtensionContext) {
 	const clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
 		documentSelector: [
-			{ scheme: 'file', language: "Aventus Ts" }, 
-			{ scheme: 'file', language: "Aventus HTML" }, 
+			{ scheme: 'file', language: "Aventus Ts" },
+			{ scheme: 'file', language: "Aventus HTML" },
 			{ scheme: 'file', language: 'Aventus SCSS' },
 			{ scheme: 'file', language: 'Aventus WebComponent' },
 		],
 		middleware: {
 			executeCommand: async (command, args, next) => {
 				if (command == "aventus.create") {
-					let toDisplay: BuildQuickPick[] = [
-						new BuildQuickPick("Init", "Create a project"),
-						new BuildQuickPick("Component", "Create a component"),
-						new BuildQuickPick("Data", "Create a data"),
-						new BuildQuickPick("Library", "Create a library"),
-						new BuildQuickPick("RAM", "Create a RAM"),
-					];
-					const result = await vscode.window.showQuickPick(toDisplay, {
+					const result = await vscode.window.showQuickPick(QuickPick.createOptions, {
 						placeHolder: 'What do you want to create?',
 						canPickMany: false,
 					});
 					if (result) {
+						QuickPick.reorder(QuickPick.createOptions, result);
 						args.push(result);
 						if (result.label == "Init") {
 							let folderSplitted = args[0].path.split('/');
@@ -93,6 +87,22 @@ export function activate(context: vscode.ExtensionContext) {
 							});
 							if (resultData) {
 								args.push(resultData);
+							}
+						}
+						else if (result.label == "Component") {
+							const name = await vscode.window.showInputBox({
+								title: "Provide a name for your " + result.label,
+							});
+							args.push(name);
+							if (name) {
+								const resultFormat = await vscode.window.showQuickPick(QuickPick.componentFormat, {
+									placeHolder: 'How should I setup your component?',
+									canPickMany: false,
+								});
+								if (resultFormat) {
+									QuickPick.reorder(QuickPick.componentFormat, resultFormat);
+									args.push(resultFormat);
+								}
 							}
 						}
 						else {

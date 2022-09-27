@@ -28,6 +28,7 @@ import { convertKind, convertRange, convertSymbolKind, generateIndent, getWordAt
 import { completionOptions, formatingOptions } from './config';
 import { AventusJSProgramManager } from './program';
 import { languageIdJs } from '../../config';
+import { EOL } from 'os';
 
 
 
@@ -41,14 +42,17 @@ export class AventusJSMode {
     getFiles() {
         return this.listFiles;
     }
+    getFile(uri: string) {
+        return this.listFiles[uri];
+    }
     async init(files: TextDocument[]) {
         for (let file of files) {
             this.listFiles[file.uri] = file
         }
     }
-    async doValidation(document: TextDocument, sendDiagnostic: boolean) {
+    async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc: boolean = false) {
         this.listFiles[document.uri] = document;
-        return this.programManager.getProgram(document).doValidation(document, sendDiagnostic);
+        return this.programManager.getProgram(document).doValidation(document, sendDiagnostic, virtualDoc);
     }
     async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
         try {
@@ -72,11 +76,11 @@ export class AventusJSMode {
                 let entry = completions.entries[i];
                 let remplacement = entry.insertText ? entry.insertText : entry.name
                 let customData = {
-                    languageIdJs,
+                    languageId: languageIdJs,
                     offset: offset,
                     uri: document.uri
                 }
-                
+
                 let completionEntry: CompletionItem = {
                     label: entry.name,
                     sortText: entry.sortText,
@@ -102,11 +106,11 @@ export class AventusJSMode {
             if (document != null) {
                 const jsLanguageService = program.getLanguageService();
                 let myData = {
-                    languageIdJs: item.data.languageIdJs,
+                    languageId: item.data.languageIdJs,
                     offset: item.data.offset,
                     uri: item.data.uri
                 }
-                delete item.data.languageIdJs;
+                delete item.data.languageId;
                 delete item.data.offset;
                 delete item.data.uri;
                 if (Object.keys(item.data).length == 0) {
@@ -168,7 +172,7 @@ export class AventusJSMode {
             const contents = ts.displayPartsToString(info.displayParts);
             return {
                 range: convertRange(document, info.textSpan),
-                contents: [contents, textDoc.join("\r\n")].join('\n')
+                contents: [contents, textDoc.join(EOL)].join(EOL)
             };
         }
         return null;
@@ -321,7 +325,7 @@ export class AventusJSMode {
         const range = jsLanguageService.getSmartSelectionRange(document.uri, document.offsetAt(position));
         return convertSelectionRange(range);
     }
-    async format(document: TextDocument, range: Range, formatParams: FormattingOptions): Promise<TextEdit[]> {
+    async format(document: TextDocument, range: Range, formatParams: FormattingOptions, virtualDoc: boolean = false): Promise<TextEdit[]> {
         const jsLanguageService = this.programManager.getProgram(document).getLanguageService();
 
         let start = document.offsetAt(range.start);
@@ -331,7 +335,11 @@ export class AventusJSMode {
             end -= range.end.character;
             lastLineRange = Range.create(Position.create(range.end.line, 0), range.end);
         }
-        let edits = jsLanguageService.getFormattingEditsForRange(document.uri, start, end, formatingOptions);
+        let options = { ...formatingOptions };
+        if (virtualDoc) {
+            options.baseIndentSize = 4;
+        }
+        let edits = jsLanguageService.getFormattingEditsForRange(document.uri, start, end, options);
         if (edits) {
             let result: TextEdit[] = [];
             for (let edit of edits) {

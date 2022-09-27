@@ -98,13 +98,18 @@
 			},
 			{
 				"language": "Aventus WebComponent",
-				"scopeName": "text.html1.basic",
-				"path": "./syntaxes/html.tmLanguage.json"
+				"scopeName": "text.wc.avt",
+				"path": "./syntaxes/wc.tmLanguage.json",
+				"embeddedLanguages": {
+					"source.css.scss": "Aventus SCSS",
+					"source.js": "Aventus Ts",
+					"text.html1.basic": "Aventus HTML"
+				}
 			}
 		],
 		"configuration": {
 			"type": "object",
-			"title": "aventus",
+			"title": "Aventus",
 			"order": 20,
 			"properties": {
 				"aventus.suggest.completeJSDocs": {
@@ -119,6 +124,30 @@
 					"description": "Complete the fct calls",
 					"scope": "resource"
 				}
+			}
+		},
+		"configurationDefaults": {
+			"editor.tokenColorCustomizations": {
+				"textMateRules": [
+					{
+						"scope": "aventus.css.tag",
+						"settings": {
+							"foreground": "#E066DC"
+						}
+					},
+					{
+						"scope": "aventus.js.tag",
+						"settings": {
+							"foreground": "#E5540E"
+						}
+					},
+					{
+						"scope": "aventus.html.tag",
+						"settings": {
+							"foreground": "#22AAEE"
+						}
+					}
+				]
 			}
 		},
 		"commands": [
@@ -145,6 +174,14 @@
 			{
 				"command": "aventus.static",
 				"title": "Aventus : Copy static"
+			},
+			{
+				"command": "aventus.component.merge",
+				"title": "Aventus : Merge component in a single file"
+			},
+			{
+				"command": "aventus.component.split",
+				"title": "Aventus : Split component in multiple files"
 			}
 		],
 		"menus": {
@@ -152,6 +189,16 @@
 				{
 					"when": "explorerResourceIsFolder",
 					"command": "aventus.create",
+					"group": "navigation@-50"
+				},
+				{
+					"when": "resourceFilename =~ /^.*\\.wc.avt/",
+					"command": "aventus.component.split",
+					"group": "navigation@-50"
+				},
+				{
+					"when": "resourceFilename =~ /^.*\\.(wcl|wcs|wcv).avt/",
+					"command": "aventus.component.merge",
 					"group": "navigation@-50"
 				}
 			],

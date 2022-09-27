@@ -17,13 +17,19 @@ export class AventusSCSSMode {
 	private dependancesFile: { [key: string]: string[] } = {};
 	private documentationInfo: SCSSDoc = {};
 	private documentationInfoDef: { [key: string]: SCSSDoc } = {};
+	private listFiles: { [key: string]: TextDocument } = {};
 	async init(documents: TextDocument[]): Promise<void> {
 		this.customLanguageService = getSCSSLanguageService();
 		for (let doc of documents) {
 			await this.doValidation(doc, true);
 		}
 	}
-
+	getFiles() {
+        return this.listFiles;
+    }
+    getFile(uri: string) {
+        return this.listFiles[uri];
+    }
 	async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
 		let result: CompletionList = { isIncomplete: false, items: [] };
 		if (this.customLanguageService) {
@@ -52,6 +58,7 @@ export class AventusSCSSMode {
 	}
 
 	async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc: boolean = false): Promise<Diagnostic[]> {
+		this.listFiles[document.uri] = document;
 		let diagnostics: Diagnostic[] = [];
 		if (this.customLanguageService) {
 			diagnostics = this.customLanguageService.doValidation(document, this.customLanguageService.parseStylesheet(document))
@@ -151,6 +158,7 @@ export class AventusSCSSMode {
 	}
 	mustBeRemoved(document: TextDocument) {
 		this.removeDependances(document);
+		delete this.listFiles[document.uri];
 	}
 	public reload(): void {
 		this.documentationInfo = {};

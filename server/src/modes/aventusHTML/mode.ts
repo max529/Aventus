@@ -15,7 +15,11 @@ export class AventusHTMLMode {
 	public transformedInfo: ITagData[] = [];
 	public id: number = 0;
 	private isAutoComplete: boolean = false;
+	private listFiles: { [key: string]: TextDocument } = {};
 	public init(documents: TextDocument[]): void {
+		for (let file of documents) {
+            this.listFiles[file.uri] = file
+        }
 		this.customLanguageService = getHTMLLanguageService({
 			useDefaultDataProvider: true,
 			customDataProviders: [
@@ -31,6 +35,12 @@ export class AventusHTMLMode {
 			]
 		})
 	}
+	public getFiles() {
+        return this.listFiles;
+    }
+    public getFile(uri: string) {
+        return this.listFiles[uri];
+    }
 	public getId(): string {
 		return this.id + "";
 	}
@@ -135,6 +145,7 @@ export class AventusHTMLMode {
 		return null;
 	}
 	async doValidation(document: TextDocument, sendDiagnostic: boolean) :  Promise<Diagnostic[]> {
+		this.listFiles[document.uri] = document;
 		if (connectionWithClient && sendDiagnostic) {
 			connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: [] });
 		}
@@ -166,7 +177,7 @@ export class AventusHTMLMode {
 		return [];
 	}
 	mustBeRemoved(document: TextDocument) {
-
+		delete this.listFiles[document.uri];
 	}
 
 	public addDefinition(uri: string, doc: HTMLDoc): void {

@@ -14,18 +14,74 @@ import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { uriToPath } from '../../utils';
 import { AventusJSProgram } from '../../program';
+import { AventusWcDoc } from '../../../aventusWc/doc';
+import { EOL } from 'os';
 
 const ts = require("typescript");
 
+interface PrepareDocumentResult {
+	folderPath: string,
+	scriptText: string,
+	cssResult: ScssCompilerResult
+	htmlText: string,
+	diagnostics: Diagnostic[]
+}
+function prepareDocument(document: TextDocument, virtualDoc: boolean): PrepareDocumentResult {
+	let result: PrepareDocumentResult = {
+		folderPath: "",
+		scriptText: "",
+		cssResult: {
+			success: true,
+			content: "",
+			rawContent: "",
+			errorInfo: "",
+			importedPath: []
+		},
+		htmlText: "",
+		diagnostics: []
+	}
+	let componentPath = "";
+	if (virtualDoc) {
+		componentPath = uriToPath(document.uri.replace(aventusExtension.ComponentLogic, aventusExtension.Component));
+		let fullText = readFileSync(componentPath, 'utf8');
+		let resultTemp = AventusWcDoc.extractContent(fullText);
+		result.scriptText = resultTemp.scriptText;
+		// style
+		result.cssResult = compileScss(componentPath.replace(aventusExtension.Component, aventusExtension.ComponentStyle), resultTemp.cssText);
+		if (!result.cssResult.success) {
+			result.diagnostics.push(createErrorTs(document, result.cssResult.errorInfo));
+		}
+		// view
+		result.htmlText = resultTemp.htmlText;
+	}
+	else {
+		componentPath = uriToPath(document.uri);
+		result.scriptText = readFileSync(componentPath, 'utf8');
+		// style
+		let stylePath = componentPath.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle);
+		if (existsSync(stylePath)) {
+			result.cssResult = compileScss(stylePath, readFileSync(stylePath, 'utf8'));
+			if (!result.cssResult.success) {
+				result.diagnostics.push(createErrorTs(document, result.cssResult.errorInfo));
+			}
+		}
+		// view
+		let viewPath = componentPath.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentView);
+		if (existsSync(viewPath)) {
+			result.htmlText = readFileSync(viewPath, "utf8").replace(/<!--[\s\S]*?-->/g, '').trim();
+		}
+	}
+	let folderTemp = componentPath.split("/");
+	let scriptName = folderTemp.pop() || '';
+	result.folderPath = folderTemp.join("/");
+	return result;
+}
 
 export function compileComponent(document: TextDocument, config: AventusConfig, program: AventusJSProgram, virtualDoc: boolean): CompileComponentResult {
 	let specialTag = config.identifier;
 	let specialTagLower = specialTag.toLowerCase();
 	let baliseName = "";
-	let componentPath = uriToPath(document.uri)
-	let folderTemp = componentPath.split("/");
-	let scriptName = folderTemp.pop() || '';
-	let folderPath = folderTemp.join("/");
+
 	let result: CompileComponentResult = {
 		success: false,
 		diagnostics: [],
@@ -40,45 +96,11 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		}
 	}
 
-	const getView = () => {
-		let htmlName = scriptName.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentView);
-		if (existsSync(folderPath + '/' + htmlName)) {
-			return readFileSync(folderPath + '/' + htmlName, 'utf8')
-		}
-		result.diagnostics.push(createErrorTs(document, "Can't find a view inside " + folderPath + " for " + scriptName));
-		return "";
-	}
-	const getStylePath = () => {
-		let styleName = scriptName.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle);
-		if (existsSync(folderPath + '/' + styleName)) {
-			return folderPath + '/' + styleName
-		}
-		result.diagnostics.push(createErrorTs(document, "Can't find a style file for " + folderPath + " for " + scriptName));
-		return "";
-	}
-	let view = getView().replace(/<!--[\s\S]*?-->/g, '').trim();
-	let realScriptContent = readFileSync(componentPath, 'utf8');
-	let stylePath = getStylePath();
-	let style: ScssCompilerResult;
-	if (stylePath != "") {
-		style = compileScss(stylePath, readFileSync(stylePath, 'utf8'));
-		if (!style.success) {
-			result.diagnostics.push(createErrorTs(document, style.errorInfo));
-		}
-	}
-	else {
-		style = {
-			success: true,
-			content: "",
-			rawContent: "",
-			errorInfo: "",
-			importedPath: []
-		}
-	}
-
+	let documentInfo = prepareDocument(document, virtualDoc);
+	let documentPath = uriToPath(document.uri);
 	let template = compilerTemplate;
 
-	let jsonStructure = parseStruct(realScriptContent, {}, componentPath);
+	let jsonStructure = parseStruct(documentInfo.scriptText, {}, documentPath);
 	if (jsonStructure.functions.length > 0) {
 		for (let fct of jsonStructure.functions) {
 			result.diagnostics.push(createErrorTsPos(document, "You can't declare function outside of your class", fct.start, fct.end))
@@ -135,9 +157,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		actionByComponent: {},
 		loop: {},
 		idElement: 0,
-		style: style.content,
+		style: documentInfo.cssResult.content,
 		script: classInfo,
-		view: view,
+		view: documentInfo.htmlText,
 	}
 
 	let htmlDoc: HTMLDoc = {
@@ -226,7 +248,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			htmlDoc = {
 				[baliseName]: {
 					name: baliseName,
-					description: classInfo.documentation.join("\r\n"),
+					description: classInfo.documentation.join(EOL),
 					attributes: {}
 				}
 			};
@@ -570,16 +592,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					key = key.toLowerCase();
 					if (type == TYPES.boolean) {
 						if (defaultValueProp) {
-							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }\r\n";
+							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }" + EOL;
 						} else {
 							//If default set to false, we refresh the attribute to set it to false and not undefined
-							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }\r\n";
+							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }" + EOL;
 						}
 					}
 					else if (type == TYPES.date || type == TYPES.datetime) {
 						if (!defaultValueProp) { defaultValueProp = "" }
-						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', " + defaultValueProp + "); }\r\n";
-						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }\r\n";
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }" + EOL;
 
 					}
 					else {
@@ -587,8 +608,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							return;
 						}
 						if (!defaultValueProp) { defaultValueProp = "" }
-						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }\r\n";
-						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', '" + defaultValueProp + "'); }\r\n";
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }" + EOL;
 					}
 				}
 				_createDefaultValue(field.name, field.valueConstraint?.value);
@@ -601,14 +621,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                     }
                     set '${key}'(val) {
                         this.setAttribute('${key}',val);
-                    }\r\n`;
+                    }${EOL}`;
 					} else if (type == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
                     set '${key}'(val) {
                         this.setAttribute('${key}',val);
-                    }\r\n`;
+                    }${EOL}`;
 					}
 					else if (type == TYPES.boolean) {
 						listBool.push('"' + key + '"');
@@ -631,7 +651,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         } else{
                             this.removeAttribute('${key}');
                         }
-                    }\r\n`;
+                    }${EOL}`;
 					}
 					else if (type == TYPES.date) {
 						getterSetter += `
@@ -688,7 +708,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				// html DOC
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
-					description: field.documentation.join("\r\n"),
+					description: field.documentation.join(EOL),
 					values: []
 				}
 
@@ -708,16 +728,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					key = key.toLowerCase();
 					if (type == TYPES.boolean) {
 						if (defaultValueProp) {
-							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }\r\n";
+							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }" + EOL;
 						} else {
 							//If default set to false, we refresh the attribute to set it to false and not undefined
-							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }\r\n";
+							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }" + EOL;
 						}
 					}
 					else if (type == TYPES.date || type == TYPES.datetime) {
 						if (!defaultValueProp) { defaultValueProp = "" }
-						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', " + defaultValueProp + "); }\r\n";
-						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }\r\n";
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }" + EOL;
 
 					}
 					else {
@@ -725,8 +744,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							return;
 						}
 						if (!defaultValueProp) { defaultValueProp = "" }
-						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }\r\n";
-						// defaultValue += "if(!this.hasAttribute('" + key + "')){ this.setAttribute('" + key + "', '" + defaultValueProp + "'); }\r\n";
+						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = '" + defaultValueProp + "'; }" + EOL;
 					}
 				}
 				_createDefaultValue(field.name, field.valueConstraint?.value);
@@ -739,14 +757,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                     }
                     set '${key}'(val) {
                         this.setAttribute('${key}',val);
-                    }\r\n`;
+                    }`+ EOL;
 					} else if (type == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
                     set '${key}'(val) {
                         this.setAttribute('${key}',val);
-                    }\r\n`;
+                    }`+ EOL;
 					}
 					else if (type == TYPES.boolean) {
 						listBool.push('"' + key + '"');
@@ -769,7 +787,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         } else{
                             this.removeAttribute('${key}');
                         }
-                    }\r\n`;
+                    }`+ EOL;
 					}
 					else if (type == TYPES.date) {
 						getterSetter += `
@@ -822,20 +840,20 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				}
 				_createGetterSetter(field.name);
 
-				upgradeAttributes += 'this.__upgradeProperty(\'' + field.name.toLowerCase() + '\');\r\n';
+				upgradeAttributes += 'this.__upgradeProperty(\'' + field.name.toLowerCase() + '\');' + EOL;
 				variablesWatched.push(field.name.toLowerCase());
 				attributesChanged[field.name] = '';
 
 
 
 				if (args.length > 0) {
-					attributesChanged[field.name] += transpileMethod(args[0], ["this"]) + ';\r\n';
+					attributesChanged[field.name] += transpileMethod(args[0], ["this"]) + ';' + EOL;
 				}
 
 				// html DOC
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
-					description: field.documentation.join("\r\n"),
+					description: field.documentation.join(EOL),
 					values: []
 				}
 
@@ -900,7 +918,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					}
 					set '${field.name}'(val) {
 						this.__watch["${field.name}"] = val;
-					}\r\n`;
+					}`+ EOL;
 					variableProxy[field.name] = `${watchAction}`;
 					variableProxyInit += `this["${field.name}"] = ${value};`;
 					foundedWatch.push(field.name);
@@ -915,10 +933,10 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					if (field.isStatic) {
-						variablesStatic += `static ${field.name} = ${value};\r\n`;
+						variablesStatic += `static ${field.name} = ${value};` + EOL;
 					}
 					else {
-						variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}\r\n`;
+						variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}` + EOL;
 					}
 				}
 				else {
@@ -934,22 +952,22 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 									variablesInViewDynamic += `get ${field.name} () {
 										var list = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));
 										return list;
-									}\r\n`
+									}`+ EOL
 								}
 								else {
 									variablesInViewDynamic += `get ${field.name} () {
 										return this.shadowRoot.querySelector('[_id="${id}"]');
-									}\r\n`
+									}`+ EOL
 								}
 								return;
 							}
 						}
 
 						if (isArray) {
-							variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));\r\n`
+							variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));` + EOL
 						}
 						else {
-							variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');\r\n`
+							variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
 						}
 
 					}
@@ -962,7 +980,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				let defineStateName = "";
 				for (var key in states) {
 					if (key == "stateManagerName") {
-						defineStateName = "__getStateManagerName(){retrun \"" + states[key] + "\";}\r\n"
+						defineStateName = "__getStateManagerName(){retrun \"" + states[key] + "\";}" + EOL
 					}
 					else {
 						var activeFct = "";
@@ -1013,7 +1031,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                                 askChange(currentState, nextState){
                                     return ${askChange}
                                 }
-                            };\r\n`
+                            };`+ EOL
 						}
 						else {
 							fctStateTxt += `
@@ -1024,12 +1042,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                                 inactive(currentState, nextState){
                                     ${inactiveFct}
                                 }
-                            };\r\n`
+                            };`+ EOL
 						}
 					}
 				}
 
-				statesTxt = defineStateName + slugGenerator + "\r\n" + fctStateTxt;
+				statesTxt = defineStateName + slugGenerator + EOL + fctStateTxt;
 			}
 			const _updateTemplate = () => {
 				for (let fieldName in toPrepare.actionByComponent) {
@@ -1158,11 +1176,11 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					let realKey = key.split(".")[0];
 					if (toPrepare.allFields[realKey]) {
 						if (!toPrepare.allFields[realKey].inParent || classInfo.overrideView) {
-							attributesChangedTxt += `this.__onChangeFct['${realKey}'] = []\r\n`;
+							attributesChangedTxt += `this.__onChangeFct['${realKey}'] = []` + EOL;
 						} else {
-							attributesChangedTxt += `if (!this.__onChangeFct['${realKey}']) {\r\nthis.__onChangeFct['${realKey}'] = []\r\n}\r\n`;
+							attributesChangedTxt += `if (!this.__onChangeFct['${realKey}']) {\r\nthis.__onChangeFct['${realKey}'] = []${EOL}}` + EOL;
 						}
-						attributesChangedTxt += `this.__onChangeFct['${realKey}'].push((path) => {${attributesChanged[key]}})\r\n`;
+						attributesChangedTxt += `this.__onChangeFct['${realKey}'].push((path) => {${attributesChanged[key]}})` + EOL;
 					}
 					else {
 						result.diagnostics.push(createErrorTs(document, realKey + ' can\'t be found'));
@@ -1171,7 +1189,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			}
 			for (var key in variableProxy) {
 				if (variableProxy[key] !== "") {
-					variableProxyTxt += `${variableProxy[key]}\r\n`
+					variableProxyTxt += `${variableProxy[key]}` + EOL
 				}
 			}
 
@@ -1275,7 +1293,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						for (let arg of method.arguments) {
 							args.push(arg.name);
 						}
-						methodsTxt += methodFinal + " " + method.name + "(" + args.join(",") + "){" + methodTxt + "}\r\n";
+						methodsTxt += methodFinal + " " + method.name + "(" + args.join(",") + "){" + methodTxt + "}" + EOL;
 					}
 
 				}
@@ -1374,7 +1392,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						result.diagnostics.push(createErrorTs(document, 'variable ' + firstInNamePart + ' inside in of for loop must be watchable'));
 					}
 				}
-				loopTxt += `this.__loopTemplate['${key}'] = \`${item.__template}\`;\r\n`;
+				loopTxt += `this.__loopTemplate['${key}'] = \`${item.__template}\`;` + EOL;
 				let itemName = item.__itemName;
 				let indexName = item.__indexName;
 				let itemClone = { ...item };
@@ -1457,7 +1475,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							resultDefinition.push(`result["${varTemp.name}"] = [];`);
 							return `item.__values["${varTemp.name}"] = ${varTemp.getValue};
 							result["${varTemp.name}"].push(item);
-							item.__templates["${varTemp.name}"] = [];\r\n`
+							item.__templates["${varTemp.name}"] = [];` + EOL
 						}
 						if (current.isProperty) {
 							let txtCreate = ""
@@ -1483,10 +1501,10 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 												}
 											}
 										}
-									}));\r\n`
+									}));`+ EOL
 								}
 								else {
-									txtCreate += `item.__templates["${varTemp.name}"].push(((element) => element.setAttribute("${current.propName}", ${value})));\r\n`
+									txtCreate += `item.__templates["${varTemp.name}"].push(((element) => element.setAttribute("${current.propName}", ${value})));` + EOL
 								}
 							}
 							forActionsCreateSelector[componentId] = forActionsCreateSelector[componentId].replace("/**replaceTemplate*/", txtCreate + "/**replaceTemplate*/");
@@ -1497,7 +1515,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 								if (variablesForItems[componentId].indexOf(varTemp.name) == -1) {
 									forActionsCreateSelector[componentId] = forActionsCreateSelector[componentId].replace("/**replaceValue*/", _createVariable(varTemp) + "/**replaceValue*/");
 								}
-								txtCreate += `item.__templates["${varTemp.name}"].push(((element) => element.innerHTML = ${value}));\r\n`
+								txtCreate += `item.__templates["${varTemp.name}"].push(((element) => element.innerHTML = ${value}));` + EOL
 							}
 							forActionsCreateSelector[componentId] = forActionsCreateSelector[componentId].replace("/**replaceTemplate*/", txtCreate + "/**replaceTemplate*/");
 						}
@@ -1505,9 +1523,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				}
 				loopTxt += `this.__prepareForCreate['${key}'] = (el, data, key, indexes) => {
 					let result = {};
-					${Object.values(wrapperActionsSelector).join("\r\n")}
-					${resultDefinition.join("\r\n")}
-					${Object.values(forActionsCreateSelector).join("\r\n")}
+					${Object.values(wrapperActionsSelector).join(EOL)}
+					${resultDefinition.join(EOL)}
+					${Object.values(forActionsCreateSelector).join(EOL)}
 					return result;
 				};
 				`
@@ -1524,14 +1542,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			var allTranslations = "";
 			let allLangs: string[] = [];
 
-			if (existsSync(folderPath + '/_lang')) {
+			if (!virtualDoc && existsSync(documentInfo.folderPath + '/_lang')) {
 				var translationsKey: string[] = [];
-				readdirSync(folderPath + '/_lang').forEach(file => {
+				readdirSync(documentInfo.folderPath + '/_lang').forEach(file => {
 					if (file.indexOf('.json') !== -1) {
 						var lang = file.replace('.json', '');
 						allLangs.push(lang);
 
-						var translations = JSON.parse(readFileSync(folderPath + '/_lang/' + file, 'utf8'));
+						var translations = JSON.parse(readFileSync(documentInfo.folderPath + '/_lang/' + file, 'utf8'));
 
 						const processTranslationsObject = (object, parentKey) => {
 							for (let key in object) {
@@ -1571,7 +1589,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 								use.value = use.value.replace(matches[j], '"+this.getTranslation("' + variableName + '")+"');
 							}
 
-							applyTranslations += '\tthis._components["' + use.componentId + '"].innerHTML = ' + use.value + ';\r\n';
+							applyTranslations += '\tthis._components["' + use.componentId + '"].innerHTML = ' + use.value + ';' + EOL;
 						});
 					}
 					delete toPrepare.actionByComponent[key]
@@ -1622,12 +1640,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	template = removeWhiteSpaceLines(template)
 	// fs.writeFileSync(folderPath + '/compiled.js', template);
 	if (classInfo.debuggerOption.writeCompiled) {
-		writeFileSync(folderPath + '/compiled.js', template);
+		writeFileSync(documentInfo.folderPath + '/compiled.js', template);
 	}
-	else if (existsSync(folderPath + '/compiled.js')) {
-		unlinkSync(folderPath + '/compiled.js')
+	else if (existsSync(documentInfo.folderPath + '/compiled.js')) {
+		unlinkSync(documentInfo.folderPath + '/compiled.js')
 	}
-	let struct = parseStruct(realScriptContent, {}, componentPath);
+	let struct = parseStruct(documentInfo.scriptText, {}, documentPath);
 	let doc = "";
 	if (struct.classes.length == 1) {
 		let classContent = removeComments(removeDecoratorFromClassContent(struct.classes[0]));
@@ -1635,7 +1653,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		doc = compileDocTs(classContent);
 	}
 	let customCssProperties: SCSSDoc = {
-		[baliseName]: scssMode.getCustomProperty(style.rawContent)
+		[baliseName]: scssMode.getCustomProperty(documentInfo.cssResult.rawContent)
 	}
 	result.result.nameCompiled = classInfo.name;
 	result.result.nameDoc = classInfo.name;

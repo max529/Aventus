@@ -1,10 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { connectionWithClient, jsMode, jsonMode } from '../mode';
+import { connectionWithClient, jsMode, jsonMode, wcMode } from '../mode';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
 import { getImportPath, pathToUri, uriToPath } from '../modes/aventusJs/utils';
 import * as aventusConfig from '../config';
+import { EOL } from 'os';
 
 
 export class Create {
@@ -42,7 +43,7 @@ export class Create {
         }
     ]
 }`);
-						
+
 						jsMode.programManager.createProgram(TextDocument.create(pathToUri(baseFolder + "/aventus.conf.json"), aventusConfig.languageIdJs, 0, readFileSync(baseFolder + "/aventus.conf.json", 'utf8')));
 						connectionWithClient?.sendNotification("aventus/openfile", pathToUri(baseFolder + "/aventus.conf.json"))
 					}
@@ -98,6 +99,10 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 						}
 						else {
 							let name: string = params.arguments[3];
+							let format = "Multiple";
+							if (params.arguments[4]) {
+								format = params.arguments[4].label;
+							}
 							if (type == "Component") {
 								let newFolderPath = uriToPath(baseFolder + "/" + name);
 								let componentName = name;
@@ -110,7 +115,8 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 								let className = identifier + firstUpperName;
 								mkdirSync(newFolderPath);
 								let newScriptPath = newFolderPath + "/" + name;
-								writeFileSync(newScriptPath + aventusExtension.ComponentLogic, `export class ${className} extends WebComponent implements DefaultComponent {
+								if (format == "Multiple") {
+									writeFileSync(newScriptPath + aventusExtension.ComponentLogic, `export class ${className} extends WebComponent implements DefaultComponent {
 
 	//#region static
 
@@ -142,11 +148,34 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 	//#endregion
 	
 }`);
-								writeFileSync(newScriptPath + aventusExtension.ComponentStyle, ":host {\r\n\t\r\n}\r\n");
-								writeFileSync(newScriptPath + aventusExtension.ComponentView, "<slot></slot>");
+									writeFileSync(newScriptPath + aventusExtension.ComponentStyle, ":host {" + EOL + "\t" + EOL + "}" + EOL + "");
+									writeFileSync(newScriptPath + aventusExtension.ComponentView, "<slot></slot>");
+									jsMode.programManager.getProgram(newScriptPath + aventusExtension.ComponentLogic);
+									connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath + aventusExtension.ComponentLogic))
+								}
+								else {
+									writeFileSync(newScriptPath + aventusExtension.Component, `<script>
+	export class ${className} extends WebComponent implements DefaultComponent {
 
-								jsMode.programManager.getProgram(newScriptPath + aventusExtension.ComponentLogic);
-								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath + aventusExtension.ComponentLogic))
+	}
+</script>
+
+<template>
+	<slot></slot>
+</template>
+
+<style>
+	:host {
+		
+	}
+
+</style>
+									`);
+									// wcMode.doValidation()
+									connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath + aventusExtension.Component))
+								}
+
+
 							}
 							else if (type == "Data") {
 								let newScriptPath = uriToPath(baseFolder + "/" + name + aventusExtension.Data);
@@ -160,7 +189,7 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 									identifier = "";
 								}
 								let className = identifier + firstUpperName;
-								writeFileSync(newScriptPath, `export class ${className} implements Data {\r\n\tpublic id: number = 0;\r\n}`);
+								writeFileSync(newScriptPath, `export class ${className} implements Data {${EOL}\tpublic id: number = 0;${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))
 							}
@@ -176,7 +205,7 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 									identifier = "";
 								}
 								let className = identifier + firstUpperName;
-								writeFileSync(newScriptPath, `export class ${className} {\r\n\t\r\n}`);
+								writeFileSync(newScriptPath, `export class ${className} {${EOL}\t${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))
 							}

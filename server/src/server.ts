@@ -28,6 +28,8 @@ import * as aventusConfig from './config';
 import * as modes from './mode';
 import { Create } from './cmds/create';
 import { AventusWcMode } from './modes/aventusWc/mode';
+import { MergeComponent } from './cmds/mergeComponent';
+import { SplitComponent } from './cmds/splitComponent';
 
 
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -53,13 +55,13 @@ export async function init(uris: string[]) {
 					if (folderContent[i] == aventusConfig.configFileName) {
 						configFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdJs, 0, readFileSync(currentPath, 'utf8')));
 					}
-					else if(folderContent[i].endsWith(aventusExtension.ComponentView)){
+					else if (folderContent[i].endsWith(aventusExtension.ComponentView)) {
 						viewFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdHTML, 0, readFileSync(currentPath, 'utf8')));
 					}
-					else if(folderContent[i].endsWith(aventusExtension.ComponentStyle)){
+					else if (folderContent[i].endsWith(aventusExtension.ComponentStyle)) {
 						styleFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdSCSS, 0, readFileSync(currentPath, 'utf8')));
 					}
-					else if(folderContent[i].endsWith(aventusExtension.Component)){
+					else if (folderContent[i].endsWith(aventusExtension.Component)) {
 						wcFiles.push(TextDocument.create(pathToUri(currentPath), aventusConfig.languageIdWc, 0, readFileSync(currentPath, 'utf8')));
 					}
 					else if (folderContent[i].endsWith("." + aventusConfig.extension)) {
@@ -92,7 +94,7 @@ modes.connectionWithClient?.onInitialize((_params: InitializeParams) => {
 	if (_params.workspaceFolders) {
 		Workspaces = _params.workspaceFolders;
 	}
-	
+
 	restart();
 
 	documents.onDidClose(e => {
@@ -120,6 +122,8 @@ modes.connectionWithClient?.onInitialize((_params: InitializeParams) => {
 					PreviewComponent.cmd,
 					BuildProject.cmd,
 					StaticExport.cmd,
+					MergeComponent.cmd,
+					SplitComponent.cmd,
 					"aventus.restart",
 				]
 			},
@@ -156,13 +160,13 @@ function selectRightMode(textDocument: TextDocument): AventusJSMode | AventusJSO
 	if (textDocument.uri.endsWith(aventusConfig.configFileName)) {
 		return modes.jsonMode;
 	}
-	else if(textDocument.languageId == aventusConfig.languageIdHTML){
+	else if (textDocument.languageId == aventusConfig.languageIdHTML) {
 		return modes.htmlMode;
 	}
-	else if(textDocument.languageId == aventusConfig.languageIdSCSS){
+	else if (textDocument.languageId == aventusConfig.languageIdSCSS) {
 		return modes.scssMode;
 	}
-	else if(textDocument.languageId == aventusConfig.languageIdWc){
+	else if (textDocument.languageId == aventusConfig.languageIdWc) {
 		return modes.wcMode;
 	}
 	else if (textDocument.languageId == aventusConfig.languageIdJs && !textDocument.uri.endsWith(aventusExtension.Definition)) {
@@ -226,10 +230,11 @@ modes.connectionWithClient?.onCompletion(async (textDocumentPosition, token) => 
 	if (document.languageId.startsWith(aventusConfig.languageIdBase)) {
 		const mode = selectRightMode(document);
 		if (mode) {
-			return mode.doComplete(document, textDocumentPosition.position);
+			let completionList = await mode.doComplete(document, textDocumentPosition.position)
+			return completionList;
 		}
 	}
-	else if(document.languageId == "html"){
+	else if (document.languageId == "html") {
 		return modes.htmlMode.doComplete(document, textDocumentPosition.position);
 	}
 });
@@ -254,7 +259,7 @@ modes.connectionWithClient?.onHover(async (textDocumentPosition, token) => {
 	if (mode) {
 		return mode.doHover(document, textDocumentPosition.position);
 	}
-	else if(document.languageId == "html"){
+	else if (document.languageId == "html") {
 		return modes.htmlMode.doHover(document, textDocumentPosition.position);
 	}
 })
@@ -298,6 +303,12 @@ modes.connectionWithClient?.onExecuteCommand(async (params) => {
 	}
 	else if (params.command == StaticExport.cmd) {
 		new StaticExport(params);
+	}
+	else if (params.command == SplitComponent.cmd) {
+		new SplitComponent(params);
+	}
+	else if (params.command == MergeComponent.cmd) {
+		new MergeComponent(params);
 	}
 	else if (params.command == "aventus.restart") {
 		restart();

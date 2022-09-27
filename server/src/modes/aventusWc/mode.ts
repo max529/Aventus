@@ -2,8 +2,14 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CodeAction, CompletionItem, CompletionList, Definition, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver/node';
 import { connectionWithClient, htmlMode, jsMode, scssMode } from '../../mode';
 import { Diagnostic, getLanguageService, LanguageService, TokenType } from 'vscode-html-languageservice';
-import { languageIdWc } from '../../config';
-import { AventusWcDoc } from './doc';
+import { languageIdJs, languageIdWc } from '../../config';
+import { AventusWcDoc, AventusWcDocSection } from './doc';
+import { EOL } from 'os';
+import { AventusJSMode } from '../aventusJs/mode';
+import { AventusHTMLMode } from '../aventusHTML/mode';
+import { AventusSCSSMode } from '../aventusSCSS/mode';
+
+type AllModes = AventusJSMode | AventusHTMLMode | AventusSCSSMode;
 
 export class AventusWcMode {
 	private documents: { [key: string]: AventusWcDoc } = {}
@@ -13,29 +19,38 @@ export class AventusWcMode {
 		}
 	}
 	mustBeRemoved(document: TextDocument) {
-		//jsMode.programManager.getProgram(document).removeDocument(document);
+		let doc = this.getDoc(document);
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		scssMode.mustBeRemoved(cssInfo.document);
+		jsMode.mustBeRemoved(jsInfo.document);
+		htmlMode.mustBeRemoved(htmlInfo.document);
 		delete this.documents[document.uri];
 	}
 	async doValidation(document: TextDocument, sendDiagnostic: boolean): Promise<Diagnostic[]> {
 		let doc = this.getDoc(document);
-		let diagnostics: Diagnostic[] =[];
-		let cssDoc = doc.getSCSS();
-		let cssErrors = await scssMode.doValidation(cssDoc, false, true);
+		let diagnostics: Diagnostic[] = [];
+		let cssInfo = doc.getSCSSInfo();
+		let cssErrors = await scssMode.doValidation(cssInfo.document, false, true);
 		for (let error of cssErrors) {
-			error.range.start = document.positionAt(cssDoc.offsetAt(error.range.start) + doc.getSCSSOffset());
-			error.range.end = document.positionAt(cssDoc.offsetAt(error.range.end) + doc.getSCSSOffset());
+			error.range.start = document.positionAt(cssInfo.document.offsetAt(error.range.start) + cssInfo.start);
+			error.range.end = document.positionAt(cssInfo.document.offsetAt(error.range.end) + cssInfo.start);
+			diagnostics.push(error);
 		}
-		let jsDoc = doc.getJS();
-		let jsErrors = await jsMode.doValidation(jsDoc, false);
+		let jsInfo = doc.getJSInfo();
+		let jsErrors = await jsMode.doValidation(jsInfo.document, false, true);
 		for (let error of jsErrors) {
-			error.range.start = document.positionAt(jsDoc.offsetAt(error.range.start) + doc.getJSOffset());
-			error.range.end = document.positionAt(jsDoc.offsetAt(error.range.end) + doc.getJSOffset());
+			error.range.start = document.positionAt(jsInfo.document.offsetAt(error.range.start) + jsInfo.start);
+			error.range.end = document.positionAt(jsInfo.document.offsetAt(error.range.end) + jsInfo.start);
+			diagnostics.push(error);
 		}
-		let htmlDoc = doc.getHTML();
-		let htmlErrors = await htmlMode.doValidation(htmlDoc, false);
+		let htmlInfo = doc.getHTMLInfo();
+		let htmlErrors = await htmlMode.doValidation(htmlInfo.document, false);
 		for (let error of htmlErrors) {
-			error.range.start = document.positionAt(htmlDoc.offsetAt(error.range.start) + doc.getHTMLOffset());
-			error.range.end = document.positionAt(htmlDoc.offsetAt(error.range.end) + doc.getHTMLOffset());
+			error.range.start = document.positionAt(htmlInfo.document.offsetAt(error.range.start) + htmlInfo.start);
+			error.range.end = document.positionAt(htmlInfo.document.offsetAt(error.range.end) + htmlInfo.start);
+			diagnostics.push(error);
 		}
 		if (sendDiagnostic) {
 			if (connectionWithClient) {
@@ -46,29 +61,258 @@ export class AventusWcMode {
 		return diagnostics;
 	}
 	compile(document: TextDocument) {
-		//this.programManager.getProgram(document).compile(document);
+		let doc = this.getDoc(document);
+		let jsInfo = doc.getJSInfo();
+		jsMode.programManager.getProgram(jsInfo.document, false).compile(jsInfo.document, true);
 	}
 	async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
-		return { isIncomplete: false, items: [] };
+		let doc = this.getDoc(document);
+		let currentOffset = document.offsetAt(position);
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		let result: CompletionList = { isIncomplete: false, items: [] }
+		if (currentOffset >= cssInfo.start && currentOffset <= cssInfo.end) {
+			result = await scssMode.doComplete(cssInfo.document, cssInfo.document.positionAt(currentOffset - cssInfo.start));
+			for (let item of result.items) {
+				if (item.textEdit) {
+					let textEdit = item.textEdit as TextEdit;
+					if (textEdit.range) {
+						textEdit.range.start = this.transformPosition(cssInfo.document, textEdit.range.start, document, cssInfo.start * -1);
+						textEdit.range.end = this.transformPosition(cssInfo.document, textEdit.range.end, document, cssInfo.start * -1);
+					}
+				}
+			}
+		}
+		else if (currentOffset >= jsInfo.start && currentOffset <= jsInfo.end) {
+			result = await jsMode.doComplete(jsInfo.document, jsInfo.document.positionAt(currentOffset - jsInfo.start))
+			for (let item of result.items) {
+				if (item.data && item.data.uri) {
+					item.data.languageId = languageIdWc;
+					item.data.uri = document.uri
+				}
+				if (item.textEdit) {
+					let textEdit = item.textEdit as TextEdit;
+					if (textEdit.range) {
+						textEdit.range.start = this.transformPosition(jsInfo.document, textEdit.range.start, document, jsInfo.start * -1);
+						textEdit.range.end = this.transformPosition(jsInfo.document, textEdit.range.end, document, jsInfo.start * -1);
+					}
+				}
+
+			}
+		}
+		else if (currentOffset >= htmlInfo.start && currentOffset <= htmlInfo.end) {
+			result = await htmlMode.doComplete(htmlInfo.document, htmlInfo.document.positionAt(currentOffset - htmlInfo.start))
+			for (let item of result.items) {
+				if (item.textEdit) {
+					let textEdit = item.textEdit as TextEdit;
+					if (textEdit.range) {
+						textEdit.range.start = this.transformPosition(htmlInfo.document, textEdit.range.start, document, htmlInfo.start * -1);
+						textEdit.range.end = this.transformPosition(htmlInfo.document, textEdit.range.end, document, htmlInfo.start * -1);
+					}
+
+				}
+			}
+		}
+		// TODO check why html is not auto completing
+		return result;
 	}
 	async doResolve(item: CompletionItem): Promise<CompletionItem> {
-
+		if (item.data) {
+			if (this.documents[item.data.uri]) {
+				let doc = this.documents[item.data.uri];
+				let jsInfo = doc.getJSInfo();
+				item.data.uri = jsInfo.document.uri;
+				item.data.languageId = languageIdJs;
+				let resultTemp = await jsMode.doResolve(item);
+				if (resultTemp.additionalTextEdits) {
+					for (let edit of resultTemp.additionalTextEdits) {
+						if (jsInfo.document.offsetAt(edit.range.start) == 0) {
+							edit.newText = EOL + edit.newText;
+						}
+						edit.range.start = this.transformPosition(jsInfo.document, edit.range.start, doc.document, jsInfo.start * -1);
+						edit.range.end = this.transformPosition(jsInfo.document, edit.range.end, doc.document, jsInfo.start * -1);
+					}
+				}
+				return resultTemp;
+			}
+		}
 		return item;
 	}
 	async doHover(document: TextDocument, position: Position): Promise<Hover | null> {
-
-		return null;
+		let doc = this.getDoc(document);
+		let currentOffset = document.offsetAt(position);
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		let result: Hover | null = null;
+		if (currentOffset >= cssInfo.start && currentOffset <= cssInfo.end) {
+			result = await scssMode.doHover(cssInfo.document, cssInfo.document.positionAt(currentOffset - cssInfo.start));
+			if (result?.range) {
+				result.range.start = this.transformPosition(cssInfo.document, result.range.start, document, cssInfo.start * -1);
+				result.range.end = this.transformPosition(cssInfo.document, result.range.end, document, cssInfo.start * -1);
+			}
+		}
+		else if (currentOffset >= jsInfo.start && currentOffset <= jsInfo.end) {
+			result = await jsMode.doHover(jsInfo.document, jsInfo.document.positionAt(currentOffset - jsInfo.start));
+			if (result?.range) {
+				result.range.start = this.transformPosition(jsInfo.document, result.range.start, document, jsInfo.start * -1);
+				result.range.end = this.transformPosition(jsInfo.document, result.range.end, document, jsInfo.start * -1);
+			}
+		}
+		else if (currentOffset >= htmlInfo.start && currentOffset <= htmlInfo.end) {
+			result = await htmlMode.doHover(htmlInfo.document, htmlInfo.document.positionAt(currentOffset - htmlInfo.start));
+			if (result?.range) {
+				result.range.start = this.transformPosition(htmlInfo.document, result.range.start, document, htmlInfo.start * -1);
+				result.range.end = this.transformPosition(htmlInfo.document, result.range.end, document, htmlInfo.start * -1);
+			}
+		}
+		return result;
 	}
 	async findDefinition(document: TextDocument, position: Position): Promise<Definition | null> {
-		return null;
+		let doc = this.getDoc(document);
+		let currentOffset = document.offsetAt(position);
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		let result: Definition | null = null;
+		if (currentOffset >= cssInfo.start && currentOffset <= cssInfo.end) {
+			result = await scssMode.findDefinition(cssInfo.document, cssInfo.document.positionAt(currentOffset - cssInfo.start));
+		}
+		else if (currentOffset >= jsInfo.start && currentOffset <= jsInfo.end) {
+			result = await jsMode.findDefinition(jsInfo.document, jsInfo.document.positionAt(currentOffset - jsInfo.start));
+		}
+		else if (currentOffset >= htmlInfo.start && currentOffset <= htmlInfo.end) {
+			result = await htmlMode.findDefinition(htmlInfo.document, htmlInfo.document.positionAt(currentOffset - htmlInfo.start));
+		}
+		return result;
 	}
 	async format(document: TextDocument, range: Range, formatParams: FormattingOptions): Promise<TextEdit[]> {
-		return [];
+		let doc = this.getDoc(document);
+		let rangeSelected = {
+			start: document.offsetAt(range.start),
+			end: document.offsetAt(range.end)
+		}
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		let result: TextEdit[] = [];
+
+		if (this.isOverlapping(rangeSelected, cssInfo)) {
+			let resultsTemp = await scssMode.format(
+				cssInfo.document,
+				{
+					start: cssInfo.document.positionAt(0),
+					end: cssInfo.document.positionAt(cssInfo.document.getText().length),
+				},
+				formatParams
+			);
+			for (let temp of resultsTemp) {
+				temp.newText = EOL + "\t" + temp.newText.split('\n').join("\n\t") + EOL;
+				temp.range.start = this.transformPosition(cssInfo.document, temp.range.start, document, cssInfo.start * -1);
+				temp.range.end = this.transformPosition(cssInfo.document, temp.range.end, document, cssInfo.start * -1);
+				result.push(temp);
+			}
+		}
+
+		if (this.isOverlapping(rangeSelected, jsInfo)) {
+			let resultsTemp = await jsMode.format(
+				jsInfo.document,
+				{
+					start: jsInfo.document.positionAt(0),
+					end: jsInfo.document.positionAt(jsInfo.document.getText().length),
+				},
+				formatParams,
+				true
+			);
+			for (let temp of resultsTemp) {
+				temp.range.start = this.transformPosition(jsInfo.document, temp.range.start, document, jsInfo.start * -1);
+				temp.range.end = this.transformPosition(jsInfo.document, temp.range.end, document, jsInfo.start * -1);
+				result.push(temp);
+			}
+		}
+
+		if (this.isOverlapping(rangeSelected, htmlInfo)) {
+			let resultsTemp = await htmlMode.format(
+				htmlInfo.document,
+				{
+					start: htmlInfo.document.positionAt(0),
+					end: htmlInfo.document.positionAt(htmlInfo.document.getText().length),
+				},
+				formatParams,
+			);
+			for (let temp of resultsTemp) {
+				temp.newText = EOL + "\t" + temp.newText.split('\n').join("\n\t") + EOL;
+				temp.range.start = this.transformPosition(htmlInfo.document, temp.range.start, document, htmlInfo.start * -1);
+				temp.range.end = this.transformPosition(htmlInfo.document, temp.range.end, document, htmlInfo.start * -1);
+				result.push(temp);
+			}
+		}
+
+		return result;
 	}
 	async doCodeAction(document: TextDocument, range: Range): Promise<CodeAction[]> {
-		return []
+		let doc = this.getDoc(document);
+		let cssInfo = doc.getSCSSInfo();
+		let jsInfo = doc.getJSInfo();
+		let htmlInfo = doc.getHTMLInfo();
+		let rangeSelected = {
+			start: document.offsetAt(range.start),
+			end: document.offsetAt(range.end)
+		}
+
+		const testCodeAction = async (mode: AllModes, info: AventusWcDocSection): Promise<CodeAction[] | undefined> => {
+			let results: CodeAction[] = [];
+			if (this.isOverlapping(rangeSelected, info)) {
+				results = await mode.doCodeAction(
+					info.document,
+					{
+						start: info.document.positionAt(0),
+						end: info.document.positionAt(info.document.getText().length),
+					}
+				);
+				for (let result of results) {
+					if (result.edit) {
+						if (result.edit.changes) {
+							let changesFinal: TextEdit[] = [];
+							for (let changeFile in result.edit.changes) {
+								if (changeFile == info.document.uri) {
+									let changes = result.edit.changes[changeFile];
+									for (let change of changes) {
+										change.range.start = this.transformPosition(info.document, change.range.start, document, info.start * -1);
+										change.range.end = this.transformPosition(info.document, change.range.end, document, info.start * -1);
+										changesFinal.push(change);
+									}
+								}
+							}
+							if (changesFinal.length > 0) {
+								delete result.edit.changes[info.document.uri];
+								result.edit.changes[document.uri] = changesFinal;
+							}
+						}
+					}
+				}
+				return results;
+			}
+			return undefined;
+		}
+
+		let resultTemp: CodeAction[] | undefined;
+		resultTemp = await testCodeAction(scssMode, cssInfo);
+		if (resultTemp) { return resultTemp };
+
+		resultTemp = await testCodeAction(jsMode, jsInfo);
+		if (resultTemp) { return resultTemp };
+
+		resultTemp = await testCodeAction(htmlMode, htmlInfo);
+		if (resultTemp) { return resultTemp };
+
+		return [];
 	}
 
+	public getDocumentByUri(uri: string): AventusWcDoc | undefined {
+		return this.documents[uri];
+	}
 	private getDoc(document: TextDocument): AventusWcDoc {
 		if (this.documents[document.uri]) {
 			this.documents[document.uri].refresh(document);
@@ -77,6 +321,16 @@ export class AventusWcMode {
 			this.documents[document.uri] = new AventusWcDoc(document);
 		}
 		return this.documents[document.uri];
+	}
+	private transformPosition(documentFrom: TextDocument, positionFrom: Position, documentTo: TextDocument, offset: number): Position {
+		let currentOffset = documentFrom.offsetAt(positionFrom);
+		return documentTo.positionAt(currentOffset - offset);
+	}
+
+	private isOverlapping(rangeSelected: { start: number, end: number }, rangeSection: { start: number, end: number }): boolean {
+		return (rangeSection.start < rangeSelected.start && rangeSection.end > rangeSelected.start) ||
+			(rangeSection.start < rangeSelected.end && rangeSection.end > rangeSelected.end) ||
+			(rangeSection.start > rangeSelected.start && rangeSection.end < rangeSelected.end)
 	}
 }
 

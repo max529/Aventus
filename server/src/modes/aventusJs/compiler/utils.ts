@@ -25,7 +25,7 @@ export function createErrorTsPos(currentDoc: TextDocument, msg: string, start: n
 	}
 }
 export function removeComments(txt: string): string {
-	let regex = /(\".*?\"|\'.*?\')|(\/\*.*?\*\/|\/\/[^\r\n]*$)/gm
+	let regex = /(\".*?\"|\'.*?\')|(\/\*.*?\*\/|\/\/[^(\r\n|\n)]*$)/gm
 	txt = txt.replace(regex, (match, grp1, grp2) => {
 		if(grp2){
 			return "";

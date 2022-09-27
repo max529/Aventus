@@ -14,3 +14,25 @@ export class BuildQuickPick implements QuickPickItem {
 		this.detail = detail;
 	}
 }
+
+export namespace QuickPick {
+	export const createOptions: BuildQuickPick[] = [
+		new BuildQuickPick("Init", "Create a project"),
+		new BuildQuickPick("Component", "Create a component"),
+		new BuildQuickPick("Data", "Create a data"),
+		new BuildQuickPick("Library", "Create a library"),
+		new BuildQuickPick("RAM", "Create a RAM"),
+	];
+	export const componentFormat: BuildQuickPick[] = [
+		new BuildQuickPick("Single", "Single file"),
+		new BuildQuickPick("Multiple", "Splitted files"),
+	];
+
+	export function reorder(list: BuildQuickPick[], selected: BuildQuickPick) {
+		let indexResult = list.indexOf(selected);
+		if (indexResult > -1) {
+			list.splice(indexResult, 1);
+		}
+		list.splice(0, 0, selected);
+	}
+}

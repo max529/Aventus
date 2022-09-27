@@ -17,6 +17,7 @@ import * as cheerio from 'cheerio';
 import { HTMLDoc, SCSSDoc } from './compiler/component/def';
 import { ClassModel, parseStruct } from '../../ts-file-parser';
 import { connectionWithClient } from '../../mode';
+import { EOL } from 'os';
 
 
 const baseAventusEndPath = "/aventus/base/src";
@@ -551,17 +552,17 @@ export class AventusJSProgram {
 					if (build.namespace) {
 						finalTxt += "var " + build.namespace + ";(function (" + build.namespace + ") {"
 					}
-					finalTxt += includesTxt.join("\r\n") + "\r\n";
-					finalTxt += libsTxt.join("\r\n") + "\r\n";
-					finalTxt += dataTxt.join("\r\n") + "\r\n";
-					finalTxt += ramTxt.join("\r\n") + "\r\n";
-					finalTxt += socketTxt.join("\r\n") + "\r\n";
-					finalTxt += compsTxt.join("\r\n") + "\r\n";
+					finalTxt += includesTxt.join(EOL) + EOL;
+					finalTxt += libsTxt.join(EOL) + EOL;
+					finalTxt += dataTxt.join(EOL) + EOL;
+					finalTxt += ramTxt.join(EOL) + EOL;
+					finalTxt += socketTxt.join(EOL) + EOL;
+					finalTxt += compsTxt.join(EOL) + EOL;
 					finalTxt = finalTxt.trim();
 					if (build.namespace) {
-						finalTxt += "\r\n";
+						finalTxt += EOL;
 						for (let className of classesNameScript) {
-							finalTxt += build.namespace + "." + className + "=" + className + ";\r\n";
+							finalTxt += build.namespace + "." + className + "=" + className + ";" + EOL;
 						}
 						finalTxt += "})(" + build.namespace + " || (" + build.namespace + " = {}));"
 					}
@@ -572,22 +573,22 @@ export class AventusJSProgram {
 					writeFileSync(build.outputFile, finalTxt);
 					if (build.generateDefinition) {
 						let finalDtxt = "";
-						finalDtxt += libsTxtDoc.join("\r\n") + "\r\n";
-						finalDtxt += dataTxtDoc.join("\r\n") + "\r\n";
-						finalDtxt += ramTxtDoc.join("\r\n") + "\r\n";
-						finalDtxt += socketTxtDoc.join("\r\n") + "\r\n";
-						finalDtxt += compsTxtDoc.join("\r\n") + "\r\n";
+						finalDtxt += libsTxtDoc.join(EOL) + EOL;
+						finalDtxt += dataTxtDoc.join(EOL) + EOL;
+						finalDtxt += ramTxtDoc.join(EOL) + EOL;
+						finalDtxt += socketTxtDoc.join(EOL) + EOL;
+						finalDtxt += compsTxtDoc.join(EOL) + EOL;
 						if (build.namespace) {
-							finalDtxt = "declare namespace " + build.namespace + "{\r\n" + finalDtxt.replace(/declare /g, '') + "}\r\n";
+							finalDtxt = "declare namespace " + build.namespace + "{" + EOL + finalDtxt.replace(/declare /g, '') + "}" + EOL;
 						}
-						finalDtxt = "// version " + build.version + "\r\n// region js //\r\n" + finalDtxt;
-						finalDtxt += "// end region js //\r\n";
-						finalDtxt += "// region css //\r\n";
-						finalDtxt += JSON.stringify(this.SCSSDoc) + "\r\n";
-						finalDtxt += "// end region css //\r\n";
-						finalDtxt += "// region html //\r\n";
-						finalDtxt += JSON.stringify(this.HTMLDoc) + "\r\n";
-						finalDtxt += "// end region html //\r\n";
+						finalDtxt = "// version " + build.version + EOL + "// region js //" + EOL + finalDtxt;
+						finalDtxt += "// end region js //" + EOL;
+						finalDtxt += "// region css //" + EOL;
+						finalDtxt += JSON.stringify(this.SCSSDoc) + EOL;
+						finalDtxt += "// end region css //" + EOL;
+						finalDtxt += "// region html //" + EOL;
+						finalDtxt += JSON.stringify(this.HTMLDoc) + EOL;
+						finalDtxt += "// end region html //" + EOL;
 						writeFileSync(build.outputFile.replace(".js", ".def.avt"), finalDtxt);
 					}
 
@@ -596,10 +597,10 @@ export class AventusJSProgram {
 			}
 		}
 	}
-	public async compile(document: TextDocument) {
+	public async compile(document: TextDocument, virtualDoc: boolean = false) {
 		let config = this.getConfig();
 		if (config) {
-			await this.doValidation(document, true);
+			await this.doValidation(document, true, virtualDoc);
 			this.filesLoaded[document.uri]?.compile(config)
 		}
 	}
@@ -635,7 +636,7 @@ export class AventusJSProgram {
 		return config;
 	}
 
-	public async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc:boolean = false): Promise<Diagnostic[]> {
+	public async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc: boolean = false): Promise<Diagnostic[]> {
 		let diagnostics: Diagnostic[] = []
 		let tempDoc = new AventusDoc(document, this);
 		if (tempDoc.getType() == AventusType.Definition) {
@@ -664,7 +665,7 @@ export class AventusJSProgram {
 					}
 					else {
 						const languageService = this.getLanguageService();
-						
+
 						const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(document.uri);
 						const semanticDiagnostics: ts.Diagnostic[] = languageService.getSemanticDiagnostics(document.uri);
 
