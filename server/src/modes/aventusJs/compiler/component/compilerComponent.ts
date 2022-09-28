@@ -584,6 +584,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				let type = field.type.typeName.toLowerCase();
 				if (!TYPES.hasOwnProperty(type)) {
 					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as attribute", field.start, field.end));
+					return;
 				}
 				if (field.name.toLowerCase() != field.name) {
 					result.diagnostics.push(createErrorTsPos(document, "an attribute must be in lower case", field.start, field.end));
@@ -709,6 +710,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
 					description: field.documentation.join(EOL),
+					type: TYPES[type],
 					values: []
 				}
 
@@ -720,6 +722,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				let type = field.type.typeName.toLowerCase();
 				if (!TYPES.hasOwnProperty(type)) {
 					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as property", field.start, field.end));
+					return;
 				}
 				if (field.name.toLowerCase() != field.name) {
 					result.diagnostics.push(createErrorTsPos(document, "a property must be in lower case", field.start, field.end));
@@ -854,6 +857,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
 					description: field.documentation.join(EOL),
+					type: TYPES[type],
 					values: []
 				}
 

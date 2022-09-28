@@ -1,7 +1,7 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { getLanguageService as getHTMLLanguageService, IAttributeData, ITagData, IValueData, LanguageService } from 'vscode-html-languageservice'
 import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, TextEdit } from 'vscode-languageserver';
-import { HTMLDoc } from '../aventusJs/compiler/component/def';
+import { CustomTypeAttribute, HTMLDoc } from '../aventusJs/compiler/component/def';
 import { Range } from 'vscode-languageserver/node'
 import { aventusExtension } from '../aventusJs/aventusDoc';
 import { languageIdHTML } from '../../config';
@@ -56,7 +56,10 @@ export class AventusHTMLMode {
 				if (this.isAutoComplete) {
 					result.push({
 						name: "!!" + current.name,
-						description: current.description
+						description: JSON.stringify({
+							description: current.description,
+							type: current.type,
+						})
 					})
 				}
 				else {
@@ -126,10 +129,24 @@ export class AventusHTMLMode {
 						if (temp.textEdit) {
 							let newLabel = temp.label.replace("!!", "");
 							temp.textEdit.newText = temp.textEdit.newText.replace(temp.label, newLabel)
+							if (temp.documentation) {
+								let customInfo: {
+									description: string,
+									type: CustomTypeAttribute
+								} = JSON.parse(temp.documentation["value"]);
+
+								if (customInfo.description == "") {
+									delete temp.documentation;
+								}
+
+								if (customInfo.type == 'boolean') {
+									temp.textEdit.newText = temp.textEdit.newText.split("=")[0];
+								}
+							}
 							temp.label = newLabel;
 						}
 					}
-					if (temp.textEdit) {
+					if (temp.kind == CompletionItemKind.Property && temp.textEdit) {
 						temp.textEdit.newText += "></" + temp.textEdit.newText + ">";
 					}
 				}

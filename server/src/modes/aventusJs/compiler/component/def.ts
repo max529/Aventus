@@ -61,6 +61,7 @@ export declare interface HTMLDoc {
 			[key: string]: {
 				name: string,
 				description: string,
+				type: CustomTypeAttribute,
 				values: {
 					name: string,
 					description: string,
@@ -78,6 +79,7 @@ export const configTS = {
 	"noImplicitOverride": false,
 	"target": "ES6"
 }
+export type CustomTypeAttribute = "date" | 'datetime' | 'string' | 'number' | 'boolean';
 export const TYPES = {
 	date: 'date',
 	datetime: 'datetime',
