@@ -85,6 +85,7 @@ export class AventusJSProgramManager {
 	public async resetProgram() {
 		this.removePrograms();
 		this.unknowProgram = new AventusJSProgram();
+		this.unknowProgram.isUnknowProgram = true;
 		this.unknowProgram.init(undefined);
 
 		let configs = modes.jsonMode.getConfigFiles();
@@ -123,6 +124,7 @@ export class AventusJSProgram {
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
 	private TSDefClass: { [key: string]: ClassModel } = {};
+	public isUnknowProgram:boolean = false;
 
 	private jsLanguageService: ts.LanguageService | undefined;
 
@@ -637,7 +639,8 @@ export class AventusJSProgram {
 	}
 
 	public async doValidation(document: TextDocument, sendDiagnostic: boolean, virtualDoc: boolean = false): Promise<Diagnostic[]> {
-		let diagnostics: Diagnostic[] = []
+		let diagnostics: Diagnostic[] = [];
+		let text = document.getText();
 		let tempDoc = new AventusDoc(document, this);
 		if (tempDoc.getType() == AventusType.Definition) {
 			if (this.filesLoaded[document.uri]) {

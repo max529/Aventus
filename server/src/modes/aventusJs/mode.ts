@@ -56,11 +56,11 @@ export class AventusJSMode {
     }
     async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
         try {
+            this.listFiles[document.uri] = document;
             const jsLanguageService = this.programManager.getProgram(document).getLanguageService();
             let offset = document.offsetAt(position);
             let replaceRange = convertRange(document, getWordAtText(document.getText(), offset, JS_WORD_REGEX));
             let completions: ts.WithMetadata<ts.CompletionInfo> | undefined;
-
             try {
                 completions = jsLanguageService.getCompletionsAtPosition(document.uri, offset, completionOptions);
             } catch (e) {

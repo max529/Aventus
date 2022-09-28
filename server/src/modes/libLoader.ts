@@ -72,7 +72,6 @@ export function loadLibrary(name: string): string {
 		}
 		contents[name] = content;
 	}
-
 	return content;
 }
 

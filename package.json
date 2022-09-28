@@ -29,7 +29,7 @@
 			{
 				"id": "Aventus HTML",
 				"extensions": [
-					"wcv.avt"
+					".wcv.avt"
 				],
 				"configuration": "./syntaxes/html-language-configuration.json",
 				"icon": {
@@ -40,7 +40,7 @@
 			{
 				"id": "Aventus SCSS",
 				"extensions": [
-					"wcs.avt"
+					".wcs.avt"
 				],
 				"configuration": "./syntaxes/scss-language-configuration.json",
 				"icon": {
@@ -51,7 +51,7 @@
 			{
 				"id": "Aventus WebComponent",
 				"extensions": [
-					"wc.avt"
+					".wc.avt"
 				],
 				"configuration": "./syntaxes/html-language-configuration.json",
 				"icon": {

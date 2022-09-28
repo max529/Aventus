@@ -11,6 +11,8 @@ import { AventusSCSSMode } from '../aventusSCSS/mode';
 
 type AllModes = AventusJSMode | AventusHTMLMode | AventusSCSSMode;
 
+// CARE : range be the same when converting result
+
 export class AventusWcMode {
 	private documents: { [key: string]: AventusWcDoc } = {}
 	async init(files: TextDocument[]) {
@@ -30,28 +32,27 @@ export class AventusWcMode {
 	}
 	async doValidation(document: TextDocument, sendDiagnostic: boolean): Promise<Diagnostic[]> {
 		let doc = this.getDoc(document);
-		let diagnostics: Diagnostic[] = [];
 		let cssInfo = doc.getSCSSInfo();
-		let cssErrors = await scssMode.doValidation(cssInfo.document, false, true);
-		for (let error of cssErrors) {
-			error.range.start = document.positionAt(cssInfo.document.offsetAt(error.range.start) + cssInfo.start);
-			error.range.end = document.positionAt(cssInfo.document.offsetAt(error.range.end) + cssInfo.start);
-			diagnostics.push(error);
-		}
 		let jsInfo = doc.getJSInfo();
-		let jsErrors = await jsMode.doValidation(jsInfo.document, false, true);
-		for (let error of jsErrors) {
-			error.range.start = document.positionAt(jsInfo.document.offsetAt(error.range.start) + jsInfo.start);
-			error.range.end = document.positionAt(jsInfo.document.offsetAt(error.range.end) + jsInfo.start);
-			diagnostics.push(error);
-		}
 		let htmlInfo = doc.getHTMLInfo();
-		let htmlErrors = await htmlMode.doValidation(htmlInfo.document, false);
-		for (let error of htmlErrors) {
-			error.range.start = document.positionAt(htmlInfo.document.offsetAt(error.range.start) + htmlInfo.start);
-			error.range.end = document.positionAt(htmlInfo.document.offsetAt(error.range.end) + htmlInfo.start);
-			diagnostics.push(error);
+		let diagnostics: Diagnostic[] = [];
+		let convertedRanges: Range[] = [];
+
+		const generateError = async (mode: AllModes, info: AventusWcDocSection): Promise<void> => {
+			let errors = await mode.doValidation(info.document, false, true);
+			for (let error of errors) {
+				if (convertedRanges.indexOf(error.range) == -1) {
+					convertedRanges.push(error.range);
+					error.range.start = document.positionAt(info.document.offsetAt(error.range.start) + info.start);
+					error.range.end = document.positionAt(info.document.offsetAt(error.range.end) + info.start);
+				}
+				diagnostics.push(error);
+			}
 		}
+		await generateError(scssMode, cssInfo);
+		await generateError(jsMode, jsInfo);
+		await generateError(htmlMode, htmlInfo);
+
 		if (sendDiagnostic) {
 			if (connectionWithClient) {
 				connectionWithClient.sendDiagnostics({ uri: document.uri, diagnostics: diagnostics });
@@ -71,51 +72,39 @@ export class AventusWcMode {
 		let cssInfo = doc.getSCSSInfo();
 		let jsInfo = doc.getJSInfo();
 		let htmlInfo = doc.getHTMLInfo();
-		let result: CompletionList = { isIncomplete: false, items: [] }
-		if (currentOffset >= cssInfo.start && currentOffset <= cssInfo.end) {
-			result = await scssMode.doComplete(cssInfo.document, cssInfo.document.positionAt(currentOffset - cssInfo.start));
-			for (let item of result.items) {
-				if (item.textEdit) {
-					let textEdit = item.textEdit as TextEdit;
-					if (textEdit.range) {
-						textEdit.range.start = this.transformPosition(cssInfo.document, textEdit.range.start, document, cssInfo.start * -1);
-						textEdit.range.end = this.transformPosition(cssInfo.document, textEdit.range.end, document, cssInfo.start * -1);
-					}
-				}
-			}
-		}
-		else if (currentOffset >= jsInfo.start && currentOffset <= jsInfo.end) {
-			result = await jsMode.doComplete(jsInfo.document, jsInfo.document.positionAt(currentOffset - jsInfo.start))
-			for (let item of result.items) {
-				if (item.data && item.data.uri) {
-					item.data.languageId = languageIdWc;
-					item.data.uri = document.uri
-				}
-				if (item.textEdit) {
-					let textEdit = item.textEdit as TextEdit;
-					if (textEdit.range) {
-						textEdit.range.start = this.transformPosition(jsInfo.document, textEdit.range.start, document, jsInfo.start * -1);
-						textEdit.range.end = this.transformPosition(jsInfo.document, textEdit.range.end, document, jsInfo.start * -1);
-					}
-				}
 
-			}
-		}
-		else if (currentOffset >= htmlInfo.start && currentOffset <= htmlInfo.end) {
-			result = await htmlMode.doComplete(htmlInfo.document, htmlInfo.document.positionAt(currentOffset - htmlInfo.start))
-			for (let item of result.items) {
-				if (item.textEdit) {
-					let textEdit = item.textEdit as TextEdit;
-					if (textEdit.range) {
-						textEdit.range.start = this.transformPosition(htmlInfo.document, textEdit.range.start, document, htmlInfo.start * -1);
-						textEdit.range.end = this.transformPosition(htmlInfo.document, textEdit.range.end, document, htmlInfo.start * -1);
-					}
+		let convertedRanges: Range[] = [];
 
+		const generateComplete = async (mode: AllModes, info: AventusWcDocSection): Promise<CompletionList | undefined> => {
+			if (currentOffset >= info.start && currentOffset <= info.end) {
+				let result = await mode.doComplete(info.document, info.document.positionAt(currentOffset - info.start));
+				for (let item of result.items) {
+					if (item.data && item.data.uri) {
+						item.data.languageId = languageIdWc;
+						item.data.uri = document.uri
+					}
+					if (item.textEdit) {
+						let textEdit = item.textEdit as TextEdit;
+						if (textEdit.range) {
+							if (convertedRanges.indexOf(textEdit.range) == -1) {
+								convertedRanges.push(textEdit.range)
+								textEdit.range.start = this.transformPosition(info.document, textEdit.range.start, document, info.start * -1);
+								textEdit.range.end = this.transformPosition(info.document, textEdit.range.end, document, info.start * -1);
+							}
+						}
+					}
 				}
+				return result
 			}
 		}
+		let cssResult = await generateComplete(scssMode, cssInfo);
+		if (cssResult) { return cssResult; }
+		let jsResult = await generateComplete(jsMode, jsInfo);
+		if (jsResult) { return jsResult; }
+		let htmlResult = await generateComplete(htmlMode, htmlInfo);
+		if (htmlResult) { return htmlResult; }
 		// TODO check why html is not auto completing
-		return result;
+		return { isIncomplete: false, items: [] };
 	}
 	async doResolve(item: CompletionItem): Promise<CompletionItem> {
 		if (item.data) {
@@ -125,13 +114,20 @@ export class AventusWcMode {
 				item.data.uri = jsInfo.document.uri;
 				item.data.languageId = languageIdJs;
 				let resultTemp = await jsMode.doResolve(item);
+				let convertedRanges: Range[] = [];
+
 				if (resultTemp.additionalTextEdits) {
 					for (let edit of resultTemp.additionalTextEdits) {
 						if (jsInfo.document.offsetAt(edit.range.start) == 0) {
 							edit.newText = EOL + edit.newText;
 						}
-						edit.range.start = this.transformPosition(jsInfo.document, edit.range.start, doc.document, jsInfo.start * -1);
-						edit.range.end = this.transformPosition(jsInfo.document, edit.range.end, doc.document, jsInfo.start * -1);
+						if (convertedRanges.indexOf(edit.range) == -1 && !edit.range["wc_transformed"]) {
+							convertedRanges.push(edit.range);
+							edit.range["wc_transformed"] = true;
+							edit.range.start = this.transformPosition(jsInfo.document, edit.range.start, doc.document, jsInfo.start * -1);
+							edit.range.end = this.transformPosition(jsInfo.document, edit.range.end, doc.document, jsInfo.start * -1);
+						}
+
 					}
 				}
 				return resultTemp;
@@ -145,29 +141,30 @@ export class AventusWcMode {
 		let cssInfo = doc.getSCSSInfo();
 		let jsInfo = doc.getJSInfo();
 		let htmlInfo = doc.getHTMLInfo();
-		let result: Hover | null = null;
-		if (currentOffset >= cssInfo.start && currentOffset <= cssInfo.end) {
-			result = await scssMode.doHover(cssInfo.document, cssInfo.document.positionAt(currentOffset - cssInfo.start));
-			if (result?.range) {
-				result.range.start = this.transformPosition(cssInfo.document, result.range.start, document, cssInfo.start * -1);
-				result.range.end = this.transformPosition(cssInfo.document, result.range.end, document, cssInfo.start * -1);
+		let convertedRanges: Range[] = [];
+		const generateHover = async (mode: AllModes, info: AventusWcDocSection): Promise<Hover | null> => {
+			if (currentOffset >= info.start && currentOffset <= info.end) {
+				let result = await mode.doHover(info.document, info.document.positionAt(currentOffset - info.start));
+				if (result?.range) {
+					if (convertedRanges.indexOf(result.range) == -1) {
+						convertedRanges.push(result.range);
+						result.range.start = this.transformPosition(info.document, result.range.start, document, info.start * -1);
+						result.range.end = this.transformPosition(info.document, result.range.end, document, info.start * -1);
+					}
+				}
+				return result;
 			}
+			return null;
 		}
-		else if (currentOffset >= jsInfo.start && currentOffset <= jsInfo.end) {
-			result = await jsMode.doHover(jsInfo.document, jsInfo.document.positionAt(currentOffset - jsInfo.start));
-			if (result?.range) {
-				result.range.start = this.transformPosition(jsInfo.document, result.range.start, document, jsInfo.start * -1);
-				result.range.end = this.transformPosition(jsInfo.document, result.range.end, document, jsInfo.start * -1);
-			}
-		}
-		else if (currentOffset >= htmlInfo.start && currentOffset <= htmlInfo.end) {
-			result = await htmlMode.doHover(htmlInfo.document, htmlInfo.document.positionAt(currentOffset - htmlInfo.start));
-			if (result?.range) {
-				result.range.start = this.transformPosition(htmlInfo.document, result.range.start, document, htmlInfo.start * -1);
-				result.range.end = this.transformPosition(htmlInfo.document, result.range.end, document, htmlInfo.start * -1);
-			}
-		}
-		return result;
+
+		let cssResult = await generateHover(scssMode, cssInfo);
+		if (cssResult) { return cssResult; }
+		let jsResult = await generateHover(jsMode, jsInfo);
+		if (jsResult) { return jsResult; }
+		let htmlResult = await generateHover(htmlMode, htmlInfo);
+		if (htmlResult) { return htmlResult; }
+
+		return null;
 	}
 	async findDefinition(document: TextDocument, position: Position): Promise<Definition | null> {
 		let doc = this.getDoc(document);
@@ -197,6 +194,7 @@ export class AventusWcMode {
 		let jsInfo = doc.getJSInfo();
 		let htmlInfo = doc.getHTMLInfo();
 		let result: TextEdit[] = [];
+		let convertedRanges: Range[] = [];
 
 		if (this.isOverlapping(rangeSelected, cssInfo)) {
 			let resultsTemp = await scssMode.format(
@@ -209,8 +207,11 @@ export class AventusWcMode {
 			);
 			for (let temp of resultsTemp) {
 				temp.newText = EOL + "\t" + temp.newText.split('\n').join("\n\t") + EOL;
-				temp.range.start = this.transformPosition(cssInfo.document, temp.range.start, document, cssInfo.start * -1);
-				temp.range.end = this.transformPosition(cssInfo.document, temp.range.end, document, cssInfo.start * -1);
+				if (convertedRanges.indexOf(temp.range) == -1) {
+					convertedRanges.push(temp.range);
+					temp.range.start = this.transformPosition(cssInfo.document, temp.range.start, document, cssInfo.start * -1);
+					temp.range.end = this.transformPosition(cssInfo.document, temp.range.end, document, cssInfo.start * -1);
+				}
 				result.push(temp);
 			}
 		}
@@ -226,8 +227,11 @@ export class AventusWcMode {
 				true
 			);
 			for (let temp of resultsTemp) {
-				temp.range.start = this.transformPosition(jsInfo.document, temp.range.start, document, jsInfo.start * -1);
-				temp.range.end = this.transformPosition(jsInfo.document, temp.range.end, document, jsInfo.start * -1);
+				if (convertedRanges.indexOf(temp.range) == -1) {
+					convertedRanges.push(temp.range);
+					temp.range.start = this.transformPosition(jsInfo.document, temp.range.start, document, jsInfo.start * -1);
+					temp.range.end = this.transformPosition(jsInfo.document, temp.range.end, document, jsInfo.start * -1);
+				}
 				result.push(temp);
 			}
 		}
@@ -243,8 +247,11 @@ export class AventusWcMode {
 			);
 			for (let temp of resultsTemp) {
 				temp.newText = EOL + "\t" + temp.newText.split('\n').join("\n\t") + EOL;
-				temp.range.start = this.transformPosition(htmlInfo.document, temp.range.start, document, htmlInfo.start * -1);
-				temp.range.end = this.transformPosition(htmlInfo.document, temp.range.end, document, htmlInfo.start * -1);
+				if (convertedRanges.indexOf(temp.range) == -1) {
+					convertedRanges.push(temp.range);
+					temp.range.start = this.transformPosition(htmlInfo.document, temp.range.start, document, htmlInfo.start * -1);
+					temp.range.end = this.transformPosition(htmlInfo.document, temp.range.end, document, htmlInfo.start * -1);
+				}
 				result.push(temp);
 			}
 		}
@@ -260,15 +267,16 @@ export class AventusWcMode {
 			start: document.offsetAt(range.start),
 			end: document.offsetAt(range.end)
 		}
+		let convertedRanges: Range[] = [];
 
-		const testCodeAction = async (mode: AllModes, info: AventusWcDocSection): Promise<CodeAction[] | undefined> => {
+		const generateCodeAction = async (mode: AllModes, info: AventusWcDocSection): Promise<CodeAction[] | undefined> => {
 			let results: CodeAction[] = [];
 			if (this.isOverlapping(rangeSelected, info)) {
 				results = await mode.doCodeAction(
 					info.document,
 					{
-						start: info.document.positionAt(0),
-						end: info.document.positionAt(info.document.getText().length),
+						start: this.transformPosition(document, range.start, info.document, info.start),
+						end: this.transformPosition(document, range.end, info.document, info.start)
 					}
 				);
 				for (let result of results) {
@@ -279,8 +287,11 @@ export class AventusWcMode {
 								if (changeFile == info.document.uri) {
 									let changes = result.edit.changes[changeFile];
 									for (let change of changes) {
-										change.range.start = this.transformPosition(info.document, change.range.start, document, info.start * -1);
-										change.range.end = this.transformPosition(info.document, change.range.end, document, info.start * -1);
+										if (convertedRanges.indexOf(change.range) == -1) {
+											convertedRanges.push(change.range);
+											change.range.start = this.transformPosition(info.document, change.range.start, document, info.start * -1);
+											change.range.end = this.transformPosition(info.document, change.range.end, document, info.start * -1);
+										}
 										changesFinal.push(change);
 									}
 								}
@@ -298,13 +309,13 @@ export class AventusWcMode {
 		}
 
 		let resultTemp: CodeAction[] | undefined;
-		resultTemp = await testCodeAction(scssMode, cssInfo);
+		resultTemp = await generateCodeAction(scssMode, cssInfo);
 		if (resultTemp) { return resultTemp };
 
-		resultTemp = await testCodeAction(jsMode, jsInfo);
+		resultTemp = await generateCodeAction(jsMode, jsInfo);
 		if (resultTemp) { return resultTemp };
 
-		resultTemp = await testCodeAction(htmlMode, htmlInfo);
+		resultTemp = await generateCodeAction(htmlMode, htmlInfo);
 		if (resultTemp) { return resultTemp };
 
 		return [];
