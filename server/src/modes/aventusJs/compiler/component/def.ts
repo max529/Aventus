@@ -24,7 +24,8 @@ export interface CustomFieldModel extends FieldModel {
 	arguments?: any[],
 }
 declare interface DebuggerConfig {
-	writeCompiled?: boolean
+	writeCompiled?: boolean,
+	enableWatchHistory?:boolean,
 }
 export declare interface CustomClassInfo {
 	debuggerOption: DebuggerConfig,
@@ -79,10 +80,10 @@ export const configTS = {
 	"noImplicitOverride": false,
 	"target": "ES6"
 }
-export type CustomTypeAttribute = "date" | 'datetime' | 'string' | 'number' | 'boolean';
+export type CustomTypeAttribute = "luxon.date" | 'luxon.datetime' | 'string' | 'number' | 'boolean';
 export const TYPES = {
-	date: 'date',
-	datetime: 'datetime',
+	date: 'luxon.date',
+	datetime: 'luxon.datetime',
 	string: 'string',
 	number: 'number',
 	boolean: 'boolean',

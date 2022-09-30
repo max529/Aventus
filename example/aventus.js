@@ -8500,6 +8500,7 @@ var luxon = (function (exports) {
     var VERSION = "2.3.2";
   
     exports.DateTime = DateTime;
+    exports.Date = DateTime;
     exports.Duration = Duration;
     exports.FixedOffsetZone = FixedOffsetZone;
     exports.IANAZone = IANAZone;
@@ -8521,43 +8522,43 @@ class DefaultHttpRequestOptions {    url = "";    method = HttpRequestMethod.G
 Proxy.__maxProxyData = 0;
 Error.stackTraceLimit = Infinity;
 Object.transformIntoWatcher = function (obj, onDataChanged) {
-    if (obj == undefined) {
+    if(obj == undefined) {
         console.error("You must define an objet / array for your proxy");
         return;
     }
-    if (obj.__isProxy) {
+    if(obj.__isProxy) {
         obj.__subscribe(onDataChanged);
         return obj;
     }
     Proxy.__maxProxyData++;
     let setProxyPath = (newProxy, newPath) => {
-        if (newProxy instanceof Object && newProxy.__isProxy) {
+        if(newProxy instanceof Object && newProxy.__isProxy) {
             newProxy.__path = newPath;
-            if (!newProxy.__proxyData) {
+            if(!newProxy.__proxyData) {
                 newProxy.__proxyData = {};
             }
-            if (!newProxy.__proxyData[newPath]) {
+            if(!newProxy.__proxyData[newPath]) {
                 newProxy.__proxyData[newPath] = [];
             }
-            if (newProxy.__proxyData[newPath].indexOf(proxyData) == -1) {
+            if(newProxy.__proxyData[newPath].indexOf(proxyData) == -1) {
                 newProxy.__proxyData[newPath].push(proxyData);
             }
         }
     };
     let removeProxyPath = (oldValue, pathToDelete, recursive = true) => {
-        if (oldValue instanceof Object && oldValue.__isProxy) {
+        if(oldValue instanceof Object && oldValue.__isProxy) {
             let allProxies = oldValue.__proxyData;
-            for (let triggerPath in allProxies) {
-                if (triggerPath == pathToDelete) {
-                    for (let i = 0; i < allProxies[triggerPath].length; i++) {
-                        if (allProxies[triggerPath][i] == proxyData) {
+            for(let triggerPath in allProxies) {
+                if(triggerPath == pathToDelete) {
+                    for(let i = 0; i < allProxies[triggerPath].length; i++) {
+                        if(allProxies[triggerPath][i] == proxyData) {
                             allProxies[triggerPath].splice(i, 1);
                             i--;
                         }
                     }
-                    if (allProxies[triggerPath].length == 0) {
+                    if(allProxies[triggerPath].length == 0) {
                         delete allProxies[triggerPath];
-                        if (Object.keys(allProxies).length == 0) {
+                        if(Object.keys(allProxies).length == 0) {
                             delete oldValue.__proxyData;
                         }
                     }
@@ -8567,26 +8568,33 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
             // apply recursive delete
         }
     };
-    let currentTrace = new Error().stack.split("\n")
+    let jsonReplacer = (key, value) => {
+        if(key == "__path") return undefined;
+        else if(key == "__proxyData") return undefined;
+        else return value;
+    };
+    let currentTrace = new Error().stack.split("\n");
     currentTrace.shift();
     currentTrace.shift();
+    var proxy = undefined;
     let proxyData = {
         id: Proxy.__maxProxyData,
         callbacks: [onDataChanged],
         avoidUpdate: [],
         pathToRemove: [],
         history: [{
-            object: JSON.parse(JSON.stringify(obj)),
-            trace: currentTrace
+            object: JSON.parse(JSON.stringify(obj, jsonReplacer)),
+            trace: currentTrace,
         }],
+        useHistory: false,
         getProxyObject(target, element, prop) {
             let newProxy;
-            if (element instanceof Object && element.__isProxy) {
+            if(element instanceof Object && element.__isProxy) {
                 newProxy = element;
             }
             else {
                 try {
-                    if (element instanceof Object) {
+                    if(element instanceof Object) {
                         newProxy = new Proxy(element, this);
                     } else {
                         return element;
@@ -8597,20 +8605,20 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 }
             }
             let newPath = '';
-            if (Array.isArray(target)) {
-                if (prop != "length") {
-                    if (target.__path) {
+            if(Array.isArray(target)) {
+                if(prop != "length") {
+                    if(target.__path) {
                         newPath = target.__path;
                     }
                     newPath += "[" + prop + "]";
                     setProxyPath(newProxy, newPath);
                 }
             }
-            else if (element instanceof Date) {
+            else if(element instanceof Date) {
                 return element;
             }
             else {
-                if (target.__path) {
+                if(target.__path) {
                     newPath = target.__path + '.';
                 }
                 newPath += prop;
@@ -8620,51 +8628,61 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
 
         },
         tryCustomFunction(target, prop, receiver) {
-            if (prop == "__isProxy") {
+            if(prop == "__isProxy") {
                 return true;
             }
-            else if (prop == "__subscribe") {
+            else if(prop == "__subscribe") {
                 return (cb) => {
                     this.callbacks.push(cb);
                 };
             }
-            else if (prop == "__unsubscribe") {
+            else if(prop == "__unsubscribe") {
                 return (cb) => {
                     let index = this.callbacks.indexOf(cb);
-                    if (index > -1) {
+                    if(index > -1) {
                         this.callbacks.splice(index, 1);
                     }
                 };
             }
-            else if (prop == "__proxyId") {
+            else if(prop == "__proxyId") {
                 return this.id;
             }
             return undefined;
         },
         get(target, prop, receiver) {
-            if (prop == "__proxyData") {
+            if(prop == "__proxyData") {
                 return target[prop];
             }
-            else if(prop == "getHistory"){
+            else if(prop == "getHistory") {
                 return () => {
                     return this.history;
-                }
+                };
+            }
+            else if(prop == "enableHistory") {
+                return () => {
+                    this.useHistory = true;
+                };
+            }
+            else if(prop == "disableHistory") {
+                return () => {
+                    this.useHistory = false;
+                };
             }
             let customResult = this.tryCustomFunction(target, prop, receiver);
-            if (customResult !== undefined) {
+            if(customResult !== undefined) {
                 return customResult;
             }
 
             let element = target[prop];
-            if (typeof (element) == 'object') {
+            if(typeof (element) == 'object') {
                 return this.getProxyObject(target, element, prop);
             }
-            else if (typeof (element) == 'function') {
-                
-                if (Array.isArray(target)) {
+            else if(typeof (element) == 'function') {
+
+                if(Array.isArray(target)) {
                     let result;
-                    if (prop == 'push') {
-                        if (target.__isProxy) {
+                    if(prop == 'push') {
+                        if(target.__isProxy) {
                             result = (el) => {
                                 let index = target.push(el);
                                 return index;
@@ -8681,8 +8699,8 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                             };
                         };
                     }
-                    else if (prop == 'splice') {
-                        if (target.__isProxy) {
+                    else if(prop == 'splice') {
+                        if(target.__isProxy) {
                             result = (index, nbRemove, ...insert) => {
                                 let res = target.splice(index, nbRemove, ...insert);
                                 return res;
@@ -8692,11 +8710,11 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                             result = (index, nbRemove, ...insert) => {
                                 let res = target.splice(index, nbRemove, ...insert);
                                 let path = target.__path ? target.__path : '';
-                                for (let i = 0; i < res.length; i++) {
+                                for(let i = 0; i < res.length; i++) {
                                     trigger('DELETED', target, receiver, res[i], "[" + index + "]");
                                     removeProxyPath(res[i], path + "[" + (index + i) + "]");
                                 }
-                                for (let i = 0; i < insert.length; i++) {
+                                for(let i = 0; i < insert.length; i++) {
                                     // get real objetct with proxy to have the correct subscription
                                     let proxyEl = this.getProxyObject(target, insert[i], (index + i));
                                     target.splice((index + i), 1, proxyEl);
@@ -8705,15 +8723,15 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                                 let fromIndex = index + insert.length;
                                 let baseDiff = index - insert.length + res.length + 1;
                                 // update path and subscription
-                                for (let i = fromIndex, j = 0; i < target.length; i++, j++) {
+                                for(let i = fromIndex, j = 0; i < target.length; i++, j++) {
                                     let oldPath = path + "[" + (j + baseDiff) + "]";
                                     removeProxyPath(target[i], oldPath, false);
                                     let proxyEl = this.getProxyObject(target, target[i], i);
 
                                     let recuUpdate = (childEl) => {
-                                        if (Array.isArray(childEl)) {
-                                            for (let i = 0; i < childEl.length; i++) {
-                                                if (childEl[i] instanceof Object && childEl[i].__path) {
+                                        if(Array.isArray(childEl)) {
+                                            for(let i = 0; i < childEl.length; i++) {
+                                                if(childEl[i] instanceof Object && childEl[i].__path) {
                                                     let oldPathRecu = proxyEl[i].__path.replace(proxyEl.__path, oldPath);
                                                     removeProxyPath(childEl[i], oldPathRecu, false);
                                                     let newProxyEl = this.getProxyObject(childEl, childEl[i], i);
@@ -8721,9 +8739,9 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                                                 }
                                             }
                                         }
-                                        else if (childEl instanceof Object && !(childEl instanceof Date)) {
-                                            for (let key in childEl) {
-                                                if (childEl[key] instanceof Object && childEl[key].__path) {
+                                        else if(childEl instanceof Object && !(childEl instanceof Date)) {
+                                            for(let key in childEl) {
+                                                if(childEl[key] instanceof Object && childEl[key].__path) {
                                                     let oldPathRecu = proxyEl[key].__path.replace(proxyEl.__path, oldPath);
                                                     removeProxyPath(childEl[key], oldPathRecu, false);
                                                     let newProxyEl = this.getProxyObject(childEl, childEl[key], key);
@@ -8740,8 +8758,8 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                         }
 
                     }
-                    else if (prop == 'pop') {
-                        if (target.__isProxy) {
+                    else if(prop == 'pop') {
+                        if(target.__isProxy) {
                             result = () => {
                                 let res = target.pop();
                                 return res;
@@ -8769,15 +8787,15 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         },
         set(target, prop, value, receiver) {
             let triggerChange = false;
-            if (["__path", "__proxyData"].indexOf(prop) == -1) {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
                         triggerChange = true;
                     }
                 }
                 else {
                     let oldValue = Reflect.get(target, prop, receiver);
-                    if (oldValue !== value) {
+                    if(oldValue !== value) {
                         triggerChange = true;
                     }
                 }
@@ -8786,10 +8804,10 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
 
             let result = Reflect.set(target, prop, value, receiver);
 
-            if (triggerChange) {
+            if(triggerChange) {
                 let index = this.avoidUpdate.indexOf(prop);
 
-                if (index == -1) {
+                if(index == -1) {
                     trigger('UPDATED', target, receiver, value, prop);
                 }
                 else {
@@ -8801,10 +8819,10 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         deleteProperty(target, prop) {
             let triggerChange = false;
             let pathToDelete = '';
-            if (prop != "__path") {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
-                        if (target.__path) {
+            if(prop != "__path") {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
+                        if(target.__path) {
                             pathToDelete = target.__path;
                         }
                         pathToDelete += "[" + prop + "]";
@@ -8812,17 +8830,17 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                     }
                 }
                 else {
-                    if (target.__path) {
+                    if(target.__path) {
                         pathToDelete = target.__path + '.';
                     }
                     pathToDelete += prop;
                     triggerChange = true;
                 }
             }
-            if (target.hasOwnProperty(prop)) {
+            if(target.hasOwnProperty(prop)) {
                 let oldValue = target[prop];
                 delete target[prop];
-                if (triggerChange) {
+                if(triggerChange) {
                     trigger('DELETED', target, null, oldValue, prop);
                     removeProxyPath(oldValue, pathToDelete);
                 }
@@ -8833,30 +8851,30 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
         defineProperty(target, prop, descriptor) {
             let triggerChange = false;
             let newPath = '';
-            if (["__path", "__proxyData"].indexOf(prop) == -1) {
-                if (Array.isArray(target)) {
-                    if (prop != "length") {
-                        if (target.__path) {
+            if(["__path", "__proxyData"].indexOf(prop) == -1) {
+                if(Array.isArray(target)) {
+                    if(prop != "length") {
+                        if(target.__path) {
                             newPath = target.__path;
                         }
                         newPath += "[" + prop + "]";
-                        if (!target.hasOwnProperty(prop)) {
+                        if(!target.hasOwnProperty(prop)) {
                             triggerChange = true;
                         }
                     }
                 }
                 else {
-                    if (target.__path) {
+                    if(target.__path) {
                         newPath = target.__path + '.';
                     }
                     newPath += prop;
-                    if (!target.hasOwnProperty(prop)) {
+                    if(!target.hasOwnProperty(prop)) {
                         triggerChange = true;
                     }
                 }
             }
             let result = Reflect.defineProperty(target, prop, descriptor);
-            if (triggerChange) {
+            if(triggerChange) {
                 this.avoidUpdate.push(prop);
                 let proxyEl = this.getProxyObject(target, descriptor.value, prop);
                 target[prop] = proxyEl;
@@ -8867,40 +8885,43 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
     };
     const trigger = (type, target, receiver, value, prop) => {
 
-        if (target.__isProxy) {
+        if(target.__isProxy) {
             return;
         }
         let allProxies = target.__proxyData;
         // trigger only if same id
         let receiverId = 0;
-        if (receiver == null) {
+        if(receiver == null) {
             receiverId = proxyData.id;
         }
         else {
             receiverId = receiver.__proxyId;
         }
-        if (proxyData.id == receiverId) {
+        if(proxyData.id == receiverId) {
             let stacks = [];
             let allStacks = new Error().stack.split("\n");
-            for (let i = allStacks.length - 1; i >= 0; i--) {
+            for(let i = allStacks.length - 1; i >= 0; i--) {
                 let current = allStacks[i].trim().replace("at ", "");
-                if (current.startsWith("Object.set") || current.startsWith("Proxy.result")) {
+                if(current.startsWith("Object.set") || current.startsWith("Proxy.result")) {
                     break;
                 }
                 stacks.push(current);
             }
-            proxyData.history.push({
-                object: JSON.parse(JSON.stringify(target)),
-                trace: stacks.reverse()
-            });
-            
-            for (let triggerPath in allProxies) {
+            if(proxyData.useHistory) {
+                proxyData.history.push({
+                    object: JSON.parse(JSON.stringify(target, jsonReplacer)),
+                    trace: stacks.reverse()
+                });
+                console.log(proxy);
+            }
 
-                for (let currentProxyData of allProxies[triggerPath]) {
+            for(let triggerPath in allProxies) {
+
+                for(let currentProxyData of allProxies[triggerPath]) {
                     [...currentProxyData.callbacks].forEach((cb) => {
                         let pathToSend = triggerPath;
-                        if (pathToSend != "") {
-                            if (!prop.startsWith("[")) {
+                        if(pathToSend != "") {
+                            if(!prop.startsWith("[")) {
                                 pathToSend += ".";
                             }
                             pathToSend += prop;
@@ -8916,7 +8937,7 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
     };
 
 
-    let proxy = new Proxy(obj, proxyData);
+    proxy = new Proxy(obj, proxyData);
     setProxyPath(proxy, '');
     return proxy;
 };
@@ -8957,6 +8978,7 @@ Object.isPathMatching = function (p1, p2) {
     p2 = p2.replace(/\[\d*?\]/g, '[]');
     return p1 == p2;
 }
+
 Event.prototype.normalize = function () {
     if (
         this.type === "touchstart" ||
@@ -9255,7 +9277,8 @@ class AvScrollable extends WebComponent {
                         return Number(this.getAttribute('zoom'));
                     }
                     set 'zoom'(val) {
-                        this.setAttribute('zoom',val);
+						if(val === undefined || val === null){this.removeAttribute('zoom')}
+                        else{this.setAttribute('zoom',val)}
                     }get 'floating_scroll'() {
                         return this.hasAttribute('floating_scroll');
                     }
@@ -9365,7 +9388,8 @@ class AvRouterLink extends WebComponent {
                         return this.getAttribute('state');
                     }
                     set 'state'(val) {
-                        this.setAttribute('state',val);
+						if(val === undefined || val === null){this.removeAttribute('state')}
+                        else{this.setAttribute('state',val)}
                     }    __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -9568,7 +9592,8 @@ class AvFormElement extends WebComponent {
                         return this.getAttribute('name');
                     }
                     set 'name'(val) {
-                        this.setAttribute('name',val);
+						if(val === undefined || val === null){this.removeAttribute('name')}
+                        else{this.setAttribute('name',val)}
                     }get 'focusable'() {
                         return this.hasAttribute('focusable');
                     }
@@ -9690,12 +9715,14 @@ class AvForm extends WebComponent {
                         return this.getAttribute('method');
                     }
                     set 'method'(val) {
-                        this.setAttribute('method',val);
+						if(val === undefined || val === null){this.removeAttribute('method')}
+                        else{this.setAttribute('method',val)}
                     }get 'action'() {
                         return this.getAttribute('action');
                     }
                     set 'action'(val) {
-                        this.setAttribute('action',val);
+						if(val === undefined || val === null){this.removeAttribute('action')}
+                        else{this.setAttribute('action',val)}
                     }get 'use_event'() {
                         return this.hasAttribute('use_event');
                     }
@@ -9751,17 +9778,20 @@ class AvFor extends WebComponent {
                         return this.getAttribute('item');
                     }
                     set 'item'(val) {
-                        this.setAttribute('item',val);
+						if(val === undefined || val === null){this.removeAttribute('item')}
+                        else{this.setAttribute('item',val)}
                     }get 'in'() {
                         return this.getAttribute('in');
                     }
                     set 'in'(val) {
-                        this.setAttribute('in',val);
+						if(val === undefined || val === null){this.removeAttribute('in')}
+                        else{this.setAttribute('in',val)}
                     }get 'index'() {
                         return this.getAttribute('index');
                     }
                     set 'index'(val) {
-                        this.setAttribute('index',val);
+						if(val === undefined || val === null){this.removeAttribute('index')}
+                        else{this.setAttribute('index',val)}
                     }    __prepareVariables() { super.__prepareVariables(); if(this.template === undefined) {this.template = "";}if(this.parent === undefined) {this.parent = undefined;}if(this.parentIndex === undefined) {this.parentIndex = 0;}if(this.parentFor === undefined) {this.parentFor = undefined;}if(this.otherPart === undefined) {this.otherPart = undefined;}if(this.elementsByPath === undefined) {this.elementsByPath = {};}if(this.elementsRootByIndex === undefined) {this.elementsRootByIndex = {};}if(this.forInside === undefined) {this.forInside = {};}if(this.maxIndex === undefined) {this.maxIndex = 0;}if(this.watchElement === undefined) {this.watchElement = undefined;}if(this.watchActionArray === undefined) {this.watchActionArray = undefined;}if(this.watchObjectArray === undefined) {this.watchObjectArray = undefined;}if(this.watchObjectName === undefined) {this.watchObjectName = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();

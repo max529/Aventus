@@ -1,0 +1,3 @@
+declare namespace luxon {
+	class Date extends luxon.DateTime {}
+}

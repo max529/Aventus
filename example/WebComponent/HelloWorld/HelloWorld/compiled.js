@@ -4,12 +4,14 @@ class AvHelloWorld extends WebComponent {
                         return Number(this.getAttribute('hello_clicked'));
                     }
                     set 'hello_clicked'(val) {
-                        this.setAttribute('hello_clicked',val);
+						if(val === undefined || val === null){this.removeAttribute('hello_clicked')}
+                        else{this.setAttribute('hello_clicked',val)}
                     }get 'word_clicked'() {
                         return Number(this.getAttribute('word_clicked'));
                     }
                     set 'word_clicked'(val) {
-                        this.setAttribute('word_clicked',val);
+						if(val === undefined || val === null){this.removeAttribute('word_clicked')}
+                        else{this.setAttribute('word_clicked',val)}
                     }    __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(`:host{margin:15px}:host .hello{color:gray;cursor:pointer;padding:10px 5px;margin-right:5px}:host .hello:hover{background-color:rgba(100,100,100,.5)}:host .world{color:blue;cursor:pointer;padding:10px 5px;margin-left:5px}:host .world:hover{background-color:rgba(100,100,100,.5)}`);

@@ -147,7 +147,9 @@ export class AventusHTMLMode {
 						}
 					}
 					if (temp.kind == CompletionItemKind.Property && temp.textEdit) {
-						temp.textEdit.newText += "></" + temp.textEdit.newText + ">";
+						if (!temp.textEdit.newText.endsWith(">")) {
+							temp.textEdit.newText += "></" + temp.textEdit.newText + ">";
+						}
 					}
 				}
 				return result;

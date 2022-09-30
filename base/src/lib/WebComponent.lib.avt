@@ -38,7 +38,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private __prepareForUpdate: [] = [];
     private __loopTemplate: { [key: string]: () => string; } = {};
     private __watchActionsCb: { [key: string]: (type: WatchAction, path: string, element: any) => void; } = {};
-    
+
     public getClassName(): string {
         return this.constructor.name;
     };

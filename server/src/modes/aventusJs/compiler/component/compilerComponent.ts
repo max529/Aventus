@@ -176,6 +176,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					if (arg.writeCompiled) {
 						classInfo.debuggerOption.writeCompiled = arg.writeCompiled;
 					}
+					if (arg.enableWatchHistory) {
+						classInfo.debuggerOption.enableWatchHistory = arg.enableWatchHistory
+					}
 				}
 
 			}
@@ -582,8 +585,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					return;
 				}
 				let type = field.type.typeName.toLowerCase();
-				if (!TYPES.hasOwnProperty(type)) {
-					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as attribute", field.start, field.end));
+				let foundType = false;
+				for (let TYPE in TYPES) {
+					if (TYPES[TYPE] == type) {
+						foundType = true;
+						break;
+					}
+				}
+				if (!foundType) {
+					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + field.type.typeName + " as attribute", field.start, field.end));
 					return;
 				}
 				if (field.name.toLowerCase() != field.name) {
@@ -600,6 +610,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					else if (type == TYPES.date || type == TYPES.datetime) {
+						if (defaultValueProp === undefined) {
+							return;
+						}
 						if (!defaultValueProp) { defaultValueProp = "" }
 						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }" + EOL;
 
@@ -621,14 +634,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         return this.getAttribute('${key}');
                     }
                     set '${key}'(val) {
-                        this.setAttribute('${key}',val);
+						if(val === undefined || val === null){this.removeAttribute('${key}')}
+                        else{this.setAttribute('${key}',val)}
                     }${EOL}`;
 					} else if (type == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
                     set '${key}'(val) {
-                        this.setAttribute('${key}',val);
+						if(val === undefined || val === null){this.removeAttribute('${key}')}
+                        else{this.setAttribute('${key}',val)}
                     }${EOL}`;
 					}
 					else if (type == TYPES.boolean) {
@@ -658,20 +673,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
-                                return luxon.DateTime.now();
+                                return undefined;
                             }
                             return luxon.DateTime.fromISO(this.getAttribute('${key}'));
                         }
                         set '${key}'(val) {
-                            if (val instanceof luxon.DateTime) {
+							if(val === undefined || val === null){this.removeAttribute('${key}')}
+                            else if (val instanceof luxon.DateTime) {
                                 this.setAttribute('${key}', val.toISODate());
-                            } else if(val instanceof Date){
-                                val = luxon.DateTime.fromJSDate(val);
-                                this.setAttribute('${key}', val.toISODate());
-                            } else if (typeof val === 'string') {
-                                val = luxon.DateTime.fromISO(val);
-                                this.setAttribute('${key}', val.toISODate());
-                            } else {
+                            }
+							else {
                                 throw new Error("Invalid date");
                             }
                         }
@@ -681,22 +692,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
-                                return luxon.DateTime.now();
+                                return undefined;
                             }
                             return luxon.DateTime.fromISO(this.getAttribute('${key}'));
                         }
                         set '${key}'(val) {
-                            if (val instanceof luxon.DateTime) {
+							if(val === undefined || val === null){this.removeAttribute('${key}')}
+                            else if (val instanceof luxon.DateTime) {
                                 this.setAttribute('${key}', val.toISO());
                             } 
-                            else if(val instanceof Date){
-                                val = luxon.DateTime.fromJSDate(val);
-                                this.setAttribute('${key}', val.toISO());
-                            }
-                            else if (typeof val === 'string') {
-                                val = luxon.DateTime.fromISO(val);
-                                this.setAttribute('${key}', val.toISO());
-                            } else {
+                            else {
                                 throw new Error("Invalid date");
                             }
                         }
@@ -720,8 +725,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					return;
 				}
 				let type = field.type.typeName.toLowerCase();
-				if (!TYPES.hasOwnProperty(type)) {
-					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + type + " as property", field.start, field.end));
+				let foundType = false;
+				for (let TYPE in TYPES) {
+					if (TYPES[TYPE] == type) {
+						foundType = true;
+						break;
+					}
+				}
+				if (!foundType) {
+					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + field.type.typeName + " as property", field.start, field.end));
 					return;
 				}
 				if (field.name.toLowerCase() != field.name) {
@@ -738,6 +750,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						}
 					}
 					else if (type == TYPES.date || type == TYPES.datetime) {
+						if (defaultValueProp === undefined) {
+							return;
+						}
 						if (!defaultValueProp) { defaultValueProp = "" }
 						defaultValue += "if(!this.hasAttribute('" + key + "')){ this['" + key + "'] = " + defaultValueProp + "; }" + EOL;
 
@@ -759,14 +774,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         return this.getAttribute('${key}');
                     }
                     set '${key}'(val) {
-                        this.setAttribute('${key}',val);
+						if(val === undefined || val === null){this.removeAttribute('${key}')}
+						else{this.setAttribute('${key}',val)}
                     }`+ EOL;
 					} else if (type == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
                     set '${key}'(val) {
-                        this.setAttribute('${key}',val);
+						if(val === undefined || val === null){this.removeAttribute('${key}')}
+                        else{this.setAttribute('${key}',val)}
                     }`+ EOL;
 					}
 					else if (type == TYPES.boolean) {
@@ -796,18 +813,13 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
-                                return luxon.DateTime.now();
+                                return undefined;
                             }
                             return luxon.DateTime.fromISO(this.getAttribute('${key}'));
                         }
                         set '${key}'(val) {
-                            if (val instanceof luxon.DateTime) {
-                                this.setAttribute('${key}', val.toISODate());
-                            } else if(val instanceof Date){
-                                val = luxon.DateTime.fromJSDate(val);
-                                this.setAttribute('${key}', val.toISODate());
-                            } else if (typeof val === 'string') {
-                                val = luxon.DateTime.fromISO(val);
+							if(val === undefined || val === null){this.removeAttribute('${key}')}
+                            else if (val instanceof luxon.DateTime) {
                                 this.setAttribute('${key}', val.toISODate());
                             } else {
                                 throw new Error("Invalid date");
@@ -819,22 +831,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
-                                return luxon.DateTime.now();
+                                return undefined;
                             }
                             return luxon.DateTime.fromISO(this.getAttribute('${key}'));
                         }
                         set '${key}'(val) {
-                            if (val instanceof luxon.DateTime) {
+							if(val === undefined || val === null){this.removeAttribute('${key}')}
+                            else if (val instanceof luxon.DateTime) {
                                 this.setAttribute('${key}', val.toISO());
                             } 
-                            else if(val instanceof Date){
-                                val = luxon.DateTime.fromJSDate(val);
-                                this.setAttribute('${key}', val.toISO());
-                            }
-                            else if (typeof val === 'string') {
-                                val = luxon.DateTime.fromISO(val);
-                                this.setAttribute('${key}', val.toISO());
-                            } else {
+                            else {
                                 throw new Error("Invalid date");
                             }
                         }
@@ -863,24 +869,24 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 			}
 			const _createWatchVariable = (field: FieldModel, args: any[] = []) => {
-				if (field.type) {
-					if (field.type.typeKind == TypeKind.BASIC) {
+				// if (field.type.typeKind == TypeKind.BASIC) {
 
-					}
-					if (field.type.typeKind == TypeKind.ARRAY) {
-						let arrayType: ArrayType = field.type as ArrayType;
-						let name = arrayType.base.typeName;
-					}
-					let value = "";
-					if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
-						result.diagnostics.push(createErrorTsPos(document, "A watchable prop must be initialized", field.start, field.end));
+				// }
+				// if (field.type.typeKind == TypeKind.ARRAY) {
+				// 	let arrayType: ArrayType = field.type as ArrayType;
+				// 	let name = arrayType.base.typeName;
+				// }
+				let value = "";
+				if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
+					result.diagnostics.push(createErrorTsPos(document, "A watchable prop must be initialized", field.start, field.end));
+				}
+				else {
+					// constraint is a function
+					if (field.valueConstraint.isCallConstraint) {
+						value = field.valueConstraint.value.name + `(${field.valueConstraint.value.arguments.join(", ")})`
 					}
 					else {
-						// constraint is a function
-						if (field.valueConstraint.isCallConstraint) {
-							value = field.valueConstraint.value.name + `(${field.valueConstraint.value.arguments.join(", ")})`
-						}
-						else {
+						if (field.type) {
 							if (field.type.typeName.toLowerCase() === TYPES.string) {
 								value = `"${field.valueConstraint.value}"`;
 							} else if (field.type.typeName.toLowerCase() === TYPES.date) {
@@ -893,14 +899,18 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 								value = JSON.stringify(field.valueConstraint.value);
 							}
 						}
+						else {
+							value = JSON.stringify(field.valueConstraint.value);
+						}
 					}
-					if (value == '"undefined"') { value = "undefined" }
-					let watchAction = `this.__watchActions["${field.name}"] = []`;
-					let txtWatchFct = "";
-					if (args.length > 0) {
-						txtWatchFct = transpileMethodNoRun(args[0]);
-					}
-					watchAction = `this.__watchActions["${field.name}"] = [${txtWatchFct}];
+				}
+				if (value == '"undefined"') { value = "undefined" }
+				let watchAction = `this.__watchActions["${field.name}"] = []`;
+				let txtWatchFct = "";
+				if (args.length > 0) {
+					txtWatchFct = transpileMethodNoRun(args[0]);
+				}
+				watchAction = `this.__watchActions["${field.name}"] = [${txtWatchFct}];
 						this.__watchActionsCb["${field.name}"] = (action, path, value) => {
 							for (let fct of this.__watchActions["${field.name}"]) {
 								fct(this, action, path, value);
@@ -917,16 +927,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 								}
 							}
 						}`;
-					getterSetter += `get '${field.name}'() {
+				getterSetter += `get '${field.name}'() {
 						return this.__watch["${field.name}"];
 					}
 					set '${field.name}'(val) {
 						this.__watch["${field.name}"] = val;
 					}`+ EOL;
-					variableProxy[field.name] = `${watchAction}`;
-					variableProxyInit += `this["${field.name}"] = ${value};`;
-					foundedWatch.push(field.name);
-				}
+				variableProxy[field.name] = `${watchAction}`;
+				variableProxyInit += `this["${field.name}"] = ${value};`;
+				foundedWatch.push(field.name);
 			}
 			const _createSimpleVariable = (field: CustomFieldModel) => {
 				if (!toPrepare.variablesInView.hasOwnProperty(field.name)) {
@@ -1253,15 +1262,32 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				template = template.replace(/\$listBool/g, "");
 			}
 
+			let debugWatchTxt = '';
+			if (classInfo.debuggerOption.enableWatchHistory) {
+				debugWatchTxt = `if(this.__watch){
+	this.__watch.enableHistory();
+	this.getWatchHistory = () => {
+		return this.__watch.getHistory();
+	}
+}`
+			}
 			if (variableProxyTxt.length > 0) {
+
 				variableProxyTxt = `__prepareWatchesActions() {
 					${variableProxyTxt}
 					super.__prepareWatchesActions();
+					${debugWatchTxt}
 				}`
 
 				variableProxyTxt += `\r\n__initWatches() {
 					super.__initWatches();
 					${variableProxyInit}
+				}`
+			}
+			else if (debugWatchTxt.length > 0) {
+				variableProxyTxt = `__prepareWatchesActions() {
+					super.__prepareWatchesActions();
+					${debugWatchTxt}
 				}`
 			}
 			template = template.replace(/\$watches/g, variableProxyTxt);

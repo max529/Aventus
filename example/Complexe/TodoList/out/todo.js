@@ -241,7 +241,8 @@ class AvInput extends AvFormElement {
                         return this.getAttribute('label');
                     }
                     set 'label'(val) {
-                        this.setAttribute('label',val);
+						if(val === undefined || val === null){this.removeAttribute('label')}
+						else{this.setAttribute('label',val)}
                     }    __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -299,7 +300,8 @@ class AvComplexTest extends WebComponent {
                         return this.getAttribute('testvariable');
                     }
                     set 'testvariable'(val) {
-                        this.setAttribute('testvariable',val);
+						if(val === undefined || val === null){this.removeAttribute('testvariable')}
+						else{this.setAttribute('testvariable',val)}
                     }get 'data'() {
 						return this.__watch["data"];
 					}

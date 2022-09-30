@@ -8491,6 +8491,7 @@ var luxon = (function (exports) {
     var VERSION = "2.3.2";
   
     exports.DateTime = DateTime;
+    exports.Date = DateTime;
     exports.Duration = Duration;
     exports.FixedOffsetZone = FixedOffsetZone;
     exports.IANAZone = IANAZone;

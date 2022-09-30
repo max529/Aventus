@@ -4,7 +4,8 @@ class AvComplexTest extends WebComponent {
                         return this.getAttribute('testvariable');
                     }
                     set 'testvariable'(val) {
-                        this.setAttribute('testvariable',val);
+						if(val === undefined || val === null){this.removeAttribute('testvariable')}
+						else{this.setAttribute('testvariable',val)}
                     }get 'data'() {
 						return this.__watch["data"];
 					}

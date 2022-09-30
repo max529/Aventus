@@ -4,7 +4,8 @@ class AvSelect extends AvFormElement {
                         return this.getAttribute('label');
                     }
                     set 'label'(val) {
-                        this.setAttribute('label',val);
+						if(val === undefined || val === null){this.removeAttribute('label')}
+						else{this.setAttribute('label',val)}
                     }get 'value_display'() {
 						return this.__watch["value_display"];
 					}
@@ -109,7 +110,8 @@ class AvOption extends WebComponent {
                         return this.getAttribute('value');
                     }
                     set 'value'(val) {
-                        this.setAttribute('value',val);
+						if(val === undefined || val === null){this.removeAttribute('value')}
+                        else{this.setAttribute('value',val)}
                     }get 'selected'() {
                         return this.hasAttribute('selected');
                     }

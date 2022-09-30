@@ -17,6 +17,9 @@ declare interface ObjectConstructor {
     prepareByPath:(obj, path, currentPath?) => {canApply:boolean, objToApply:any};
     isPathMatching:(p1:string, p2:string) => void;
 }
+declare namespace luxon {
+	class Date extends luxon.DateTime {}
+}
 declare interface Event {
     normalize: () => void;
     /**
@@ -52,7 +55,7 @@ interface DtScrollablePositions {    vertical: {        value: number;       
 interface AvHideableOptions {    canHide?: (target?: Element) => Promise<boolean>;    beforeHide?: () => Promise<void>;    afterHide?: () => Promise<void>;    noHideItems?: HTMLElement[];    container?: HTMLElement;}
 interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultComponent {    states?: States;    [key: string]: any;    getStateManagerName?(): string | undefined;    getClassName(): string;}declare abstract class WebComponent extends HTMLElement implements DefaultComponent {    static get observedAttributes(): {};    private _first;    private _isReady;    get isReady(): boolean;    private _translations;    private currentState;    private statesList;    private _components;    private __onChangeFct;    private getSlugFct;    private __watch;    private __watchActions;    private __prepareForCreate;    private __prepareForUpdate;    private __loopTemplate;    private __watchActionsCb;    getClassName(): string;    constructor();    private __prepareVariables;    private __prepareWatchesActions;    private __initWatches;    private __prepareForLoop;    private __getLangTranslations;    private __prepareTranslations;    private __setTranslations;    private __getStyle;    private __getHtml;    private __prepareTemplate;    private __createStates;    protected getDefaultStateCallbacks(): State;    private __getMaxId;    private __selectElementNeeded;    private __mapSelectedElement;    private __registerOnChange;    private __endConstructor;    private connectedCallback;    private __defaultValue;    private __upgradeAttributes;    private __listBoolProps;    private __upgradeProperty;    private __addEvents;    private __applyTranslations;    private __getTranslation;    getStateManagerName(): string | undefined;    private __subscribeState;    private attributeChangedCallback;    protected postCreation(): void;    private _unsubscribeState;}
 interface ViewElementConfig {    useLive?: boolean;}
-interface DebuggerConfig {    writeCompiled?: boolean;}
+interface DebuggerConfig {    writeCompiled?: boolean;    enableWatchHistory?: boolean;}
 declare enum WatchAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
 interface IData {}interface CSharpData extends IData {    $type: string;}
 declare class Coordinate implements IData {    x: number;    y: number;}
