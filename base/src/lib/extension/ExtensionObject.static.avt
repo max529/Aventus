@@ -386,12 +386,7 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 }
                 stacks.push(current);
             }
-            if(proxyData.useHistory) {
-                proxyData.history.push({
-                    object: JSON.parse(JSON.stringify(realProxy, jsonReplacer)),
-                    trace: stacks.reverse()
-                });
-            }
+
 
             for(let triggerPath in allProxies) {
 
@@ -409,7 +404,16 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                         }
                         cb(WatchAction[type], pathToSend, value);
                     });
+
+                    if(proxyData.useHistory) {
+                        proxyData.history.push({
+                            object: JSON.parse(JSON.stringify(realProxy, jsonReplacer)),
+                            trace: stacks.reverse(),
+                            cha
+                        });
+                    }
                 }
+
             }
         }
     };
