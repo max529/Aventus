@@ -1,9 +1,36 @@
-declare function attribute();
-declare function property<T>(onChange: (arg: T) => void);
-declare function property();
-declare function watch();
-declare function viewElement(config:ViewElementConfig);
-declare function watch<T>(onChange: (arg: T, action: WatchAction, path: string, value: any) => void);
+/**
+ * Add an attribute inside on your component
+ */
+declare function Attribute();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property<T>(onChange: (component: T) => void);
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch();
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
+/**
+ * Signal that this variable is a link to your shadowroot
+ */
+declare function ViewElement(config?:ViewElementConfig);
+/**
+ * Ignore identifier check
+ */
 declare function IgnoreForceIdentifier();
-declare function overrideView(target: any);
+/**
+ * Clear parent view and use yours 
+ */
+declare function OverrideView();
+/**
+ * Add debbuger action function for your component
+ */
 declare function Debugger(config: DebuggerConfig);

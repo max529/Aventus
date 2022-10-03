@@ -8576,8 +8576,9 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
     let currentTrace = new Error().stack.split("\n");
     currentTrace.shift();
     currentTrace.shift();
-    var proxy = undefined;
+    let onlyDuringInit = true;
     let proxyData = {
+        baseData: {},
         id: Proxy.__maxProxyData,
         callbacks: [onDataChanged],
         avoidUpdate: [],
@@ -8666,6 +8667,11 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
             else if(prop == "disableHistory") {
                 return () => {
                     this.useHistory = false;
+                };
+            }
+            else if(prop == "__getTarget" && onlyDuringInit) {
+                return () => {
+                    return target;
                 };
             }
             let customResult = this.tryCustomFunction(target, prop, receiver);
@@ -8907,39 +8913,49 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                 }
                 stacks.push(current);
             }
-            if(proxyData.useHistory) {
-                proxyData.history.push({
-                    object: JSON.parse(JSON.stringify(target, jsonReplacer)),
-                    trace: stacks.reverse()
-                });
-                console.log(proxy);
-            }
+
 
             for(let triggerPath in allProxies) {
 
                 for(let currentProxyData of allProxies[triggerPath]) {
+
+                    let pathToSend = triggerPath;
+                    if(pathToSend != "") {
+                        if(!prop.startsWith("[")) {
+                            pathToSend += ".";
+                        }
+                        pathToSend += prop;
+                    }
+                    else {
+                        pathToSend = prop;
+                    }
+
+                    if(proxyData.useHistory) {
+                        proxyData.history.push({
+                            object: JSON.parse(JSON.stringify(currentProxyData.baseData, jsonReplacer)),
+                            trace: stacks.reverse(),
+                            action:WatchAction[type],
+                            path:pathToSend
+                        });
+                    }
+
                     [...currentProxyData.callbacks].forEach((cb) => {
-                        let pathToSend = triggerPath;
-                        if(pathToSend != "") {
-                            if(!prop.startsWith("[")) {
-                                pathToSend += ".";
-                            }
-                            pathToSend += prop;
-                        }
-                        else {
-                            pathToSend = prop;
-                        }
+
                         cb(WatchAction[type], pathToSend, value);
                     });
+
                 }
+
             }
         }
     };
 
 
-    proxy = new Proxy(obj, proxyData);
-    setProxyPath(proxy, '');
-    return proxy;
+    var realProxy = new Proxy(obj, proxyData);
+    proxyData.baseData = realProxy.__getTarget();
+    onlyDuringInit = false;
+    setProxyPath(realProxy, '');
+    return realProxy;
 };
 Object.prepareByPath = function (obj, path, currentPath = "") {
     let objToApply = obj;

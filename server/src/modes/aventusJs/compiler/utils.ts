@@ -3,7 +3,8 @@ import * as ts from 'typescript'
 import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import * as aventusConfig from '../../../config'
-import { AliasNode, ClassModel, EnumDeclaration, parseStruct } from '../../../ts-file-parser'
+import { AliasNode, ClassModel, EnumDeclaration } from '../../../ts-file-parser'
+import { parseDocument } from '../../../ts-file-parser/src/tsStructureParser'
 import { compilerOptions } from '../config'
 import { getFolder, uriToPath } from '../utils'
 
@@ -49,7 +50,7 @@ export function removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaratio
 }
 
 export function genericCompile(document: TextDocument) {
-	const struct = parseStruct(document.getText(), {}, uriToPath(document.uri));
+	const struct = parseDocument(document);
 	let scriptTxt = "";
 	let docTxt = "";
 	let classesNameSript: string[] = [];

@@ -6,37 +6,32 @@ import { WatchAction } from "../../data/WatchAction.data.avt";
  */
 export class AvFor extends WebComponent implements DefaultComponent {
 
-    //#region static
-
-    //#endregion
-
-
     //#region props
     /**
      * Name of item inside loop
      */
-    @attribute()
+    @Attribute()
     item: string = "";
 
     /**
      * Name of property to loop though
      */
-    @attribute()
+    @Attribute()
     in: string = "";
 
     /**
      * Name of your index
      */
-    @attribute()
+    @Attribute()
     index: string = "";
     //#endregion
 
 
     //#region variables
-    template: string = "";
+    private template: string = "";
     private parent: Element | undefined;
-    public parentIndex: number = 0;
-    public parentFor: AvFor | undefined;
+    private parentIndex: number = 0;
+    private parentFor: AvFor | undefined;
     private otherPart: string[];
 
     private elementsByPath: { [key: string]: { [key: string]: HTMLElement[]; }; } = {};
@@ -311,7 +306,7 @@ export class AvFor extends WebComponent implements DefaultComponent {
         this.init();
     }
 
-    public getParentKey(): string {
+    private getParentKey(): string {
         let el: AvFor = this;
         let result = "";
         while(el.parentFor) {
@@ -321,7 +316,7 @@ export class AvFor extends WebComponent implements DefaultComponent {
         return result;
     }
 
-    public updateIndexes(indexName, indexValue): void {
+    private updateIndexes(indexName, indexValue): void {
         for(let position in this.elementsByPath) {
             for(let elements of Object.values(this.elementsByPath[position])) {
                 for(let element of elements) {

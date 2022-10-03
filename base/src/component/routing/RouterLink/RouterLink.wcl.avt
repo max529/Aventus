@@ -10,7 +10,7 @@ export class AvRouterLink extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @attribute()
+    @Attribute()
     public state: string = "";
     //#endregion
 

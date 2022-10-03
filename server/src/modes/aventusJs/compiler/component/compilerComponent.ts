@@ -1,5 +1,5 @@
-import { scssMode } from '../../../../mode';
-import { ArrayType, ClassModel, DefaultClassModel, FieldModel, ImportNode, Module, parseStruct, TypeKind } from '../../../../ts-file-parser';
+import { htmlMode, jsMode, scssMode, wcMode } from '../../../../mode';
+import { ArrayType, BasicType, ClassModel, DefaultClassModel, FieldModel, ImportNode, Module, TypeKind, UnionType } from '../../../../ts-file-parser';
 import { AventusConfig } from '../../config';
 import { compileDocTs, createErrorTs, createErrorTsPos, removeComments, removeDecoratorFromClassContent, removeWhiteSpaceLines, replaceFirstExport } from '../utils';
 import { compilerTemplate } from './compilerTemplate';
@@ -12,16 +12,17 @@ import { CompileComponentResult, configTS, CustomClassInfo, CustomFieldModel, HT
 import { loadFields, transpileMethod, transpileMethodNoRun } from './utils';
 import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { uriToPath } from '../../utils';
+import { pathToUri, uriToPath } from '../../utils';
 import { AventusJSProgram } from '../../program';
 import { AventusWcDoc } from '../../../aventusWc/doc';
 import { EOL } from 'os';
+import { parseDocument } from '../../../../ts-file-parser/src/tsStructureParser';
 
 const ts = require("typescript");
 
 interface PrepareDocumentResult {
 	folderPath: string,
-	scriptText: string,
+	scriptDocument: TextDocument,
 	cssResult: ScssCompilerResult
 	htmlText: string,
 	diagnostics: Diagnostic[]
@@ -29,7 +30,7 @@ interface PrepareDocumentResult {
 function prepareDocument(document: TextDocument, virtualDoc: boolean): PrepareDocumentResult {
 	let result: PrepareDocumentResult = {
 		folderPath: "",
-		scriptText: "",
+		scriptDocument: document,
 		cssResult: {
 			success: true,
 			content: "",
@@ -43,37 +44,38 @@ function prepareDocument(document: TextDocument, virtualDoc: boolean): PrepareDo
 	let componentPath = "";
 	if (virtualDoc) {
 		componentPath = uriToPath(document.uri.replace(aventusExtension.ComponentLogic, aventusExtension.Component));
-		let fullText = readFileSync(componentPath, 'utf8');
-		let resultTemp = AventusWcDoc.extractContent(fullText);
-		result.scriptText = resultTemp.scriptText;
-		// style
-		result.cssResult = compileScss(componentPath.replace(aventusExtension.Component, aventusExtension.ComponentStyle), resultTemp.cssText);
-		if (!result.cssResult.success) {
-			result.diagnostics.push(createErrorTs(document, result.cssResult.errorInfo));
+		let wcDoc = wcMode.getDocumentByUri(document.uri.replace(aventusExtension.ComponentLogic, aventusExtension.Component));
+		if (wcDoc) {
+			result.scriptDocument = wcDoc.getJSInfo().document;
+			result.cssResult = compileScss(componentPath.replace(aventusExtension.Component, aventusExtension.ComponentStyle), wcDoc.getSCSSInfo().text);
+			if (!result.cssResult.success) {
+				result.diagnostics.push(createErrorTs(document, result.cssResult.errorInfo));
+			}
+			result.htmlText = wcDoc.getHTMLInfo().text.replace(/<!--[\s\S]*?-->/g, '').trim();
 		}
-		// view
-		result.htmlText = resultTemp.htmlText;
 	}
 	else {
 		componentPath = uriToPath(document.uri);
-		result.scriptText = readFileSync(componentPath, 'utf8');
-		// style
-		let stylePath = componentPath.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle);
-		if (existsSync(stylePath)) {
-			result.cssResult = compileScss(stylePath, readFileSync(stylePath, 'utf8'));
+		result.scriptDocument = document;
+		let styleUri = document.uri.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle);
+		let styleDoc = scssMode.getFile(styleUri);
+		if (styleDoc) {
+			result.cssResult = compileScss(componentPath.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentStyle), styleDoc.getText());
 			if (!result.cssResult.success) {
 				result.diagnostics.push(createErrorTs(document, result.cssResult.errorInfo));
 			}
 		}
-		// view
-		let viewPath = componentPath.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentView);
-		if (existsSync(viewPath)) {
-			result.htmlText = readFileSync(viewPath, "utf8").replace(/<!--[\s\S]*?-->/g, '').trim();
+		let viewUri = document.uri.replace(aventusExtension.ComponentLogic, aventusExtension.ComponentView);
+		let htmlDoc = htmlMode.getFile(viewUri);
+		if (htmlDoc) {
+			result.htmlText = htmlDoc.getText().replace(/<!--[\s\S]*?-->/g, '').trim();
 		}
 	}
+
 	let folderTemp = componentPath.split("/");
 	let scriptName = folderTemp.pop() || '';
 	result.folderPath = folderTemp.join("/");
+	result.htmlText = result.htmlText.replace(/\\\{\{(.*?)\}\}/g, "|!*$1*!|")
 	return result;
 }
 
@@ -100,7 +102,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	let documentPath = uriToPath(document.uri);
 	let template = compilerTemplate;
 
-	let jsonStructure = parseStruct(documentInfo.scriptText, {}, documentPath);
+	let jsonStructure = parseDocument(documentInfo.scriptDocument);
 	if (jsonStructure.functions.length > 0) {
 		for (let fct of jsonStructure.functions) {
 			result.diagnostics.push(createErrorTsPos(document, "You can't declare function outside of your class", fct.start, fct.end))
@@ -167,7 +169,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	};
 
 	for (let decorator of classInfo.decorators) {
-		if (decorator.name == 'overrideView') {
+		if (decorator.name == 'OverrideView') {
 			classInfo.overrideView = true;
 		}
 		else if (decorator.name == 'Debugger') {
@@ -205,11 +207,13 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				for (let importTemp of jsonStruct._imports) {
 					for (let name of importTemp.clauses) {
 						if (name == jsonStruct.classes[0].extends[0].typeName) {
-							let newPath = importTemp.absPathString;
-							let parentScript = readFileSync(newPath, 'utf8');
-							newPath = newPath.replace(/\\/g, "/");
-							let parentStructure = parseStruct(parentScript, {}, newPath);
-							_loadParent(parentStructure, false);
+							let newPath = importTemp.absPathString.replace(/\\/g, "/");
+							let newUri = pathToUri(newPath);
+							let parentScript = jsMode.getFile(newUri);
+							if (parentScript) {
+								let parentStructure = parseDocument(parentScript);
+								_loadParent(parentStructure, false);
+							}
 							return;
 						}
 					}
@@ -584,7 +588,30 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				if (!field.type) {
 					return;
 				}
+				let definedValues: {
+					name: string,
+					description: string,
+				}[] = [];
 				let type = field.type.typeName.toLowerCase();
+				if (field.type.typeKind == TypeKind.UNION) {
+					let unionType: UnionType = field.type as UnionType;
+					let previousTypeName: string = "";
+					for (let option of unionType.options) {
+						if (option.typeName != previousTypeName && previousTypeName != "") {
+							result.diagnostics.push(createErrorTsPos(document, "You must use the same type inside an union type", field.start, field.end));
+							return;
+						}
+						if (option.typeName == TYPES.literal) {
+							let literalType = option as BasicType;
+							definedValues.push({
+								name: literalType.basicName,
+								description: '',
+							});
+						}
+						previousTypeName = option.typeName;
+						type = previousTypeName.toLowerCase();
+					}
+				}
 				let foundType = false;
 				for (let TYPE in TYPES) {
 					if (TYPES[TYPE] == type) {
@@ -592,7 +619,12 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						break;
 					}
 				}
+
 				if (!foundType) {
+					// check if alias
+					// TODO load class name getClass / getAlias
+					
+
 					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + field.type.typeName + " as attribute", field.start, field.end));
 					return;
 				}
@@ -707,6 +739,17 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                         `;
 					}
+					else if (type == TYPES.literal) {
+						if (type == TYPES.string) {
+							getterSetter += `get '${key}'() {
+							return this.getAttribute('${key}');
+						}
+						set '${key}'(val) {
+							if(val === undefined || val === null){this.removeAttribute('${key}')}
+							else{this.setAttribute('${key}',val)}
+						}${EOL}`;
+						}
+					}
 				}
 				_createGetterSetter(field.name);
 
@@ -716,7 +759,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					name: field.name,
 					description: field.documentation.join(EOL),
 					type: TYPES[type],
-					values: []
+					values: definedValues
 				}
 
 			}
@@ -938,19 +981,23 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				foundedWatch.push(field.name);
 			}
 			const _createSimpleVariable = (field: CustomFieldModel) => {
+				let value = "undefined";
+				if (field.hasOwnProperty('valueConstraint')) {
+					if (field.valueConstraint != null && field.valueConstraint.hasOwnProperty("value")) {
+						value = JSON.stringify(field.valueConstraint.value);
+					}
+				}
+				if (field.isStatic) {
+					variablesStatic += `static ${field.name} = ${value};` + EOL;
+				}
+				else {
+					variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}` + EOL;
+				}
+
+			}
+			const _createViewVariable = (field: CustomFieldModel) => {
 				if (!toPrepare.variablesInView.hasOwnProperty(field.name)) {
-					let value = "undefined";
-					if (field.hasOwnProperty('valueConstraint')) {
-						if (field.valueConstraint != null && field.valueConstraint.hasOwnProperty("value")) {
-							value = JSON.stringify(field.valueConstraint.value);
-						}
-					}
-					if (field.isStatic) {
-						variablesStatic += `static ${field.name} = ${value};` + EOL;
-					}
-					else {
-						variablesSimple += `if(this.${field.name} === undefined) {this.${field.name} = ${value};}` + EOL;
-					}
+					result.diagnostics.push(createErrorTsPos(document, "Can't find this variable inside the view", field.start, field.end));
 				}
 				else {
 					let id = toPrepare.variablesInView[field.name];
@@ -959,7 +1006,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						if (field.type?.typeKind == TypeKind.ARRAY) {
 							isArray = true;
 						}
-						if (field.propType == "viewElement") {
+						if (field.propType == "ViewElement") {
 							if (field.arguments && field.arguments[0] && field.arguments[0]["useLive"]) {
 								if (isArray) {
 									variablesInViewDynamic += `get ${field.name} () {
@@ -974,14 +1021,20 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 								}
 								return;
 							}
-						}
-
-						if (isArray) {
-							variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));` + EOL
+							else {
+								if (isArray) {
+									variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));` + EOL
+								}
+								else {
+									variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
+								}
+							}
 						}
 						else {
-							variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
+							result.diagnostics.push(createErrorTsPos(document, "You must add the decorator ViewElement", field.start, field.end));
 						}
+
+
 
 					}
 				}
@@ -1151,33 +1204,33 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					}
 					continue;
 				}
-				if (field.propType == "state") {
+				if (field.propType == "State") {
 					_createStates(field);
 					continue;
 				}
-				else if (field.propType == "attribute") {
+				else if (field.propType == "Attribute") {
 					_createAttribute(field);
 					continue;
 				}
-				else if (field.propType == "property") {
+				else if (field.propType == "Property") {
 					for (let decorator of field.decorators) {
-						if (decorator.name == "property") {
+						if (decorator.name == "Property") {
 							_createProperty(field, decorator.arguments);
 						}
 					}
 					continue;
 				}
-				else if (field.propType == "watch") {
+				else if (field.propType == "Watch") {
 					for (let decorator of field.decorators) {
-						if (decorator.name == "watch") {
+						if (decorator.name == "Watch") {
 							_createWatchVariable(field, decorator.arguments);
 						}
 					}
 				}
-				else if (field.propType == "viewElement") {
-					_createSimpleVariable(field);
+				else if (field.propType == "ViewElement") {
+					_createViewVariable(field);
 				}
-				else if (field.propType == "simple") {
+				else if (field.propType == "Simple") {
 					_createSimpleVariable(field);
 				}
 			}
@@ -1268,6 +1321,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	this.__watch.enableHistory();
 	this.getWatchHistory = () => {
 		return this.__watch.getHistory();
+	}
+	this.clearWatchHistory = () => {
+		return this.__watch.clearHistory();
 	}
 }`
 			}
@@ -1660,6 +1716,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		_createEvents();
 		_createForLoop();
 
+		template = template.replace(/\|\!\*(.*?)\*\!\|/g, "{{$1}}")
 
 	}
 	_createClassname();
@@ -1675,7 +1732,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	else if (existsSync(documentInfo.folderPath + '/compiled.js')) {
 		unlinkSync(documentInfo.folderPath + '/compiled.js')
 	}
-	let struct = parseStruct(documentInfo.scriptText, {}, documentPath);
+	let struct = parseDocument(documentInfo.scriptDocument);
 	let doc = "";
 	if (struct.classes.length == 1) {
 		let classContent = removeComments(removeDecoratorFromClassContent(struct.classes[0]));

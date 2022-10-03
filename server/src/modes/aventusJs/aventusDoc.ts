@@ -11,7 +11,6 @@ import { compileData } from './compiler/data/compilerData';
 import { compileValidatorData } from './compiler/data/compilerValidator';
 import { compileValidatorRAM } from './compiler/ram/compilerValidator';
 import { compileRAM } from './compiler/ram/compilerRAM';
-import { parseStruct } from '../../ts-file-parser';
 import { existsSync, readFileSync } from 'fs';
 import { connectionWithClient } from '../../mode';
 import { compileValidatorSocket } from './compiler/socket/compilerValidator';

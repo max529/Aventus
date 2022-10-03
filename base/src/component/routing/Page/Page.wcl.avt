@@ -8,7 +8,7 @@ export abstract class AvPage extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @attribute()
+    @Attribute()
     public show: boolean;
     //#endregion
 

@@ -7,7 +7,7 @@ import * as tsm from "./tsASTMatchers";
 export * as tsm from "./tsASTMatchers";
 export * as helperMethodExtractor from "./helperMethodExtractor";
 import * as fsUtil from "./fsUtils";
-import { EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
+import { AliasNode, ClassModel, EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
 import { TypeKind } from "../index";
 import { ArrayType } from "../index";
 import { Annotation } from "../index";
@@ -22,13 +22,67 @@ import { BasicType } from "../index";
 import { classDecl } from "../index";
 import { EnumMemberDeclaration } from "./../index";
 import { JSONTransformer } from "./jsonTransformer";
+import { TextDocument } from 'vscode-languageserver-textdocument';
+import { uriToPath } from '../../modes/aventusJs/utils';
+import { aventusExtension } from '../../modes/aventusJs/aventusDoc';
+import { jsMode } from '../../mode';
 
 function parse(content: string) {
     return ts.createSourceFile("sample.ts", content, ts.ScriptTarget.ES3, true);
 }
 var fld = tsm.Matching.field();
 
-export function parseStruct(content: string, modules: { [path: string]: Module }, mpth: string): Module {
+export function getClass(className: string, uri: string): ClassModel | undefined {
+    let jsURI = uri.replace(aventusExtension.Component, aventusExtension.ComponentLogic);
+    let document = jsMode.getFile(jsURI);
+    if (document) {
+        let result = parseDocument(document);
+        for (let _class of result.classes) {
+            if (_class.name == className) {
+                return _class;
+            }
+        }
+    }
+    return undefined;
+}
+export function getAlias(aliasName: string, uri: string): AliasNode | undefined {
+    let jsURI = uri.replace(aventusExtension.Component, aventusExtension.ComponentLogic);
+    let document = jsMode.getFile(jsURI);
+    if (document) {
+        let result = parseDocument(document);
+        for (let alias of result.aliases) {
+            if (alias.name == aliasName) {
+                return alias;
+            }
+        }
+    }
+    return undefined;
+}
+let savedModule: {
+    [key: string]: {
+        version: number,
+        module: Module,
+    }
+} = {}
+export function parseDocument(document: TextDocument): Module {
+    if (savedModule[document.uri]) {
+        if(savedModule[document.uri].version < document.version){
+            savedModule[document.uri] = {
+                version: document.version,
+                module: parseStruct(document.getText(), {}, uriToPath(document.uri))
+            };
+        }
+    }
+    else {
+        savedModule[document.uri] = {
+            version: document.version,
+            module: parseStruct(document.getText(), {}, uriToPath(document.uri))
+        };
+    }
+    return savedModule[document.uri].module;
+}
+
+function parseStruct(content: string, modules: { [path: string]: Module }, mpth: string): Module {
     var mod = parse(content);
     var module: Module = { variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], imports: {}, _imports: [], name: mpth };
     modules[mpth] = module;
@@ -689,6 +743,12 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
     }
     if (t.kind === ts.SyntaxKind.VoidKeyword) {
         return basicType("void", null);
+    }
+    if (t.kind === ts.SyntaxKind.LiteralType) {
+        let literalType = basicType("literal", null);
+        let literalNode: ts.LiteralTypeNode = t as ts.LiteralTypeNode;
+        literalType.basicName = literalNode.literal.getText();
+        return literalType;
     }
 
     if (t.kind === ts.SyntaxKind.TypeReference) {

@@ -1,6 +1,6 @@
 import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { parseStruct } from '../../../../ts-file-parser/src/tsStructureParser';
+import { parseDocument } from '../../../../ts-file-parser/src/tsStructureParser';
 import { AventusConfig } from '../../config';
 import { uriToPath } from '../../utils';
 import { createErrorTsPos } from '../utils';
@@ -9,7 +9,7 @@ export function compileValidatorRAM(document: TextDocument, config: AventusConfi
 	let diagnostics: Diagnostic[] = [];
 
 	const specialTag = config.ram?.disableIdentifier ? "" : config.identifier;
-	const struct = parseStruct(document.getText(), {}, uriToPath(document.uri));
+	const struct = parseDocument(document);
 
 	for (let enumTemp of struct.enumDeclarations) {
 		if (!enumTemp.name.startsWith(specialTag)) {

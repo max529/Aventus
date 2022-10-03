@@ -45,6 +45,9 @@ export class AventusJSMode {
     getFile(uri: string) {
         return this.listFiles[uri];
     }
+    addFile(file: TextDocument) {
+        this.listFiles[file.uri] = file;
+    }
     async init(files: TextDocument[]) {
         for (let file of files) {
             this.listFiles[file.uri] = file

@@ -11,7 +11,7 @@ export class AvScrollable extends WebComponent implements DefaultComponent {
 
     //#region props
 
-    @property((target: AvScrollable) => {
+    @Property((target: AvScrollable) => {
         if(target.disable_scroll) {
             target.removeResizeObserver();
             target.removeWheelAction();
@@ -25,15 +25,15 @@ export class AvScrollable extends WebComponent implements DefaultComponent {
     })
     disable_scroll: boolean;
 
-    @property((target: AvScrollable) => {
+    @Property((target: AvScrollable) => {
         target.changeZoom();
     })
     zoom: number = 1;
 
-    @attribute()
+    @Attribute()
     floating_scroll: boolean;
 
-    @attribute()
+    @Attribute()
     only_vertical: boolean;
 
     //#endregion

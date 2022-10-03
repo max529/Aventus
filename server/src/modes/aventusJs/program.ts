@@ -15,9 +15,10 @@ import { AVENTUS_DEF_BASE_PATH, loadLibrary } from '../libLoader';
 const nodeSass = require('sass');
 import * as cheerio from 'cheerio';
 import { HTMLDoc, SCSSDoc } from './compiler/component/def';
-import { ClassModel, parseStruct } from '../../ts-file-parser';
+import { ClassModel } from '../../ts-file-parser';
 import { connectionWithClient } from '../../mode';
 import { EOL } from 'os';
+import { parseDocument } from '../../ts-file-parser/src/tsStructureParser';
 
 
 const baseAventusEndPath = "/aventus/base/src";
@@ -810,11 +811,12 @@ export class AventusJSProgram {
 			if (jsToImport) {
 				let document = TextDocument.create(uriToImport, aventusConfig.languageIdJs, 0, jsToImport[1]);
 				if (this.filesNeeded.indexOf(document.uri) == -1) {
+					modes.jsMode.addFile(document);
 					this.filesNeeded.push(document.uri);
 					this.filesLoaded[document.uri] = new AventusDoc(document, this);
 
 					try {
-						let structJs = parseStruct(document.getText(), {}, pathToImport);
+						let structJs = parseDocument(document);
 						structJs.classes.forEach(classInfo => {
 							// Check if classInfo implements DefaultComponent
 							let foundDefaultComponent = false;

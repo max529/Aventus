@@ -12,27 +12,27 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
     /**
      * If true, the element will be required
      */
-    @attribute()
+    @Attribute()
     required: boolean = false;
     /**
      * Name to use inside your form
      */
-    @attribute()
+    @Attribute()
     name: string = "";
 
     /**
      * If true, the element can be focusable
      */
-    @attribute()
+    @Attribute()
     focusable: boolean = false;
 
     /**
      * Value to use inside your component
      */
-    @watch()
+    @Watch()
     value: T = this.getDefaultValue();
 
-    @watch((target: AvFormElement<T>) => {
+    @Watch((target: AvFormElement<T>) => {
         console.log("Display errors");
         target.displayErrors();
     })

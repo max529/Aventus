@@ -3,6 +3,8 @@ import { WebComponent, DefaultComponent } from "../../../lib/WebComponent.lib.av
 import { HttpRequest } from "../../../lib/HttpRequest.lib.avt";
 import { PressManager } from "../../../lib/PressManager.lib.avt";
 
+type MethodType = 'get' | 'post' | 'put';
+
 export class AvForm extends WebComponent implements DefaultComponent {
 
     //#region static
@@ -14,16 +16,19 @@ export class AvForm extends WebComponent implements DefaultComponent {
     /**
     * Show/Hide the loading animation
     */
-    @attribute()
+    @Attribute()
     loading: boolean;
 
-    @attribute()
-    method: string = 'get';
+    /**
+     * Define method for your 
+     */
+    @Attribute()
+    method: MethodType = 'get';
 
-    @attribute()
+    @Attribute()
     action: string = '';
 
-    @attribute()
+    @Attribute()
     use_event: boolean = false;
     //#endregion
 

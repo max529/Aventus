@@ -227,7 +227,3 @@ export function classDecl(name: string, isInteface: boolean): ClassModel {
         end: 0
     };
 }
-
-export function parseStruct(content: string, modules: { [path: string]: Module }, mpth: string): Module {
-    return tsStructureParser.parseStruct(content, modules, mpth);
-}

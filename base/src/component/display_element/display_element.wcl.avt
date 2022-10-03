@@ -2,7 +2,10 @@ import { IData } from "../../data/IData.data.avt";
 import { WebComponent, DefaultComponent } from "../../lib/WebComponent.lib.avt";
 import { SocketRAMManagerObject } from "../../ram/SocketRAMManager.lib.avt";
 
-
+/**
+ * Use this object to display an element from the DB
+ * TODO : Check this component and check if it's usefull
+ */
 export abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
 	//#region variables
 	currentInstance: T & SocketRAMManagerObject<T>;

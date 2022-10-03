@@ -38,43 +38,43 @@ export function loadFields(classInfo: ClassModel, isBase: boolean): { [key: stri
 		if (field.name == "states") {
 			result[field.name] = {
 				...field,
-				propType: 'state',
+				propType: 'State',
 				inParent: !isBase,
 			}
 			found = true;
 		}
 		for (let decorator of field.decorators) {
-			if (decorator.name == "attribute") {
+			if (decorator.name == "Attribute") {
 				result[field.name] = {
 					...field,
-					propType: 'attribute',
+					propType: 'Attribute',
 					inParent: !isBase,
 				}
 				found = true;
 				break;
 			}
-			else if (decorator.name == "property") {
+			else if (decorator.name == "Property") {
 				result[field.name] = {
 					...field,
-					propType: 'property',
+					propType: 'Property',
 					inParent: !isBase,
 				}
 				found = true;
 				break;
 			}
-			else if (decorator.name == "watch") {
+			else if (decorator.name == "Watch") {
 				result[field.name] = {
 					...field,
-					propType: 'watch',
+					propType: 'Watch',
 					inParent: !isBase,
 				}
 				found = true;
 				break;
 			}
-			else if (decorator.name == "viewElement") {
+			else if (decorator.name == "ViewElement") {
 				result[field.name] = {
 					...field,
-					propType: 'viewElement',
+					propType: 'ViewElement',
 					inParent: !isBase,
 					arguments: decorator.arguments
 				}
@@ -85,7 +85,7 @@ export function loadFields(classInfo: ClassModel, isBase: boolean): { [key: stri
 		if (!found) {
 			result[field.name] = {
 				...field,
-				propType: 'simple',
+				propType: 'Simple',
 				inParent: !isBase,
 			}
 		}

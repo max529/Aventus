@@ -61,14 +61,41 @@ interface IData {}interface CSharpData extends IData {    $type: string;}
 declare class Coordinate implements IData {    x: number;    y: number;}
 declare enum ColorTypes {    rgb = 0,    hex = 1,    rgba = 2,    unkown = 3}
 declare class ColorData implements IData {    r: number;    g: number;    b: number;}
-declare function attribute();
-declare function property<T>(onChange: (arg: T) => void);
-declare function property();
-declare function watch();
-declare function viewElement(config:ViewElementConfig);
-declare function watch<T>(onChange: (arg: T, action: WatchAction, path: string, value: any) => void);
+/**
+ * Add an attribute inside on your component
+ */
+declare function Attribute();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property<T>(onChange: (component: T) => void);
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch();
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
+/**
+ * Signal that this variable is a link to your shadowroot
+ */
+declare function ViewElement(config?:ViewElementConfig);
+/**
+ * Ignore identifier check
+ */
 declare function IgnoreForceIdentifier();
-declare function overrideView(target: any);
+/**
+ * Clear parent view and use yours 
+ */
+declare function OverrideView();
+/**
+ * Add debbuger action function for your component
+ */
 declare function Debugger(config: DebuggerConfig);
 
 
@@ -202,7 +229,10 @@ declare class AvForm extends WebComponent implements DefaultComponent {
     * Show/Hide the loading animation
     */
     loading: boolean;
-    method: string;
+    /**
+     * Define method for your
+     */
+    method: MethodType;
     action: string;
     use_event: boolean;
     private fields;
@@ -240,10 +270,10 @@ declare class AvFor extends WebComponent implements DefaultComponent {
      * Name of your index
      */
     index: string;
-    template: string;
+    private template;
     private parent;
-    parentIndex: number;
-    parentFor: AvFor | undefined;
+    private parentIndex;
+    private parentFor;
     private otherPart;
     private elementsByPath;
     private elementsRootByIndex;
@@ -269,11 +299,15 @@ declare class AvFor extends WebComponent implements DefaultComponent {
     private deleteForElement;
     private reset;
     protected postCreation(): void;
-    getParentKey(): string;
-    updateIndexes(indexName: any, indexValue: any): void;
+    private getParentKey;
+    private updateIndexes;
     private getAllIndexes;
 }
 
+/**
+ * Use this object to display an element from the DB
+ * TODO : Check this component and check if it's usefull
+ */
 declare abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
     currentInstance: T & SocketRAMManagerObject<T>;
     eventsFunctions: {
@@ -298,5 +332,5 @@ declare abstract class DisplayElement<T extends IData> extends WebComponent impl
 {"display-element":[],"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
 // end region css //
 // region html //
-{"display-element":{"name":"display-element","description":"","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","type":"string","values":[]},"in":{"name":"in","description":"Name of property to loop though","type":"string","values":[]},"index":{"name":"index","description":"Name of your index","type":"string","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","type":"boolean","values":[]},"method":{"name":"method","description":"","type":"string","values":[]},"action":{"name":"action","description":"","type":"string","values":[]},"use_event":{"name":"use_event","description":"","type":"boolean","values":[]}}},"av-form-element":{"name":"av-form-element","description":"","attributes":{"required":{"name":"required","description":"If true, the element will be required","type":"boolean","values":[]},"name":{"name":"name","description":"Name to use inside your form","type":"string","values":[]},"focusable":{"name":"focusable","description":"If true, the element can be focusable","type":"boolean","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-page":{"name":"av-page","description":"","attributes":{"show":{"name":"show","description":"","type":"boolean","values":[]}}},"av-router":{"name":"av-router","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{"state":{"name":"state","description":"","type":"string","values":[]}}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"disable_scroll":{"name":"disable_scroll","description":"","type":"boolean","values":[]},"zoom":{"name":"zoom","description":"","type":"number","values":[]},"floating_scroll":{"name":"floating_scroll","description":"","type":"boolean","values":[]},"only_vertical":{"name":"only_vertical","description":"","type":"boolean","values":[]}}}}
+{"display-element":{"name":"display-element","description":"Use this object to display an element from the DB\r\nTODO : Check this component and check if it's usefull","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{}},"av-form":{"name":"av-form","description":"","attributes":{}},"av-form-element":{"name":"av-form-element","description":"","attributes":{}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-page":{"name":"av-page","description":"","attributes":{}},"av-router":{"name":"av-router","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{}}}
 // end region html //

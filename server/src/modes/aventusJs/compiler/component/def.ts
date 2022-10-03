@@ -17,7 +17,7 @@ export interface CompileComponentResult {
 	}
 }
 
-declare type FieldType = 'attribute' | 'property' | 'watch' | 'state' | 'viewElement' | 'simple';
+declare type FieldType = 'Attribute' | 'Property' | 'Watch' | 'State' | 'ViewElement' | 'Simple';
 export interface CustomFieldModel extends FieldModel {
 	propType: FieldType,
 	inParent: boolean,
@@ -25,7 +25,7 @@ export interface CustomFieldModel extends FieldModel {
 }
 declare interface DebuggerConfig {
 	writeCompiled?: boolean,
-	enableWatchHistory?:boolean,
+	enableWatchHistory?: boolean,
 }
 export declare interface CustomClassInfo {
 	debuggerOption: DebuggerConfig,
@@ -87,5 +87,6 @@ export const TYPES = {
 	string: 'string',
 	number: 'number',
 	boolean: 'boolean',
+	literal: 'literal'
 }
 
