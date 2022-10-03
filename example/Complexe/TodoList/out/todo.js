@@ -1,8 +1,10 @@
+var AventusTest;(function (AventusTest) {
+
 class AvTodoData {    id = 0;    name = "";    state = AvTodoState.Waiting;}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
 class AvLight {    name = "";    value = 0;    color = "";    values = [];}
 
 
-class AvTodoList extends WebComponent {
+class AvTodoList extends Aventus.WebComponent {
     get 'items'() {
 						return this.__watch["items"];
 					}
@@ -92,14 +94,14 @@ class AvTodoList extends WebComponent {
     }
      addItem(item){this.items.push(item);}}
 window.customElements.define('av-todo-list', AvTodoList);
-class AvTodoItem extends WebComponent {
+class AvTodoItem extends Aventus.WebComponent {
     get 'item'() {
 						return this.__watch["item"];
 					}
 					set 'item'(val) {
 						this.__watch["item"] = val;
 					}    __prepareWatchesActions() {
-					this.__watchActions["item"] = [((target, action, path, value) => {    console.log(WatchAction[action], path);})];
+					this.__watchActions["item"] = [((target, action, path, value) => {    console.log(Aventus.WatchAction[action], path);})];
 						this.__watchActionsCb["item"] = (action, path, value) => {
 							for (let fct of this.__watchActions["item"]) {
 								fct(this, action, path, value);
@@ -158,8 +160,8 @@ class AvTodoItem extends WebComponent {
     }
 }
 window.customElements.define('av-todo-item', AvTodoItem);
-class AvTodoCreation extends WebComponent {
-    __prepareVariables() { super.__prepareVariables(); if(this.todoList === undefined) {this.todoList = undefined;} }
+class AvTodoCreation extends Aventus.WebComponent {
+    __prepareVariables() { super.__prepareVariables(); if(this.inputEl === undefined) {this.inputEl = undefined;}if(this.todoList === undefined) {this.todoList = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -169,15 +171,15 @@ class AvTodoCreation extends WebComponent {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<av-form>
-	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
-	<button av-press="addTodo" _id="avtodocreation_1">Add</button>
+	<av-input label="Todo name" av-element="inputEl"></av-input>
+	<button av-press="addTodo">Add</button>
 </av-form>`,
             slots: {
             },
             blocks: {
                 'default':`<av-form>
-	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
-	<button av-press="addTodo" _id="avtodocreation_1">Add</button>
+	<av-input label="Todo name" av-element="inputEl"></av-input>
+	<button av-press="addTodo">Add</button>
 </av-form>`
             }
         }
@@ -185,24 +187,16 @@ class AvTodoCreation extends WebComponent {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvTodoCreation", 2])
+        temp.push(["AvTodoCreation", 0])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avtodocreation_0"]');}
     getClassName() {
         return "AvTodoCreation";
     }
-    __addEvents(ids = null) { super.__addEvents(ids); 
-                new PressManager({
-                    "element": this._components['avtodocreation_1'],
-                    "onPress": (e, pressInstance) => {
-                        this.addTodo(e, pressInstance);
-                     },
-                });
-                 }
      addTodo(){var _a;let data = new AvTodoData();data.name = this.inputEl.value;(_a = this.todoList) === null || _a === void 0 ? void 0 : _a.addItem(data);}}
 window.customElements.define('av-todo-creation', AvTodoCreation);
-class AvTodo extends WebComponent {
+class AvTodo extends Aventus.WebComponent {
+    __prepareVariables() { super.__prepareVariables(); if(this.listEl === undefined) {this.listEl = undefined;}if(this.creationEl === undefined) {this.creationEl = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(`:host{display:flex;flex-direction:column}:host av-todo-list{margin-bottom:30px}`);
@@ -212,30 +206,29 @@ class AvTodo extends WebComponent {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<h1>My todo list</h1>
-<av-todo-list _id="avtodo_0"></av-todo-list>
-<av-todo-creation _id="avtodo_1"></av-todo-creation>`,
+<av-todo-list av-element="listEl"></av-todo-list>
+<av-todo-creation av-element="creationEl"></av-todo-creation>`,
             slots: {
             },
             blocks: {
                 'default':`<h1>My todo list</h1>
-<av-todo-list _id="avtodo_0"></av-todo-list>
-<av-todo-creation _id="avtodo_1"></av-todo-creation>`
+<av-todo-list av-element="listEl"></av-todo-list>
+<av-todo-creation av-element="creationEl"></av-todo-creation>`
             }
         }
         return info;
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvTodo", 2])
+        temp.push(["AvTodo", 0])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.listEl = this.shadowRoot.querySelector('[_id="avtodo_0"]');this.creationEl = this.shadowRoot.querySelector('[_id="avtodo_1"]');}
     getClassName() {
         return "AvTodo";
     }
      postCreation(){this.creationEl.todoList = this.listEl;}}
 window.customElements.define('av-todo', AvTodo);
-class AvInput extends AvFormElement {
+class AvInput extends Aventus.AvFormElement {
     static get observedAttributes() {return ["label"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'label'() {
                         return this.getAttribute('label');
@@ -243,7 +236,8 @@ class AvInput extends AvFormElement {
                     set 'label'(val) {
 						if(val === undefined || val === null){this.removeAttribute('label')}
 						else{this.setAttribute('label',val)}
-                    }    __getStyle() {
+                    }    __prepareVariables() { super.__prepareVariables(); if(this.inputEl === undefined) {this.inputEl = undefined;} }
+    __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
         return arrStyle;
@@ -252,12 +246,12 @@ class AvInput extends AvFormElement {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<label for="test" _id="avinput_0"></label>
-<input id="test" _id="avinput_1">`,
+<input id="test" av-element="inputEl" av-input="inputChanged">`,
             slots: {
             },
             blocks: {
                 'default':`<label for="test" _id="avinput_0"></label>
-<input id="test" _id="avinput_1">`
+<input id="test" av-element="inputEl" av-input="inputChanged">`
             }
         }
                 let newHtml = parentInfo.html
@@ -272,10 +266,9 @@ class AvInput extends AvFormElement {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvInput", 2])
+        temp.push(["AvInput", 1])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avinput_1"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avinput_0'].length;i++){
 									this._components['avinput_0'][i].innerHTML = ""+this.label+"".toString();
@@ -285,16 +278,9 @@ class AvInput extends AvFormElement {
         return "AvInput";
     }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
-    __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avinput_1') != -1) {
-                    if (this._components['avinput_1']) {
-                        for (var i = 0; i < this._components['avinput_1'].length; i++) {
-                            this._components['avinput_1'][i].addEventListener('input', (e) => { this.inputChanged(e) })
-                        }
-                    }
-                } }
      getDefaultValue(){return "";} inputChanged(){this.value = this.inputEl.value;this.onValueChanged();}}
 window.customElements.define('av-input', AvInput);
-class AvComplexTest extends WebComponent {
+class AvComplexTest extends Aventus.WebComponent {
     static get observedAttributes() {return ["testvariable"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'testvariable'() {
                         return this.getAttribute('testvariable');
@@ -307,7 +293,8 @@ class AvComplexTest extends WebComponent {
 					}
 					set 'data'(val) {
 						this.__watch["data"] = val;
-					}    __prepareWatchesActions() {
+					}    __prepareVariables() { super.__prepareVariables(); if(this.salut === undefined) {this.salut = undefined;}if(this.valueTest === undefined) {this.valueTest = undefined;} }
+    __prepareWatchesActions() {
 					this.__watchActions["data"] = [];
 						this.__watchActionsCb["data"] = (action, path, value) => {
 							for (let fct of this.__watchActions["data"]) {
@@ -337,12 +324,12 @@ class AvComplexTest extends WebComponent {
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<h2 _id="avcomplextest_0"></h2>
+            html: `<h2 av-element="salut" _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`,
             slots: {
             },
             blocks: {
-                'default':`<h2 _id="avcomplextest_0"></h2>
+                'default':`<h2 av-element="salut" _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`
             }
         }
@@ -386,7 +373,7 @@ class AvComplexTest extends WebComponent {
 							}
 					return result;
 				};
-				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
+				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div av-element="valueTest" _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
 					let result = {};
 					let arr_avcomplextest_1 = Array.from(el.querySelectorAll('[_id="avcomplextest_1"]'));let arr_avcomplextest_3 = Array.from(el.querySelectorAll('[_id="avcomplextest_3"]'));let arr_avcomplextest_2 = Array.from(el.querySelectorAll('[_id="avcomplextest_2"]'));
 					result["color"] = [];result["$index$_i"] = [];result["name"] = [];result["$index$_i"] = [];result["j"] = [];result["value"] = [];result["value"] = [];
@@ -458,7 +445,6 @@ class AvComplexTest extends WebComponent {
         temp.push(["AvComplexTest", 6])
         return temp;
     }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.salut = this.shadowRoot.querySelector('[_id="avcomplextest_0"]');this.valueTest = this.shadowRoot.querySelector('[_id="avcomplextest_2"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
 									for(var i = 0;i<this._components['avcomplextest_0'].length;i++){
 									this._components['avcomplextest_0'][i].innerHTML = ""+this.testvariable+"".toString();
@@ -471,3 +457,13 @@ class AvComplexTest extends WebComponent {
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('testvariable'); }
      postCreation(){let i = 0;let lightT = new AvLight();lightT.name = "light test";lightT.value = 80;lightT.color = "red";window["light"] = lightT;window["temp1"] = this;let interval = setInterval(() => {    i++;    let light = new AvLight();    light.name = "light " + i;    light.value = 80;    light.color = "red";    let nb = [];    for (let j = 0; j < 3; j++) {        nb.push(0);    }    this.data.push(light);    if (i == 10) {        console.log(JSON.parse(JSON.stringify(this.data)));        clearInterval(interval);    }}, 0);}}
 window.customElements.define('av-complex-test', AvComplexTest);
+AventusTest.AvTodoData=AvTodoData;
+AventusTest.AvTodoState=AvTodoState;
+AventusTest.AvLight=AvLight;
+AventusTest.AvTodoList=AvTodoList;
+AventusTest.AvTodoItem=AvTodoItem;
+AventusTest.AvTodoCreation=AvTodoCreation;
+AventusTest.AvTodo=AvTodo;
+AventusTest.AvInput=AvInput;
+AventusTest.AvComplexTest=AvComplexTest;
+})(AventusTest || (AventusTest = {}));

@@ -1,6 +1,13 @@
 const ts = require("typescript");
-import { ClassModel } from '../../../../ts-file-parser';
-import { configTS, CustomFieldModel } from './def';
+import { Diagnostic } from 'vscode-html-languageservice';
+import { TextDocument } from 'vscode-languageserver-textdocument';
+import { jsMode } from '../../../../mode';
+import { BasicType, ClassModel, FieldModel, TypeKind, TypeModel, UnionType } from '../../../../ts-file-parser';
+import { getAlias } from '../../../../ts-file-parser/src/tsStructureParser';
+import { aventusExtension } from '../../aventusDoc';
+import { pathToUri } from '../../utils';
+import { createErrorTsPos } from '../utils';
+import { configTS, CustomFieldModel, CustomTypeAttribute, TYPES } from './def';
 
 function prepareMethodToTranspile(methodTxt) {
 	methodTxt = methodTxt.trim();
@@ -89,6 +96,73 @@ export function loadFields(classInfo: ClassModel, isBase: boolean): { [key: stri
 				inParent: !isBase,
 			}
 		}
+	}
+	return result;
+}
+
+export function getTypeForAttribute(currentDoc: TextDocument, field: FieldModel) {
+	let result: {
+		realType: CustomTypeAttribute,
+		diagnostics: Diagnostic[],
+		definedValues: {
+			name: string,
+			description: string,
+		}[]
+	} = {
+		realType: 'string',
+		diagnostics: [],
+		definedValues: [],
+	}
+	const _loadTypeRecu = (type: TypeModel): boolean => {
+		if (type.typeKind == TypeKind.UNION) {
+			let unionType: UnionType = type as UnionType;
+			for (let option of unionType.options) {
+				if (option.typeName == TYPES.literal) {
+					let literalType = option as BasicType;
+					_loadTypeRecu(literalType);
+				}
+				else {
+					result.diagnostics.push(createErrorTsPos(currentDoc, "Can't use the type " + option.typeName + " inside union", field.start, field.end));
+					return false;
+				}
+			}
+			return true;
+		}
+		else if (type.typeName == TYPES.literal) {
+			result.realType = 'string';
+			let literalType = type as BasicType;
+			result.definedValues.push({
+				name: literalType.basicName,
+				description: '',
+			})
+			return true;
+		}
+		else {
+			for (let TYPE in TYPES) {
+				if (TYPES[TYPE] == type.typeName) {
+					result.realType = TYPES[TYPE];
+					return true;
+				}
+			}
+
+			// check alias
+			let basicType = type as BasicType;
+			if (basicType.modulePath) {
+				let uri = pathToUri(basicType.modulePath);
+				let aliasNode = getAlias(basicType.typeName, uri);
+				if(aliasNode && aliasNode.type){
+					return _loadTypeRecu(aliasNode.type);
+				}
+			}
+
+		}
+		return false;
+	}
+	if (field.type && _loadTypeRecu(field.type)) {
+		return result;
+	}
+	else {
+		result.diagnostics.push(createErrorTsPos(currentDoc, "can't use the the type " + field.type?.typeName + " as attribute / property", field.start, field.end));
 	}
 	return result;
 }

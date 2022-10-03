@@ -3,7 +3,7 @@ import { AvLight } from "../../Data/Light.data.avt";
 @Debugger({
     writeCompiled: true
 })
-export class AvComplexTest extends WebComponent implements DefaultComponent {
+export class AvComplexTest extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
 	//#region static
 
@@ -11,13 +11,13 @@ export class AvComplexTest extends WebComponent implements DefaultComponent {
 
 
 	//#region props
-    @property()
+    @Property()
     testvariable: string = "test";
 	//#endregion
 
 
 	//#region variables
-	@watch()
+	@Watch()
 	data: AvLight[] = [];
 
 	salut: HTMLElement;

@@ -1,7 +1,7 @@
 import { AvTodoData } from "../../../../Data/TodoData.data.avt";
 
 
-export class AvTodoItem extends WebComponent implements DefaultComponent {
+export class AvTodoItem extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
     //#region static
 
@@ -14,8 +14,8 @@ export class AvTodoItem extends WebComponent implements DefaultComponent {
 
 
     //#region variables
-    @watch((target:AvTodoData, action:WatchAction, path:string, value:any) => {
-        console.log(WatchAction[action], path)
+    @Watch((target:AvTodoData, action:Aventus.WatchAction, path:string, value:any) => {
+        console.log(Aventus.WatchAction[action], path)
     })
     item: AvTodoData = new AvTodoData();
 	//#endregion

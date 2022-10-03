@@ -2,7 +2,7 @@ import { IData } from "../data/IData.data.avt";
 
 export interface IRAMManager { }
 
-export abstract class AvGenericRAMManager<U extends IData, R extends U> implements IRAMManager {
+export abstract class GenericRAMManager<U extends IData, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -25,7 +25,7 @@ export abstract class AvGenericRAMManager<U extends IData, R extends U> implemen
         return undefined;
     }
     protected constructor() {
-        if(this.constructor == AvGenericRAMManager) {
+        if(this.constructor == GenericRAMManager) {
             throw "can't instanciate an abstract class";
         }
         this.records = {};
@@ -212,7 +212,7 @@ export abstract class AvGenericRAMManager<U extends IData, R extends U> implemen
     //#endregion
 }
 
-export abstract class AvRAMManager<U extends IData> extends AvGenericRAMManager<U, U>{
+export abstract class RAMManager<U extends IData> extends GenericRAMManager<U, U>{
     protected transformElementInStorable(item: U): U {
         return item;
     }

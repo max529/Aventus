@@ -24,39 +24,6 @@ export class AventusJSONMode {
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
-				"identifier": {
-					type: "string",
-					description: "Identifier to prefix all your components (case sensitive)",
-					minLength: 2
-				},
-				"components": {
-					type: "object",
-					properties: {
-						"disableIdentifier": { type: "boolean" }
-					},
-					required: ["disableIdentifier"]
-				},
-				"libs": {
-					type: "object",
-					properties: {
-						"disableIdentifier": { type: "boolean" }
-					},
-					required: ["disableIdentifier"]
-				},
-				"data": {
-					type: "object",
-					properties: {
-						"disableIdentifier": { type: "boolean" }
-					},
-					required: ["disableIdentifier"]
-				},
-				"ram": {
-					type: "object",
-					properties: {
-						"disableIdentifier": { type: "boolean" }
-					},
-					required: ["disableIdentifier"]
-				},
 				"build": {
 					type: "array",
 					items: {
@@ -67,7 +34,16 @@ export class AventusJSONMode {
 								type: "string",
 								pattern: "^[0-9]+\.[0-9]+\.[0-9]+$"
 							},
+							"componentPrefix": {
+								type: "string",
+								description: "Identifier to prefix all your components (case sensitive)",
+								minLength: 2
+							},
 							"inputPath": {
+								type: "array",
+								items: { type: "string" },
+							},
+							"noNamespacePath": {
 								type: "array",
 								items: { type: "string" },
 							},
@@ -89,7 +65,7 @@ export class AventusJSONMode {
 							},
 							"namespace": { type: "string" }
 						},
-						required: ["name", "inputPath", "outputFile"]
+						required: ["name", "inputPath", "outputFile", "componentPrefix", "namespace"]
 					},
 					minItems: 1
 				},
@@ -111,7 +87,7 @@ export class AventusJSONMode {
 					}
 				}
 			},
-			"required": ["identifier", "build"]
+			"required": ["build"]
 		}
 		this.languageService = getLanguageService({
 			schemaRequestService: async (uri) => {
@@ -217,6 +193,7 @@ export class AventusJSONMode {
 			if (!build.hasOwnProperty("compileOnSave")) {
 				build.compileOnSave = true;
 			}
+			// input
 			for (let inputPath of build.inputPath) {
 				let slash = "";
 				if (!inputPath.startsWith("/")) {
@@ -239,10 +216,39 @@ export class AventusJSONMode {
 				regexJoin = "(?!)";
 			}
 			build.inputPathRegex = new RegExp(regexJoin);
+
+			// output
 			if (!build.outputFile.startsWith("/")) {
 				build.outputFile = "/" + build.outputFile;
 			}
 			build.outputFile = normalize(uriToPath(baseDir) + build.outputFile);
+
+			// no namespace
+			if (build.noNamespacePath) {
+				regexs = [];
+				for (let noNamespacePath of build.noNamespacePath) {
+					let slash = "";
+					if (!noNamespacePath.startsWith("/")) {
+						slash = "/";
+					}
+					let splitedInput = noNamespacePath.split("/");
+					if (splitedInput[splitedInput.length - 1] == "" || splitedInput[splitedInput.length - 1] == "*") {
+						splitedInput[splitedInput.length - 1] = "*"
+					}
+					else if (splitedInput[splitedInput.length - 1].indexOf(".") == -1) {
+						// its a folder but without end slash
+						splitedInput.push("*");
+					}
+					noNamespacePath = splitedInput.join("/");
+					let regTemp = normalize(uriToPath(baseDir) + slash + noNamespacePath).replace(/\\/g, '\\/').replace("*", ".*");
+					regexs.push("(^" + regTemp + "$)");
+				}
+				regexJoin = regexs.join("|");
+				if (regexJoin == "") {
+					regexJoin = "(?!)";
+				}
+				build.noNamespacePathRegex = new RegExp(regexJoin);
+			}
 		}
 		if (config.static) {
 			for (let _static of config.static) {

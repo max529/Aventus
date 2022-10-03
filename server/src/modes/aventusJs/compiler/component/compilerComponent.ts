@@ -9,14 +9,14 @@ import { compileScss, ScssCompilerResult } from '../../../aventusSCSS/compiler/c
 import { AVENTUS_DEF_BASE_PATH } from '../../../libLoader';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { CompileComponentResult, configTS, CustomClassInfo, CustomFieldModel, HTMLDoc, ItoPrepare, SCSSDoc, TYPES } from './def';
-import { loadFields, transpileMethod, transpileMethodNoRun } from './utils';
+import { getTypeForAttribute, loadFields, transpileMethod, transpileMethodNoRun } from './utils';
 import { Diagnostic } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { pathToUri, uriToPath } from '../../utils';
 import { AventusJSProgram } from '../../program';
 import { AventusWcDoc } from '../../../aventusWc/doc';
 import { EOL } from 'os';
-import { parseDocument } from '../../../../ts-file-parser/src/tsStructureParser';
+import { getClass, parseDocument } from '../../../../ts-file-parser/src/tsStructureParser';
 
 const ts = require("typescript");
 
@@ -80,8 +80,20 @@ function prepareDocument(document: TextDocument, virtualDoc: boolean): PrepareDo
 }
 
 export function compileComponent(document: TextDocument, config: AventusConfig, program: AventusJSProgram, virtualDoc: boolean): CompileComponentResult {
-	let specialTag = config.identifier;
-	let specialTagLower = specialTag.toLowerCase();
+	let specialTag = "";
+	for (let build of config.build) {
+		if (build.inputPathRegex) {
+			if (uriToPath(document.uri).match(build.inputPathRegex)) {
+				if (specialTag == "" || specialTag == build.componentPrefix) {
+					specialTag = build.componentPrefix;
+				}
+				else {
+					createErrorTs(document, "You can't have two identifier for the same file " + specialTag + " and " + build.componentPrefix);
+				}
+			}
+		}
+	}
+
 	let baliseName = "";
 
 	let result: CompileComponentResult = {
@@ -124,7 +136,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		if (!jsonStructure.classes[i].isInterface) {
 			let foundDefaultComponent = false;
 			for (let implement of jsonStructure.classes[i].implements) {
-				if (implement.typeName == 'DefaultComponent') {
+				if (implement.typeName == 'Aventus.DefaultComponent' || implement.typeName == 'DefaultComponent') {
 					foundDefaultComponent = true;
 					break;
 				}
@@ -187,7 +199,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 		}
 	}
 
-	if (classInfo.extends[0]?.typeName == "WebComponent") {
+	if (classInfo.extends[0]?.typeName == "WebComponent" || classInfo.extends[0]?.typeName == "Aventus.WebComponent") {
 		classInfo.overrideView = true;
 	}
 	const _loadParent = (jsonStruct: Module, isFirst: boolean = true) => {
@@ -202,7 +214,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 
 
-			if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent") {
+			if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent" && jsonStruct.classes[0].extends[0].typeName != "Aventus.WebComponent") {
 				// search parent inside local import
 				for (let importTemp of jsonStruct._imports) {
 					for (let name of importTemp.clauses) {
@@ -238,15 +250,15 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 	const _createClassname = () => {
 		let splitted = classInfo.name.match(/[A-Z][a-z]+/g);
 		if (splitted) {
-			const specialTagClassName = config.components?.disableIdentifier ? "" : specialTag;
-			if (specialTagClassName.length > 0 && splitted[0].toLowerCase() != specialTagClassName.toLowerCase()) {
-				result.diagnostics.push(createErrorTs(document, "Your class must start with " + specialTagClassName))
+			if (specialTag.length > 0 && splitted[0].toLowerCase() != specialTag.toLowerCase()) {
+				// no special tag => add one
+				splitted.splice(0, 0, specialTag.toLowerCase());
 			}
 			baliseName = splitted.join("-").toLowerCase();
 			template = template.replace(/\$classname/g, classInfo.name);
 			template = template.replace(/\$balisename/g, baliseName);
 
-			let parentClass = 'WebComponent';
+			let parentClass = 'Aventus.WebComponent';
 			if (classInfo.extends.length > 0) {
 				parentClass = classInfo.extends[0].typeName;
 				dependances.push(classInfo.extends[0].typeName);
@@ -280,22 +292,16 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 			return toPrepare.pressEvents[_id]
 		}
 		let pressEventMap = {
-			[specialTagLower + '-press']: "onPress",
 			['@press']: "onPress",
-			[specialTagLower + '-longpress']: "onLongPress",
 			['@longpress']: "onLongPress",
-			[specialTagLower + '-drag']: "onDrag",
 			['@drag']: "onDrag",
-			[specialTagLower + '-press-stop']: "onStop",
 			['@press-stop']: "onStop",
-			[specialTagLower + '-press-start']: "onStart",
 			['@press-start']: "onStart",
-			[specialTagLower + '-longpress-delay']: "delay",
 			['@longpress-delay']: "delay",
 		};
 		const _checkAttribut = (el) => {
 			for (var key in el.attribs) {
-				if (key === specialTagLower + '-element' || key === "@element") {
+				if (key === "@element") {
 					const _addElement = () => {
 						var _id = _getId(el);
 						var value = el.attribs[key].split('.');
@@ -318,14 +324,14 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					let pressEvent = createPressEvent(el);
 					pressEvent[pressEventMap[key]] = value;
 				}
-				else if (key.startsWith(specialTagLower + '-') || key.startsWith("@")) {
+				else if (key.startsWith("@")) {
 					var _addClick = () => {
 						var _id = _getId(el);
 						var value = el.attribs[key];
 						toPrepare.eventsPerso.push({
 							componentId: _id,
 							value: value,
-							event: key.replace(specialTagLower + '-', '').replace("@", '')
+							event: key.replace("@", '')
 						});
 						$(el).removeAttr(key);
 					}
@@ -588,52 +594,23 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				if (!field.type) {
 					return;
 				}
-				let definedValues: {
-					name: string,
-					description: string,
-				}[] = [];
-				let type = field.type.typeName.toLowerCase();
-				if (field.type.typeKind == TypeKind.UNION) {
-					let unionType: UnionType = field.type as UnionType;
-					let previousTypeName: string = "";
-					for (let option of unionType.options) {
-						if (option.typeName != previousTypeName && previousTypeName != "") {
-							result.diagnostics.push(createErrorTsPos(document, "You must use the same type inside an union type", field.start, field.end));
-							return;
-						}
-						if (option.typeName == TYPES.literal) {
-							let literalType = option as BasicType;
-							definedValues.push({
-								name: literalType.basicName,
-								description: '',
-							});
-						}
-						previousTypeName = option.typeName;
-						type = previousTypeName.toLowerCase();
-					}
-				}
-				let foundType = false;
-				for (let TYPE in TYPES) {
-					if (TYPES[TYPE] == type) {
-						foundType = true;
-						break;
-					}
-				}
 
-				if (!foundType) {
-					// check if alias
-					// TODO load class name getClass / getAlias
-					
+				let formattedType = getTypeForAttribute(document, field);
 
-					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + field.type.typeName + " as attribute", field.start, field.end));
+				for (let diag of formattedType.diagnostics) {
+					result.diagnostics.push(diag);
+				}
+				if (formattedType.diagnostics.length > 0) {
 					return;
 				}
+
+
 				if (field.name.toLowerCase() != field.name) {
 					result.diagnostics.push(createErrorTsPos(document, "an attribute must be in lower case", field.start, field.end));
 				}
 				var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
 					key = key.toLowerCase();
-					if (type == TYPES.boolean) {
+					if (formattedType?.realType == TYPES.boolean) {
 						if (defaultValueProp) {
 							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }" + EOL;
 						} else {
@@ -641,7 +618,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }" + EOL;
 						}
 					}
-					else if (type == TYPES.date || type == TYPES.datetime) {
+					else if (formattedType?.realType == TYPES.date || formattedType?.realType == TYPES.datetime) {
 						if (defaultValueProp === undefined) {
 							return;
 						}
@@ -661,7 +638,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 				var _createGetterSetter = (key) => {
 					key = key.toLowerCase();
-					if (type == TYPES.string) {
+					if (formattedType?.realType == TYPES.string) {
 						getterSetter += `get '${key}'() {
                         return this.getAttribute('${key}');
                     }
@@ -669,7 +646,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						if(val === undefined || val === null){this.removeAttribute('${key}')}
                         else{this.setAttribute('${key}',val)}
                     }${EOL}`;
-					} else if (type == TYPES.number) {
+					} else if (formattedType?.realType == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
@@ -678,7 +655,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         else{this.setAttribute('${key}',val)}
                     }${EOL}`;
 					}
-					else if (type == TYPES.boolean) {
+					else if (formattedType?.realType == TYPES.boolean) {
 						listBool.push('"' + key + '"');
 						getterSetter += `get '${key}'() {
                         return this.hasAttribute('${key}');
@@ -701,7 +678,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                     }${EOL}`;
 					}
-					else if (type == TYPES.date) {
+					else if (formattedType?.realType == TYPES.date) {
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
@@ -720,7 +697,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                         `;
 					}
-					else if (type == TYPES.datetime) {
+					else if (formattedType?.realType == TYPES.datetime) {
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
@@ -739,17 +716,6 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                         `;
 					}
-					else if (type == TYPES.literal) {
-						if (type == TYPES.string) {
-							getterSetter += `get '${key}'() {
-							return this.getAttribute('${key}');
-						}
-						set '${key}'(val) {
-							if(val === undefined || val === null){this.removeAttribute('${key}')}
-							else{this.setAttribute('${key}',val)}
-						}${EOL}`;
-						}
-					}
 				}
 				_createGetterSetter(field.name);
 
@@ -758,8 +724,8 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
 					description: field.documentation.join(EOL),
-					type: TYPES[type],
-					values: definedValues
+					type: formattedType.realType,
+					values: formattedType.definedValues
 				}
 
 			}
@@ -767,24 +733,22 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				if (!field.type) {
 					return;
 				}
-				let type = field.type.typeName.toLowerCase();
-				let foundType = false;
-				for (let TYPE in TYPES) {
-					if (TYPES[TYPE] == type) {
-						foundType = true;
-						break;
-					}
+
+				let formattedType = getTypeForAttribute(document, field);
+
+				for (let diag of formattedType.diagnostics) {
+					result.diagnostics.push(diag);
 				}
-				if (!foundType) {
-					result.diagnostics.push(createErrorTsPos(document, "can't use the the type " + field.type.typeName + " as property", field.start, field.end));
+				if (formattedType.diagnostics.length > 0) {
 					return;
 				}
+
 				if (field.name.toLowerCase() != field.name) {
 					result.diagnostics.push(createErrorTsPos(document, "a property must be in lower case", field.start, field.end));
 				}
 				var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
 					key = key.toLowerCase();
-					if (type == TYPES.boolean) {
+					if (formattedType?.realType == TYPES.boolean) {
 						if (defaultValueProp) {
 							defaultValue += "if(!this.hasAttribute('" + key + "')) {this.setAttribute('" + key + "' ,'true'); }" + EOL;
 						} else {
@@ -792,7 +756,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 							defaultValue += "if(!this.hasAttribute('" + key + "')) { this.attributeChangedCallback('" + key + "', false, false); }" + EOL;
 						}
 					}
-					else if (type == TYPES.date || type == TYPES.datetime) {
+					else if (formattedType?.realType == TYPES.date || formattedType?.realType == TYPES.datetime) {
 						if (defaultValueProp === undefined) {
 							return;
 						}
@@ -812,7 +776,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 
 				var _createGetterSetter = (key) => {
 					key = key.toLowerCase();
-					if (type == TYPES.string) {
+					if (formattedType?.realType == TYPES.string) {
 						getterSetter += `get '${key}'() {
                         return this.getAttribute('${key}');
                     }
@@ -820,7 +784,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 						if(val === undefined || val === null){this.removeAttribute('${key}')}
 						else{this.setAttribute('${key}',val)}
                     }`+ EOL;
-					} else if (type == TYPES.number) {
+					} else if (formattedType?.realType == TYPES.number) {
 						getterSetter += `get '${key}'() {
                         return Number(this.getAttribute('${key}'));
                     }
@@ -829,7 +793,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         else{this.setAttribute('${key}',val)}
                     }`+ EOL;
 					}
-					else if (type == TYPES.boolean) {
+					else if (formattedType?.realType == TYPES.boolean) {
 						listBool.push('"' + key + '"');
 						getterSetter += `get '${key}'() {
                         return this.hasAttribute('${key}');
@@ -852,7 +816,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                     }`+ EOL;
 					}
-					else if (type == TYPES.date) {
+					else if (formattedType?.realType == TYPES.date) {
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
@@ -870,7 +834,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
                         }
                         `;
 					}
-					else if (type == TYPES.datetime) {
+					else if (formattedType?.realType == TYPES.datetime) {
 						getterSetter += `
                         get '${key}'() {
                             if(!this.hasAttribute('${key}')) {
@@ -906,10 +870,9 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				htmlDoc[baliseName].attributes[field.name] = {
 					name: field.name,
 					description: field.documentation.join(EOL),
-					type: TYPES[type],
-					values: []
+					type: formattedType.realType,
+					values: formattedType.definedValues
 				}
-
 			}
 			const _createWatchVariable = (field: FieldModel, args: any[] = []) => {
 				// if (field.type.typeKind == TypeKind.BASIC) {
@@ -981,6 +944,10 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				foundedWatch.push(field.name);
 			}
 			const _createSimpleVariable = (field: CustomFieldModel) => {
+				if (toPrepare.variablesInView.hasOwnProperty(field.name)) {
+					result.diagnostics.push(createErrorTsPos(document, "Please add @ViewElement", field.start, field.end));
+					return;
+				}
 				let value = "undefined";
 				if (field.hasOwnProperty('valueConstraint')) {
 					if (field.valueConstraint != null && field.valueConstraint.hasOwnProperty("value")) {
@@ -1191,13 +1158,17 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 				}
 			}
 			let listToCheck = Object.keys(toPrepare.variablesInView);
-			for (let fieldName in toPrepare.allFields) {
-				let field = toPrepare.allFields[fieldName];
+			const _removeFieldToCheck = (field: CustomFieldModel) => {
 				let index = listToCheck.indexOf(field.name);
 				if (index != -1) {
 					listToCheck.splice(index, 1);
 				}
+			}
+			for (let fieldName in toPrepare.allFields) {
+				let field = toPrepare.allFields[fieldName];
+
 				if (field.inParent) {
+					_removeFieldToCheck(field);
 					if (toPrepare.variablesInView.hasOwnProperty(field.name)) {
 						// allow override value
 						_createSimpleVariable(field);
@@ -1221,6 +1192,7 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					continue;
 				}
 				else if (field.propType == "Watch") {
+					_removeFieldToCheck(field);
 					for (let decorator of field.decorators) {
 						if (decorator.name == "Watch") {
 							_createWatchVariable(field, decorator.arguments);
@@ -1228,9 +1200,11 @@ export function compileComponent(document: TextDocument, config: AventusConfig, 
 					}
 				}
 				else if (field.propType == "ViewElement") {
+					_removeFieldToCheck(field);
 					_createViewVariable(field);
 				}
 				else if (field.propType == "Simple") {
+					_removeFieldToCheck(field);
 					_createSimpleVariable(field);
 				}
 			}

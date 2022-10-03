@@ -2,7 +2,7 @@ import { AvTodoData } from "../../../Data/TodoData.data.avt";
 import { AvInput } from "../../Input/Input.wcl.avt";
 import { AvTodoList } from "../TodoList/TodoList.wcl.avt";
 
-export class AvTodoCreation extends WebComponent implements DefaultComponent {
+export class AvTodoCreation extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
 	//#region static
 

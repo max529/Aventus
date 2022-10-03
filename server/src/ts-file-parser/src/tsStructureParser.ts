@@ -5,7 +5,6 @@
 import * as ts from "typescript";
 import * as tsm from "./tsASTMatchers";
 export * as tsm from "./tsASTMatchers";
-export * as helperMethodExtractor from "./helperMethodExtractor";
 import * as fsUtil from "./fsUtils";
 import { AliasNode, ClassModel, EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
 import { TypeKind } from "../index";
@@ -66,7 +65,7 @@ let savedModule: {
 } = {}
 export function parseDocument(document: TextDocument): Module {
     if (savedModule[document.uri]) {
-        if(savedModule[document.uri].version < document.version){
+        if (savedModule[document.uri].version < document.version) {
             savedModule[document.uri] = {
                 version: document.version,
                 module: parseStruct(document.getText(), {}, uriToPath(document.uri))
@@ -250,7 +249,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             var u = <ts.TypeAliasDeclaration>x;
             if (u.name) {
                 var aliasName = u.name.text;
-                var type = buildType(u.type, mpth);
+                var type = buildType(u.type, mpth, module);
                 module.aliases.push({ name: aliasName, type: type, content: content.substring(x.pos, x.end) });
             }
 
@@ -354,37 +353,19 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 }
                 if (x.kind === ts.SyntaxKind.MethodDeclaration) {
                     var md = <ts.MethodDeclaration>x;
-                    var method = buildMethod(md, content, mpth);
+                    var method = buildMethod(md, content, mpth, module);
                     clazz.methods.push(method);
                     //return;
                 }
                 var field: ts.PropertyDeclaration = fld.doMatch(x);
                 if (field) {
-                    var f = buildField(field, mpth);
+                    var f = buildField(field, mpth, module);
                     if (f.name !== "override") {
                         if (f.name === "$") {
                             clazz.annotations = f.annotations;
                         } else {
                             fields[f.name] = f;
                             clazz.fields.push(f);
-                            // if (f.name.charAt(0) !== "$" || f.name === "$ref") {
-                            //     fields[f.name] = f;
-                            //     clazz.fields.push(f);
-                            // } else {
-                            //     var targetField = f.name.substr(1);
-                            //     var of = fields[targetField];
-                            //     if (!of) {
-                            //         if (f.name !== "$$") {
-                            //             var overridings = clazz.annotationOverridings[targetField];
-                            //             if (!overridings) {
-                            //                 overridings = [];
-                            //             }
-                            //             clazz.annotationOverridings[targetField] = overridings.concat(f.annotations);
-                            //         }
-                            //     } else {
-                            //         of.annotations = f.annotations;
-                            //     }
-                            // }
                         }
                     }
                 }
@@ -403,13 +384,13 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 c.heritageClauses.forEach(x => {
                     x.types.forEach(y => {
                         if (x.token === ts.SyntaxKind.ExtendsKeyword) {
-                            let temp = buildType(y, mpth);
+                            let temp = buildType(y, mpth, module);
                             if (temp) {
                                 clazz.extends.push(temp);
                             }
                         } else {
                             if (x.token === ts.SyntaxKind.ImplementsKeyword) {
-                                let temp = buildType(y, mpth);
+                                let temp = buildType(y, mpth, module);
                                 if (temp) {
                                     clazz.implements.push(temp);
                                 }
@@ -440,7 +421,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
     });
     return module;
 }
-function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
+function buildField(f: ts.PropertyDeclaration, path: string, module: Module): FieldModel {
     let jsDocTxt: string[] = [];
     if (f['jsDoc']) {
         for (let jsDoc of f['jsDoc']) {
@@ -450,7 +431,7 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
     const decorators = ts.canHaveDecorators(f) ? ts.getDecorators(f) : undefined;
     let field: FieldModel = {
         name: f.name["text"],
-        type: buildType(f.type, path),
+        type: buildType(f.type, path, module),
         annotations: [],
         documentation: jsDocTxt,
         valueConstraint: buildConstraint(f.initializer),
@@ -497,16 +478,16 @@ function buildField(f: ts.PropertyDeclaration, path: string): FieldModel {
     // };
 }
 
-function buildMethod(md: ts.MethodDeclaration, content: any, path: string): MethodModel {
+function buildMethod(md: ts.MethodDeclaration, content: any, path: string, module: Module): MethodModel {
     var aliasName = (<ts.Identifier>md.name).text;
     var text = content.substring(md.pos, md.end);
     var params: ParameterModel[] = [];
     md.parameters.forEach(x => {
-        params.push(buildParameter(x, content, path));
+        params.push(buildParameter(x, content, path, module));
     });
 
     var method: MethodModel = {
-        returnType: buildType(md.type, path),
+        returnType: buildType(md.type, path, module),
         name: aliasName,
         start: md.pos,
         end: md.end,
@@ -544,7 +525,7 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string): Meth
     return method;
 }
 
-function buildParameter(f: ts.ParameterDeclaration, content: any, path: string): ParameterModel {
+function buildParameter(f: ts.ParameterDeclaration, content: any, path: string, module: Module): ParameterModel {
 
     var text = content.substring(f.pos, f.end);
     return {
@@ -552,7 +533,7 @@ function buildParameter(f: ts.ParameterDeclaration, content: any, path: string):
         start: f.pos,
         end: f.end,
         text: text,
-        type: buildType(<ts.TypeNode>f.type, path)
+        type: buildType(<ts.TypeNode>f.type, path, module)
     };
 }
 
@@ -714,6 +695,8 @@ function basicType(n: string, path: string | null): BasicType {
     var namespace = namespaceIndex !== -1 ? n.substring(0, namespaceIndex) : "";
     var basicName = namespaceIndex !== -1 ? n.substring(namespaceIndex + 1) : n;
 
+
+
     return { typeName: n, nameSpace: namespace, basicName: basicName, typeKind: TypeKind.BASIC, typeArguments: [], modulePath: path || '' };
 }
 function arrayType(b: TypeModel): ArrayType {
@@ -722,7 +705,7 @@ function arrayType(b: TypeModel): ArrayType {
 function unionType(b: TypeModel[]): UnionType {
     return { options: b, typeKind: TypeKind.UNION, typeName: '' };
 }
-export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel | undefined {
+export function buildType(t: ts.TypeNode | undefined, path: string, module: Module): TypeModel | undefined {
     if (!t) {
         return undefined;
     }
@@ -756,9 +739,17 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
         let parsedName = parseQualified(tr.typeName);
         if (parsedName) {
             var res = basicType(parsedName, path);
+
+            // TODO valdiate how to implements this one with a namespace
+            for (let _import of module._imports) {
+                if (_import.clauses.indexOf(res.typeName) != -1) {
+                    res.modulePath = _import.absPathString;
+                }
+            }
+
             if (tr.typeArguments) {
                 tr.typeArguments.forEach(x => {
-                    let temp = buildType(x, path);
+                    let temp = buildType(x, path, module);
                     if (temp) {
                         res.typeArguments.push(temp);
                     }
@@ -769,7 +760,7 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
     }
     if (t.kind === ts.SyntaxKind.ArrayType) {
         var q: ts.ArrayTypeNode = <ts.ArrayTypeNode>t;
-        let temp = buildType(q.elementType, path);
+        let temp = buildType(q.elementType, path, module);
         if (temp) {
             return arrayType(temp);
         }
@@ -779,7 +770,7 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
         var ut: ts.UnionTypeNode = <ts.UnionTypeNode>t;
         let types: TypeModel[] = [];
         for (let type of ut.types) {
-            let temp = buildType(type, path);
+            let temp = buildType(type, path, module);
             if (temp) {
                 types.push(temp);
             }
@@ -793,7 +784,7 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
             res = basicType(parsedName, path);
             if (tra.typeArguments) {
                 tra.typeArguments.forEach(x => {
-                    let temp = buildType(x, path);
+                    let temp = buildType(x, path, module);
                     if (temp) {
                         res.typeArguments.push(temp);
                     }
@@ -807,10 +798,14 @@ export function buildType(t: ts.TypeNode | undefined, path: string): TypeModel |
     //throw new Error("Case not supported: " + t.kind);
 }
 function parseQualified2(n: any): string | undefined {
-    if (!n.name) {
-        return n.text;
+    let preset = "";
+    if (n.expression && n.expression.kind === ts.SyntaxKind.Identifier) {
+        preset = n.expression.text + "."
     }
-    return n.name.text;
+    if (!n.name) {
+        return preset+n.text;
+    }
+    return preset+n.name.text;
 }
 function parseQualified(n: ts.EntityName): string | undefined {
     if (n.kind === ts.SyntaxKind.Identifier) {

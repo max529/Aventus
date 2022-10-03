@@ -1,5 +1,4 @@
 import * as index from "../index"
-import * as helperMethodExtractor from "./helperMethodExtractor"
 
 var ns: { [key: string]: boolean } = { "RamlWrapper": true };
 
@@ -109,8 +108,4 @@ export function flatten(t: index.TypeModel, namespaces?: { [key: string]: boolea
         return result;
     }
     return [];
-}
-
-export function getHelperMethods(srcPath: string): HelperMethod[] {
-    return helperMethodExtractor.getHelperMethods(srcPath);
 }

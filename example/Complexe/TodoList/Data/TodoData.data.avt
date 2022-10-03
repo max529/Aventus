@@ -3,7 +3,7 @@ export enum AvTodoState {
     InProgress,
     Done
 }
-export class AvTodoData implements IData {
+export class AvTodoData implements Aventus.IData {
     public id: number = 0;
     public name: string = "";
     public state: AvTodoState = AvTodoState.Waiting;

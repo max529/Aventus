@@ -1,4 +1,4 @@
-export class AvInput extends AvFormElement<string> implements DefaultComponent {
+export class AvInput extends Aventus.AvFormElement<string> implements Aventus.DefaultComponent {
 
 
     //#region static
@@ -7,7 +7,7 @@ export class AvInput extends AvFormElement<string> implements DefaultComponent {
 
 
     //#region props
-	@property()
+	@Property()
 	label:string;
     //#endregion
 

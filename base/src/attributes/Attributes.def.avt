@@ -23,10 +23,6 @@ declare function Watch<T>(onChange: (component: T, action: WatchAction, path: st
  */
 declare function ViewElement(config?:ViewElementConfig);
 /**
- * Ignore identifier check
- */
-declare function IgnoreForceIdentifier();
-/**
  * Clear parent view and use yours 
  */
 declare function OverrideView();

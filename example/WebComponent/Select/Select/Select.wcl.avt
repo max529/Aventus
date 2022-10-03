@@ -3,7 +3,7 @@ import { AvOption } from "../option/option.wcl.avt";
 @Debugger({
     writeCompiled: true
 })
-export class AvSelect extends AvFormElement<string> implements DefaultComponent {
+export class AvSelect extends Aventus.AvFormElement<string> implements Aventus.DefaultComponent {
 
     //#region static
 
@@ -12,16 +12,16 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
 
     //#region props
 
-    @property()
+    @Property()
     label: string;
     //#endregion
 
 
     //#region variables
-    @watch()
+    @Watch()
     value_display: string = "";
 
-    hider: AvHideable;
+    hider: Aventus.AvHideable;
     options: HTMLDivElement;
     baseEl: HTMLDivElement;
     test: HTMLLabelElement;
@@ -37,7 +37,6 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
     //#region constructor
     constructor() {
         super();
-       
     }
     //#endregion
 
@@ -119,7 +118,7 @@ export class AvSelect extends AvFormElement<string> implements DefaultComponent 
             this.openOptions();
         });
 
-        let form = this.findParentByTag<AvForm>("av-form");
+        let form = this.findParentByTag<Aventus.AvForm>("av-form");
         if(form) {
             form.subscribe(this);
         }

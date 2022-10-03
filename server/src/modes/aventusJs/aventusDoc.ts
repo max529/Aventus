@@ -141,7 +141,7 @@ export class AventusDoc {
 				} else if (this.type == AventusType.Static) {
 					let filename = this.document.uri.split("/")
 					newCompiledTxt = {
-						nameCompiled: filename[filename.length - 1],
+						nameCompiled: "",
 						nameDoc: "",
 						src: this.document.getText(),
 						doc: "",

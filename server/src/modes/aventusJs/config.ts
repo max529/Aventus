@@ -67,13 +67,16 @@ export interface AventusConfigBuild {
 	name: string,
 	version: string,
 	inputPath: string[],
-	inputPathRegex?: RegExp
+	inputPathRegex?: RegExp,
+	noNamespacePath?:string[],
+	noNamespacePathRegex?: RegExp,
 	outputFile: string,
 	generateDefinition?: boolean
 	compileOnSave?: boolean
 	includeBase?: boolean,
 	include?: { definition: string, src?: string, libraryName?: string }[],
-	namespace: "",
+	namespace: string,
+	componentPrefix: string
 }
 export interface AventusConfigStatic {
 	name: string,
@@ -85,19 +88,6 @@ export interface AventusConfigStatic {
 	colorsMap?: { [key: string]: string }
 }
 export interface AventusConfig {
-	identifier: string,
-	components?: {
-		disableIdentifier: boolean
-	},
-	libs?: {
-		disableIdentifier: boolean
-	},
-	data?: {
-		disableIdentifier: boolean
-	},
-	ram?: {
-		disableIdentifier: boolean
-	}
 	build: AventusConfigBuild[],
 	static?: AventusConfigStatic[],
 }

@@ -2,7 +2,7 @@ export interface ResizeObserverOptions {
     callback: CallableFunction;
     fps?: number;
 }
-export class AvResizeObserver {
+export class ResizeObserver {
     private callback: CallableFunction;
     private targets: Element[];
     private fpsInterval: number;
@@ -11,19 +11,19 @@ export class AvResizeObserver {
     private willTrigger: boolean;
 
     private static resizeObserverClassByObject: {
-        [key: string]: AvResizeObserver[];
+        [key: string]: ResizeObserver[];
     } = {};
     private static uniqueInstance: ResizeObserver;
     private static getUniqueInstance(): ResizeObserver {
-        if(!AvResizeObserver.uniqueInstance) {
-            AvResizeObserver.uniqueInstance = new ResizeObserver(entries => {
-                let allClasses: AvResizeObserver[] = [];
+        if(!ResizeObserver.uniqueInstance) {
+            ResizeObserver.uniqueInstance = new ResizeObserver(entries => {
+                let allClasses: ResizeObserver[] = [];
                 for(let j = 0; j < entries.length; j++) {
                     let entry = entries[j];
                     let index: string = entry.target['sourceIndex'];
-                    if(AvResizeObserver.resizeObserverClassByObject[index]) {
-                        for(let i = 0; i < AvResizeObserver.resizeObserverClassByObject[index].length; i++) {
-                            let classTemp = AvResizeObserver.resizeObserverClassByObject[index][i];
+                    if(ResizeObserver.resizeObserverClassByObject[index]) {
+                        for(let i = 0; i < ResizeObserver.resizeObserverClassByObject[index].length; i++) {
+                            let classTemp = ResizeObserver.resizeObserverClassByObject[index][i];
                             classTemp.entryChanged(entry);
                             if(allClasses.indexOf(classTemp) == -1) {
                                 allClasses.push(classTemp);
@@ -36,7 +36,7 @@ export class AvResizeObserver {
                 }
             });
         }
-        return AvResizeObserver.uniqueInstance;
+        return ResizeObserver.uniqueInstance;
     }
 
     constructor(options: ResizeObserverOptions | CallableFunction) {
@@ -66,12 +66,12 @@ export class AvResizeObserver {
         if(!target["sourceIndex"]) {
             target["sourceIndex"] = Math.random().toString(36);
             this.targets.push(target);
-            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]] = [];
-            AvResizeObserver.getUniqueInstance().observe(target);
+            ResizeObserver.resizeObserverClassByObject[target["sourceIndex"]] = [];
+            ResizeObserver.getUniqueInstance().observe(target);
         }
 
-        if(AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].indexOf(this) == -1) {
-            AvResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].push(this);
+        if(ResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].indexOf(this) == -1) {
+            ResizeObserver.resizeObserverClassByObject[target["sourceIndex"]].push(this);
         }
 
 
@@ -80,14 +80,14 @@ export class AvResizeObserver {
         for(let i = 0; this.targets.length; i++) {
             let tempTarget = this.targets[i];
             if(tempTarget == target) {
-                let position = AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].indexOf(this);
+                let position = ResizeObserver.resizeObserverClassByObject[target['sourceIndex']].indexOf(this);
                 if(position != -1) {
-                    AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].splice(position, 1);
+                    ResizeObserver.resizeObserverClassByObject[target['sourceIndex']].splice(position, 1);
                 }
-                if(AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']].length == 0) {
-                    delete AvResizeObserver.resizeObserverClassByObject[target['sourceIndex']];
+                if(ResizeObserver.resizeObserverClassByObject[target['sourceIndex']].length == 0) {
+                    delete ResizeObserver.resizeObserverClassByObject[target['sourceIndex']];
                 }
-                AvResizeObserver.getUniqueInstance().unobserve(target);
+                ResizeObserver.getUniqueInstance().unobserve(target);
                 this.targets.splice(i, 1);
                 return;
             }

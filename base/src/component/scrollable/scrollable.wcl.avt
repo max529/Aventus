@@ -1,5 +1,5 @@
 import { DtScrollablePositions } from "./scrollable-positions.lib.avt";
-import { AvResizeObserver } from "../../lib/ResizeObserver.lib.avt";
+import { ResizeObserver } from "../../lib/ResizeObserver.lib.avt";
 import { DefaultComponent, WebComponent } from "../../lib/WebComponent.lib.avt";
 
 export class AvScrollable extends WebComponent implements DefaultComponent {
@@ -42,7 +42,7 @@ export class AvScrollable extends WebComponent implements DefaultComponent {
     //#region variables
     verticalScrollVisible: boolean = false;
     horizontalScrollVisible: boolean = false;
-    observer: AvResizeObserver;
+    observer: ResizeObserver;
     wheelAction: (e: WheelEvent) => void;
     touchWheelAction: (e: MouseEvent) => void;
     contentHidderWidth: number = 0;
@@ -192,7 +192,7 @@ export class AvScrollable extends WebComponent implements DefaultComponent {
     }
     private createResizeObserver() {
         let inProgress = false;
-        this.observer = new AvResizeObserver({
+        this.observer = new ResizeObserver({
             callback: entries => {
                 if(inProgress) {
                     return;

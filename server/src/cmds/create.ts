@@ -29,10 +29,11 @@ export class Create {
 						mkdirSync(baseFolder + "/src/ram");
 						mkdirSync(baseFolder + "/src/socket");
 						writeFileSync(baseFolder + "/aventus.conf.json", `{
-	"identifier": "Av",
 	"build": [
         {
             "name": "${name}",
+			"namespace":"${name.replace(/ /g, "_")}",
+			"componentPrefix": "av",
             "version": "0.0.1",
             "inputPath": [
                 "./src/*"
@@ -60,17 +61,11 @@ export class Create {
 							let nameObject = params.arguments[3].label.charAt(0).toUpperCase() + params.arguments[3].label.slice(1);
 							let pathObject = params.arguments[3].detail;
 							let newScriptPath = uriToPath(baseFolder + "/" + nameObject + aventusExtension.RAM);
-							let identifier = config.identifier;
-							if (config.ram?.disableIdentifier) {
-								identifier = "";
-							}
-							else if (nameObject.startsWith(identifier)) {
-								identifier = "";
-							}
+							
 							let importPath = getImportPath(newScriptPath, pathObject);
-							let classActionName = identifier + nameObject + "RAMAction";
-							let classItemName = identifier + nameObject + "RAMItem";
-							let className = identifier + nameObject + "RAM";
+							let classActionName = nameObject + "RAMAction";
+							let classItemName =  nameObject + "RAMItem";
+							let className = nameObject + "RAM";
 							writeFileSync(newScriptPath, `import { ${nameObject} } from "${importPath}";
 
 declare module "${importPath}" {
@@ -79,7 +74,7 @@ declare module "${importPath}" {
 	}
 }
 
-export class ${className} extends GenericSocketRAMManager<${nameObject}, ${classItemName}> implements IRAMManager {
+export class ${className} extends Aventus.GenericSocketRAMManager<${nameObject}, ${classItemName}> implements Aventus.IRAMManager {
 
 	static getInstance(): ${className} {
 		return ${className}._getInstance<${className}>();
@@ -89,7 +84,7 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 		return "${nameObject}";
 	}
 	
-	protected override addCustomFunctions(item: ${nameObject} & SocketRAMManagerObject<${nameObject}>): SocketRAMManagerItem<${nameObject}> {
+	protected override addCustomFunctions(item: ${nameObject} & Aventus.SocketRAMManagerObject<${nameObject}>): Aventus.SocketRAMManagerItem<${nameObject}> {
         // implement your functions here
 		return item;
     }
@@ -108,15 +103,11 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 								let componentName = name;
 								componentName = componentName.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
 								let firstUpperName = componentName.charAt(0).toUpperCase() + componentName.slice(1);
-								let identifier = config.identifier;
-								if (firstUpperName.startsWith(identifier)) {
-									identifier = "";
-								}
-								let className = identifier + firstUpperName;
+								let className = firstUpperName;
 								mkdirSync(newFolderPath);
 								let newScriptPath = newFolderPath + "/" + name;
 								if (format == "Multiple") {
-									writeFileSync(newScriptPath + aventusExtension.ComponentLogic, `export class ${className} extends WebComponent implements DefaultComponent {
+									writeFileSync(newScriptPath + aventusExtension.ComponentLogic, `export class ${className} extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
 	//#region static
 
@@ -155,7 +146,7 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 								}
 								else {
 									writeFileSync(newScriptPath + aventusExtension.Component, `<script>
-	export class ${className} extends WebComponent implements DefaultComponent {
+	export class ${className} extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
 	}
 </script>
@@ -180,31 +171,17 @@ export class ${className} extends GenericSocketRAMManager<${nameObject}, ${class
 							else if (type == "Data") {
 								let newScriptPath = uriToPath(baseFolder + "/" + name + aventusExtension.Data);
 								name = name.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
-								let identifier = config.identifier;
 								let firstUpperName = name.charAt(0).toUpperCase() + name.slice(1);
-								if (config.data?.disableIdentifier) {
-									identifier = "";
-								}
-								else if (firstUpperName.startsWith(identifier)) {
-									identifier = "";
-								}
-								let className = identifier + firstUpperName;
-								writeFileSync(newScriptPath, `export class ${className} implements Data {${EOL}\tpublic id: number = 0;${EOL}}`);
+								let className = firstUpperName;
+								writeFileSync(newScriptPath, `export class ${className} implements Aventus.Data {${EOL}\tpublic id: number = 0;${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))
 							}
 							else if (type == "Library") {
 								let newScriptPath = uriToPath(baseFolder + "/" + name + aventusExtension.Lib);
 								name = name.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
-								let identifier = config.identifier;
 								let firstUpperName = name.charAt(0).toUpperCase() + name.slice(1);
-								if (config.libs?.disableIdentifier) {
-									identifier = "";
-								}
-								else if (firstUpperName.startsWith(identifier)) {
-									identifier = "";
-								}
-								let className = identifier + firstUpperName;
+								let className = firstUpperName;
 								writeFileSync(newScriptPath, `export class ${className} {${EOL}\t${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))

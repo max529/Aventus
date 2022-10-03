@@ -1,4 +1,4 @@
-export class AvOption extends WebComponent implements DefaultComponent {
+export class AvOption extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
     //#region static
 
@@ -6,10 +6,10 @@ export class AvOption extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @attribute()
+    @Attribute()
     value: string = "";
 
-    @attribute()
+    @Attribute()
     selected: boolean = false;
     //#endregion
 

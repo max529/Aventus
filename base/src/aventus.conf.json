@@ -1,20 +1,19 @@
 {
-    "identifier": "Av",
-    "data": {
-        "disableIdentifier": true
-    },
-    "components": {
-        "disableIdentifier": true
-    },
-    "libs": {
-        "disableIdentifier": true
-    },
     "build": [
         {
             "name": "base",
             "version": "1.0.0",
+            "namespace": "Aventus",
+            "componentPrefix": "av",
             "inputPath": [
-                "./"
+                "./component/",
+                "./data/",
+                "./lib/",
+                "./ram/"
+            ],
+            "noNamespacePath": [
+                "./attributes/",
+                "./extension/"
             ],
             "compileOnSave": true,
             "includeBase": false,

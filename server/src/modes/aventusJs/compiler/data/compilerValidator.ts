@@ -7,23 +7,16 @@ import { createErrorTs, createErrorTsPos } from '../utils';
 
 export function compileValidatorData(document: TextDocument, config: AventusConfig): Diagnostic[] {
 	let diagnostics: Diagnostic[] = [];
-	const specialTag = config.data?.disableIdentifier ? "" : config.identifier;
 
 	const struct = parseDocument(document);
 
 	for (let enumTemp of struct.enumDeclarations) {
-		if (!enumTemp.name.startsWith(specialTag)) {
-			diagnostics.push(createErrorTsPos(document, `Enum name must start with "${specialTag}"`, enumTemp.start, enumTemp.end));
-		}
 
 		if (!enumTemp.isExported) {
 			diagnostics.push(createErrorTsPos(document, 'Enum must be exported', enumTemp.start, enumTemp.end));
 		}
 	}
 	for (let classTemp of struct.classes) {
-		if (!classTemp.name.startsWith(specialTag)) {
-			diagnostics.push(createErrorTsPos(document, `Class name must start with "${specialTag}"`, classTemp.start, classTemp.end));
-		}
 
 		if (!classTemp.isExported) {
 			diagnostics.push(createErrorTsPos(document, 'Class must start with "export"', classTemp.start, classTemp.end));
@@ -34,7 +27,7 @@ export function compileValidatorData(document: TextDocument, config: AventusConf
 		if (classTemp.isInterface) {
 			if (classTemp.name != "IData") {
 				for (let implement of classTemp.extends) {
-					if (implement.typeName == 'IData') {
+					if (implement.typeName == 'IData' || implement.typeName == 'Aventus.IData') {
 						foundData = true;
 						break;
 					}
@@ -46,7 +39,7 @@ export function compileValidatorData(document: TextDocument, config: AventusConf
 		}
 		else {
 			for (let implement of classTemp.implements) {
-				if (implement.typeName == 'IData') {
+				if (implement.typeName == 'IData' || implement.typeName == 'Aventus.IData') {
 					foundData = true;
 					break;
 				}

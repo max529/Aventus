@@ -1,112 +1,34 @@
 // version 1.0.0
 // region js //
-interface IRAMManager {}declare abstract class AvGenericRAMManager<U extends IData, R extends U> implements IRAMManager {    private static allRams;    protected static _getInstance<T extends IRAMManager>(): T;    protected records: {        [key: number]: R;    };    abstract getPrimaryKey(): string;    protected getId(item: U): number | undefined;    protected constructor();    protected abstract transformElementInStorable(item: U): R;    createList(list: U[]): Promise<R[]>;    create(item: U, ...args: any[]): Promise<R | undefined>;    private _create;    protected beforeCreateList(list: U[]): Promise<U[]>;    protected beforeCreateItem(item: U, fromList: boolean): Promise<U>;    protected afterCreateItem(item: R, fromList: boolean): Promise<R>;    protected afterCreateList(list: R[]): Promise<R[]>;    updateList(list: U[]): Promise<R[]>;    update(item: U, ...args: any[]): Promise<R | undefined>;    private _update;    protected beforeUpdateList(list: U[]): Promise<U[]>;    protected beforeUpdateItem(item: U, fromList: boolean): Promise<U>;    protected afterUpdateItem(item: R, fromList: boolean): Promise<R>;    protected afterUpdateList(list: R[]): Promise<R[]>;    protected updateDataInRAM(newData: U): void;    deleteList(list: U[]): Promise<void>;    delete(item: U, ...args: any[]): Promise<void>;    deleteById(id: number): Promise<void>;    private _delete;    protected beforeDeleteList(list: U[]): Promise<void>;    protected beforeDeleteItem(item: U, fromList: boolean): Promise<void>;    protected afterDeleteItem(item: U, fromList: boolean): Promise<void>;    protected afterDeleteList(list: U[]): Promise<void>;    get(id: number): Promise<R>;    getById(id: number): Promise<R>;    protected beforeGetById(id: number): Promise<void>;    protected afterGetById(item: R): Promise<void>;    getByIds(ids: number[]): Promise<R[]>;    protected beforeGetByIds(ids: number[]): Promise<void>;    protected afterGetByIds(items: R[]): Promise<void>;    getAll(): Promise<{        [key: number]: R;    }>;    protected beforeGetAll(): Promise<void>;    protected afterGetAll(result: {        [key: number]: R;    }): Promise<void>;    getList(): Promise<U[]>;}declare abstract class AvRAMManager<U extends IData> extends AvGenericRAMManager<U, U> {    protected transformElementInStorable(item: U): U;}
-interface SocketRAMManagerObject<U> {    update(newData: {}): Promise<U & SocketRAMManagerObject<U>>;    onUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    offUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    delete(): Promise<void>;    onDelete(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    offDelete(callback: (item: U & SocketRAMManagerObject<U>) => void): any;}interface SocketRAMManagerRoutes {    get: SocketRAMManagerRoute;    getAll: SocketRAMManagerRoute;    create: SocketRAMManagerRoute;    created: SocketRAMManagerRoute;    update: SocketRAMManagerRoute;    updated: SocketRAMManagerRoute;    delete: SocketRAMManagerRoute;    deleted: SocketRAMManagerRoute;}interface SocketRAMManagerRoute {    request: string;    multiple: string;    success: string;    error: string;}interface SocketRAMManagerSubscribers<U, R extends U> {    created: ((item: R) => void)[];    updated: ((item: R) => void)[];    deleted: ((item: R) => void)[];}interface SocketRAMManagerRouteNotPlanned<U extends IData> {    channel: string;    callback: (response: {        data?: U[];    }) => void;}declare abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends AvGenericRAMManager<U, R> {    private socketActions;    private gotAllRecords;    private subscribers;    private recordsSubscribers;    private socketRoutes;    static defaultSocketName: string | undefined;    protected constructor();    getPrimaryKey(): string;    private getSocket;    protected _getSocketName(): string | undefined;    protected abstract getObjectName(): string;    init(): void;    private initVariables;    private initSocket;    create(item: U, cbError?: (response: any) => void): Promise<R>;    protected beforeCreateItem(item: U, fromList: boolean): Promise<U>;    protected beforeCreateList(list: U[]): Promise<U[]>;    update(item: U, cbError?: (response: any) => void): Promise<R>;    protected beforeUpdateItem(item: U, fromList: boolean): Promise<U>;    protected beforeUpdateList(list: U[]): Promise<U[]>;    private internalUpdate;    delete(item: U, cbError?: (response: any) => void): Promise<void>;    protected beforeDeleteItem(item: U, fromList: boolean): Promise<void>;    protected beforeDeleteList(list: U[]): Promise<void>;    protected beforeGetById(id: number): Promise<void>;    protected beforeGetByIds(ids: number[]): Promise<void>;    protected beforeGetAll(): Promise<void>;    protected transformElementInStorable(item: U): R;    protected abstract addCustomFunctions(item: U & SocketRAMManagerObject<U>): R;    private publish;    private printErrors;}declare abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, SocketRAMManagerItem<U>> {    protected addCustomFunctions(item: SocketRAMManagerItem<U>): SocketRAMManagerItem<U>;}declare type SocketRAMManagerItem<U extends IData> = U & SocketRAMManagerObject<U>;
-declare class AvUtils {    static sleep(ms: number): any;}
-interface State {    active?: (activeState: string) => void;    inactive?: (oldState: string, nextState: string) => void;    askChange?: (activeState: string, nextState: string) => boolean;    getSlug?: () => string;}interface States {    [key: string]: State;}declare class StateManager {    logLevel: number;    private _activeState;    private _activeParams;    private _activeSlug;    private _callbackList;    private _subscribersMutliple;    private _subscribers;    private _isNumberRegex;    private _callbackFunctions;    private constructor();    private static __instances;    static getInstance(name?: string): StateManager;    subscribe(state: string | string[], callbacks: State): void;    /**     *     * @param {string|Array} state - The state(s) to unsubscribe from     * @param {Object} callbacks     * @param {activeCallback} [callbacks.active]     * @param {incativeCallback} [callbacks.inactive]     * @param {askChangeCallback} [callbacks.askChange]     */    unsubscribe(state: any, callbacks: any): void;    /**     * Format a state and return if you need to bypass the test or not     * @param {string} string - The state to format     * @returns {Object} - The state, the formated state and if it's a regex state or not     */    private _prepareStateString;    /**     * Escape a string to be regex-compatible ()     * @param {string} string The string to escape     * @returns An escaped string     */    private _escapeRegExp;    /**     * Get the slug from a state string     * @param {string} state The state to extract the slug from     * @returns {string|undefined} The slug of the state or undefined if the state don't have one     */    private _getSlugFromState;    /**     * Save the current info (state/params) in cache     */    private _saveDataInCache;    /**     * Add a callback to a key     * @param {string} key - The key to trigger to trigger the function     * @param {function} callback - The function to trigger     */    addFunction(key: any, callback: any): void;    /**     * Remove a function from a key     * @param {string} key - The key to remove the function from     * @param {function} callback - The function to remove     */    removeFunction(key: any, callback: any): void;    /**     * Trigger all the functions added under a key     * @param {string} key - The key to trigger     * @param {*} [params] - The params to pass to the functions (optional)     */    triggerFunction(key: any, params?: {}): void;    /**     * Remove all the function added under all keys     */    clearFunctions(): void;    /**     * Set the current active state     * @param {string} state - The state to set to active     * @param {number} slug - The slug of the active state (Only work if the state ends with "*")     * @param {Object} params - The params of the active state     */    setActiveState(state: any, params?: {}): void;    /**     * Get the active state     * @returns {string} - The active state     */    getActiveState(): any;    /**     * Get the active params     * @returns {Object} - The active params     */    getActiveParams(): any;    /**     * Get the active slug     * @returns {int} - The active slug     */    getActiveSlug(): any;    /**     * Check if a state is in the subscribers and active, return true if it is, false otherwise     * @param {string} state - The state to test     * @returns {boolean} - True if the state is in the subscription list and active, false otherwise     */    isStateActive(state: any): boolean;    private _log;}
-declare class Socket {    private options;    private waitingList;    private multipltWaitingList;    private onDone;    private timeoutError;    private memoryBeforeOpen;    private nbClose;    private socket;    protected constructor();    init(options?: SocketOptions): void;    private static __instances;    static getInstance(name?: string): Socket;    protected getSocketName(): string;    addRoute(newRoute: SocketRoute): void;    /**     * The route to remove     * @param route - The route to remove     */    removeRoute(route: SocketRoute): void;    open(done?: Function, error?: Function): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param options the options to add to the message (typically the uid)     */    sendMessage<T>(channelName: string, data?: T, options?: {}): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWait<T>(channelName: string, data: T, callbacks: {        [key: string]: (data: any) => void;    }): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {}): void;    isReady(): boolean;    private onOpen;    private onError;    private onClose;    private onMessage;    private log;}
-interface ResourceLoaderOptions {    url: string;    success?: (data: any) => void;    error?: (error: any) => void;}declare class ResourceLoader {    private static waitingResources;    static load(options: ResourceLoaderOptions, preventCache?: boolean): void;}
-interface ResizeObserverOptions {    callback: CallableFunction;    fps?: number;}declare class AvResizeObserver {    private callback;    private targets;    private fpsInterval;    private nextFrame;    private entriesChangedEvent;    private willTrigger;    private static resizeObserverClassByObject;    private static uniqueInstance;    private static getUniqueInstance;    constructor(options: ResizeObserverOptions | CallableFunction);    observe(target: Element): void;    unobserve(target: Element): void;    disconnect(): void;    entryChanged(entry: any): void;    triggerCb(): void;    _triggerCb(): void;}
-interface Pointer {    id: number;    constructor(nativePointer: Touch | PointerEvent): any;}interface InternalCustomFunction {    src?: PressManager;    onDrag?: (e: PointerEvent, self: PressManager) => void;    onDragEnd?: (e: PointerEvent, self: PressManager) => void;}interface InternalPointerEvent extends Event {    detail: {        state: PressManagerState;        customFcts: InternalCustomFunction;        realEvent: PointerEvent;    };}interface PressManagerOptions {    element: Element | Element[];    onPress?: (e: PointerEvent, self: PressManager) => void;    onPressStart?: (e: PointerEvent, self: PressManager) => void;    onPressEnd?: (e: PointerEvent, self: PressManager) => void;    onLongPress?: (e: PointerEvent, self: PressManager) => void;    onDblPress?: (e: PointerEvent, self: PressManager) => void;    onDrag?: (e: PointerEvent, self: PressManager) => void;    onDragStart?: (e: PointerEvent, self: PressManager) => void;    onDragEnd?: (e: PointerEvent, self: PressManager) => void;    offsetDrag?: number;    delayDblPress?: number;    delayLongPress?: number;    forceDblPress?: boolean;}interface PressManagerState {    oneActionTriggered: boolean;    isMoving: boolean;}declare class PressManager {    private options;    private element;    private subPressManager;    private delayDblPress;    private delayLongPress;    private nbPress;    private offsetDrag;    private state;    private startPosition;    private customFcts;    private timeoutDblPress;    private timeoutLongPress;    private downEventSaved;    private actionsName;    private useDblPress;    private forceDblPress;    private functionsBinded;    /**     * @param {*} options - The options     * @param {HTMLElement | HTMLElement[]} options.element - The element to manage     */    constructor(options: PressManagerOptions);    getElement(): Element;    private checkDragConstraint;    private assignValueOption;    private bindAllFunction;    private init;    private downAction;    private upAction;    private moveAction;    private triggerEventToParent;    private childPress;    private childDblPress;    private childLongPress;    private childDragStart;    private emitTriggerFunction;    destroy(): void;}
-declare class Pointer {    readonly id: number;    readonly clientX: number;    readonly clientY: number;    private nativePointer;    private pageX;    private pageY;    constructor(nativePointer: MouseEvent | PointerEvent | Touch);}declare class PointerTracker {    private element;    private currentPointers;    private startCallback;    private moveCallback;    private endCallback;    private lastEvent;    constructor(element: HTMLElement, callbacks: {        start?: (pointer?: Pointer, event?: PointerEvent | TouchEvent) => boolean;        move?: (previousPointer?: Pointer[], trackedChangedPointers?: Pointer[], event?: MouseEvent | TouchEvent) => void;        end?: (pointer?: Pointer, event?: PointerEvent | TouchEvent) => void;    });    reset(): void;    getCurrentPointers(): Pointer[];    private triggerPointerStart;    private pointerStart;    private touchStart;    private move;    private triggerPointerEnd;    private pointerEnd;    private touchEnd;    private isTooOld;}
-
+declare namespace Aventus{
+interface IRAMManager {}abstract class GenericRAMManager<U extends IData, R extends U> implements IRAMManager {    private static allRams;    protected static _getInstance<T extends IRAMManager>(): T;    protected records: {        [key: number]: R;    };    abstract getPrimaryKey(): string;    protected getId(item: U): number | undefined;    protected constructor();    protected abstract transformElementInStorable(item: U): R;    createList(list: U[]): Promise<R[]>;    create(item: U, ...args: any[]): Promise<R | undefined>;    private _create;    protected beforeCreateList(list: U[]): Promise<U[]>;    protected beforeCreateItem(item: U, fromList: boolean): Promise<U>;    protected afterCreateItem(item: R, fromList: boolean): Promise<R>;    protected afterCreateList(list: R[]): Promise<R[]>;    updateList(list: U[]): Promise<R[]>;    update(item: U, ...args: any[]): Promise<R | undefined>;    private _update;    protected beforeUpdateList(list: U[]): Promise<U[]>;    protected beforeUpdateItem(item: U, fromList: boolean): Promise<U>;    protected afterUpdateItem(item: R, fromList: boolean): Promise<R>;    protected afterUpdateList(list: R[]): Promise<R[]>;    protected updateDataInRAM(newData: U): void;    deleteList(list: U[]): Promise<void>;    delete(item: U, ...args: any[]): Promise<void>;    deleteById(id: number): Promise<void>;    private _delete;    protected beforeDeleteList(list: U[]): Promise<void>;    protected beforeDeleteItem(item: U, fromList: boolean): Promise<void>;    protected afterDeleteItem(item: U, fromList: boolean): Promise<void>;    protected afterDeleteList(list: U[]): Promise<void>;    get(id: number): Promise<R>;    getById(id: number): Promise<R>;    protected beforeGetById(id: number): Promise<void>;    protected afterGetById(item: R): Promise<void>;    getByIds(ids: number[]): Promise<R[]>;    protected beforeGetByIds(ids: number[]): Promise<void>;    protected afterGetByIds(items: R[]): Promise<void>;    getAll(): Promise<{        [key: number]: R;    }>;    protected beforeGetAll(): Promise<void>;    protected afterGetAll(result: {        [key: number]: R;    }): Promise<void>;    getList(): Promise<U[]>;}abstract class RAMManager<U extends IData> extends GenericRAMManager<U, U> {    protected transformElementInStorable(item: U): U;}
+interface SocketRAMManagerObject<U> {    update(newData: {}): Promise<U & SocketRAMManagerObject<U>>;    onUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    offUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    delete(): Promise<void>;    onDelete(callback: (item: U & SocketRAMManagerObject<U>) => void): any;    offDelete(callback: (item: U & SocketRAMManagerObject<U>) => void): any;}interface SocketRAMManagerRoutes {    get: SocketRAMManagerRoute;    getAll: SocketRAMManagerRoute;    create: SocketRAMManagerRoute;    created: SocketRAMManagerRoute;    update: SocketRAMManagerRoute;    updated: SocketRAMManagerRoute;    delete: SocketRAMManagerRoute;    deleted: SocketRAMManagerRoute;}interface SocketRAMManagerRoute {    request: string;    multiple: string;    success: string;    error: string;}interface SocketRAMManagerSubscribers<U, R extends U> {    created: ((item: R) => void)[];    updated: ((item: R) => void)[];    deleted: ((item: R) => void)[];}interface SocketRAMManagerRouteNotPlanned<U extends IData> {    channel: string;    callback: (response: {        data?: U[];    }) => void;}abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends GenericRAMManager<U, R> {    private socketActions;    private gotAllRecords;    private subscribers;    private recordsSubscribers;    private socketRoutes;    static defaultSocketName: string | undefined;    protected constructor();    getPrimaryKey(): string;    private getSocket;    protected _getSocketName(): string | undefined;    protected abstract getObjectName(): string;    init(): void;    private initVariables;    private initSocket;    create(item: U, cbError?: (response: any) => void): Promise<R>;    protected beforeCreateItem(item: U, fromList: boolean): Promise<U>;    protected beforeCreateList(list: U[]): Promise<U[]>;    update(item: U, cbError?: (response: any) => void): Promise<R>;    protected beforeUpdateItem(item: U, fromList: boolean): Promise<U>;    protected beforeUpdateList(list: U[]): Promise<U[]>;    private internalUpdate;    delete(item: U, cbError?: (response: any) => void): Promise<void>;    protected beforeDeleteItem(item: U, fromList: boolean): Promise<void>;    protected beforeDeleteList(list: U[]): Promise<void>;    protected beforeGetById(id: number): Promise<void>;    protected beforeGetByIds(ids: number[]): Promise<void>;    protected beforeGetAll(): Promise<void>;    protected transformElementInStorable(item: U): R;    protected abstract addCustomFunctions(item: U & SocketRAMManagerObject<U>): R;    private publish;    private printErrors;}abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, SocketRAMManagerItem<U>> {    protected addCustomFunctions(item: SocketRAMManagerItem<U>): SocketRAMManagerItem<U>;}type SocketRAMManagerItem<U extends IData> = U & SocketRAMManagerObject<U>;
+class Utils {    static sleep(ms: number): any;}
+interface State {    active?: (activeState: string) => void;    inactive?: (oldState: string, nextState: string) => void;    askChange?: (activeState: string, nextState: string) => boolean;    getSlug?: () => string;}interface States {    [key: string]: State;}class StateManager {    logLevel: number;    private _activeState;    private _activeParams;    private _activeSlug;    private _callbackList;    private _subscribersMutliple;    private _subscribers;    private _isNumberRegex;    private _callbackFunctions;    private constructor();    private static __instances;    static getInstance(name?: string): StateManager;    subscribe(state: string | string[], callbacks: State): void;    /**     *     * @param {string|Array} state - The state(s) to unsubscribe from     * @param {Object} callbacks     * @param {activeCallback} [callbacks.active]     * @param {incativeCallback} [callbacks.inactive]     * @param {askChangeCallback} [callbacks.askChange]     */    unsubscribe(state: any, callbacks: any): void;    /**     * Format a state and return if you need to bypass the test or not     * @param {string} string - The state to format     * @returns {Object} - The state, the formated state and if it's a regex state or not     */    private _prepareStateString;    /**     * Escape a string to be regex-compatible ()     * @param {string} string The string to escape     * @returns An escaped string     */    private _escapeRegExp;    /**     * Get the slug from a state string     * @param {string} state The state to extract the slug from     * @returns {string|undefined} The slug of the state or undefined if the state don't have one     */    private _getSlugFromState;    /**     * Save the current info (state/params) in cache     */    private _saveDataInCache;    /**     * Add a callback to a key     * @param {string} key - The key to trigger to trigger the function     * @param {function} callback - The function to trigger     */    addFunction(key: any, callback: any): void;    /**     * Remove a function from a key     * @param {string} key - The key to remove the function from     * @param {function} callback - The function to remove     */    removeFunction(key: any, callback: any): void;    /**     * Trigger all the functions added under a key     * @param {string} key - The key to trigger     * @param {*} [params] - The params to pass to the functions (optional)     */    triggerFunction(key: any, params?: {}): void;    /**     * Remove all the function added under all keys     */    clearFunctions(): void;    /**     * Set the current active state     * @param {string} state - The state to set to active     * @param {number} slug - The slug of the active state (Only work if the state ends with "*")     * @param {Object} params - The params of the active state     */    setActiveState(state: any, params?: {}): void;    /**     * Get the active state     * @returns {string} - The active state     */    getActiveState(): any;    /**     * Get the active params     * @returns {Object} - The active params     */    getActiveParams(): any;    /**     * Get the active slug     * @returns {int} - The active slug     */    getActiveSlug(): any;    /**     * Check if a state is in the subscribers and active, return true if it is, false otherwise     * @param {string} state - The state to test     * @returns {boolean} - True if the state is in the subscription list and active, false otherwise     */    isStateActive(state: any): boolean;    private _log;}
+class Socket {    private options;    private waitingList;    private multipltWaitingList;    private onDone;    private timeoutError;    private memoryBeforeOpen;    private nbClose;    private socket;    protected constructor();    init(options?: SocketOptions): void;    private static __instances;    static getInstance(name?: string): Socket;    protected getSocketName(): string;    addRoute(newRoute: SocketRoute): void;    /**     * The route to remove     * @param route - The route to remove     */    removeRoute(route: SocketRoute): void;    open(done?: Function, error?: Function): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param options the options to add to the message (typically the uid)     */    sendMessage<T>(channelName: string, data?: T, options?: {}): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWait<T>(channelName: string, data: T, callbacks: {        [key: string]: (data: any) => void;    }): void;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {}): void;    isReady(): boolean;    private onOpen;    private onError;    private onClose;    private onMessage;    private log;}
+interface ResourceLoaderOptions {    url: string;    success?: (data: any) => void;    error?: (error: any) => void;}class ResourceLoader {    private static waitingResources;    static load(options: ResourceLoaderOptions, preventCache?: boolean): void;}
+interface ResizeObserverOptions {    callback: CallableFunction;    fps?: number;}class ResizeObserver {    private callback;    private targets;    private fpsInterval;    private nextFrame;    private entriesChangedEvent;    private willTrigger;    private static resizeObserverClassByObject;    private static uniqueInstance;    private static getUniqueInstance;    constructor(options: ResizeObserverOptions | CallableFunction);    observe(target: Element): void;    unobserve(target: Element): void;    disconnect(): void;    entryChanged(entry: any): void;    triggerCb(): void;    _triggerCb(): void;}
+interface Pointer {    id: number;    constructor(nativePointer: Touch | PointerEvent): any;}interface InternalCustomFunction {    src?: PressManager;    onDrag?: (e: PointerEvent, self: PressManager) => void;    onDragEnd?: (e: PointerEvent, self: PressManager) => void;}interface InternalPointerEvent extends Event {    detail: {        state: PressManagerState;        customFcts: InternalCustomFunction;        realEvent: PointerEvent;    };}interface PressManagerOptions {    element: Element | Element[];    onPress?: (e: PointerEvent, self: PressManager) => void;    onPressStart?: (e: PointerEvent, self: PressManager) => void;    onPressEnd?: (e: PointerEvent, self: PressManager) => void;    onLongPress?: (e: PointerEvent, self: PressManager) => void;    onDblPress?: (e: PointerEvent, self: PressManager) => void;    onDrag?: (e: PointerEvent, self: PressManager) => void;    onDragStart?: (e: PointerEvent, self: PressManager) => void;    onDragEnd?: (e: PointerEvent, self: PressManager) => void;    offsetDrag?: number;    delayDblPress?: number;    delayLongPress?: number;    forceDblPress?: boolean;}interface PressManagerState {    oneActionTriggered: boolean;    isMoving: boolean;}class PressManager {    private options;    private element;    private subPressManager;    private delayDblPress;    private delayLongPress;    private nbPress;    private offsetDrag;    private state;    private startPosition;    private customFcts;    private timeoutDblPress;    private timeoutLongPress;    private downEventSaved;    private actionsName;    private useDblPress;    private forceDblPress;    private functionsBinded;    /**     * @param {*} options - The options     * @param {HTMLElement | HTMLElement[]} options.element - The element to manage     */    constructor(options: PressManagerOptions);    getElement(): Element;    private checkDragConstraint;    private assignValueOption;    private bindAllFunction;    private init;    private downAction;    private upAction;    private moveAction;    private triggerEventToParent;    private childPress;    private childDblPress;    private childLongPress;    private childDragStart;    private emitTriggerFunction;    destroy(): void;}
 interface SocketMessage {    channel: string;    data?: any;}interface SocketRoute {    channel: string;    callback: (data: any) => void;}interface SocketOptions {    log?: boolean;    ip?: string;    port?: number;    useHttps?: boolean;    routes?: {        [key: string]: SocketRoute[];    };    socketName?: string;    onOpen?: () => void;    onError?: () => void;    onClose?: () => void;}interface ISocket {    init(options: SocketOptions): any;    addRoute(newRoute: SocketRoute): any;    /**     * The route to remove     * @param route - The route to remove     */    removeRoute(route: SocketRoute): any;    open(done: () => void, error: () => void): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param options the options to add to the message (typically the uid)     */    sendMessage<T>(channelName: string, data: T, options: any): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWait<T>(channelName: string, data: T, callbacks: {        [key: string]: (data: any) => void;    }): any;    /**     *     * @param channelName The channel on which the message is sent     * @param data The data to send     * @param callbacks The callbacks to call. With the channel as key and the callback function as value     */    sendMessageAndWaitMultiple(channelName: string, data: {}, callbacks: {}): any;    isReady(): boolean;}
-interface HttpRequestOptions {    url: string;    method?: HttpRequestMethod;    data?: {        [key: string]: any;    } | FormData;}declare class DefaultHttpRequestOptions implements HttpRequestOptions {    url: string;    method: HttpRequestMethod;}declare class HttpRequest {    private options;    private url;    static getMethod(method: string): HttpRequestMethod;    private getMethod;    constructor(options: HttpRequestOptions);    send(): any;    static get(url: string): Promise<any>;    static post(url: string, data: {}): Promise<any>;}/** * List of HTTP Method allowed */declare enum HttpRequestMethod {    GET = 0,    POST = 1,    DELETE = 2,    PUT = 3,    OPTION = 4}
-declare interface ObjectConstructor {
-    transformIntoWatcher: (obj, onDataChanged) => any;
-    prepareByPath:(obj, path, currentPath?) => {canApply:boolean, objToApply:any};
-    isPathMatching:(p1:string, p2:string) => void;
-}
-declare namespace luxon {
-	class Date extends luxon.DateTime {}
-}
-declare interface Event {
-    normalize: () => void;
-    /**
-     * Cancel event and create a clone trigger on body : used for popup etc
-     */
-    cancelEvent:() => void;
-    /**
-     * Real element target on an event
-     */
-    realTarget:() => Element;
-}
-
-declare interface Element {
-    findParentByTag:<T>(tagname:string|string[], untilNode?:Element) => T | null;
-    findParentByType:<T>(type: new()=>T) => T | null;
-    findParents:<T>(tagname:string|string[], untilNode?:Element) => T[];
-    findParentByClass:<T>(classname:string|string[]) => T | null;
-    containsChild:(el:Element) => boolean;
-    getPositionOnScreen:(untilEl?:HTMLElement) => Coordinate;
-    getElementsInSlot:<T>() => T[];
-}
-declare interface Date {
-    clone: () => Date;
-}
-declare interface Array<T> {
-    unique: () => Array<T>;
-	last:() => T; 
-}
-interface DragAndDropOptions {    applyDrag?: boolean;    element: HTMLElement;    elementTrigger?: HTMLElement;    offsetDrag?: number;    shadow?: {        enable: boolean;        container?: HTMLElement;    };    strict?: boolean;    targets?: HTMLElement[];    usePercent?: boolean;    isDragEnable?: () => boolean;    getZoom?: () => number;    getOffsetX?: () => number;    getOffsetY?: () => number;    onStart?: (e: PointerEvent) => void;    onMove?: (e: PointerEvent, position: Coordinate) => void;    onStop?: (e: PointerEvent) => void;    onDrop?: (element: HTMLElement, targets: HTMLElement[]) => void;}declare class DragAndDrop {    static defaultOffsetDrag: number;    private pressManager;    private options;    private startCursorPosition;    private startElementPosition;    constructor(options: DragAndDropOptions);    private getDefaultOptions;    private mergeProperties;    private mergeFunctions;    private defaultMerge;    private init;    private draggableElement;    private positionShadowRelativeToElement;    private onDragStart;    private onDrag;    private onDragEnd;    private setPosition;    private getMatchingTargets;    setTargets(targets: HTMLElement[]): void;}
-declare class Color {    private subscribers;    private currentColor;    static createFromRgb(r: number, g: number, b: number): Color;    /**     * The hex format of the color     */    get hex(): string;    set hex(hexString: string);    /**     * The rgb format of the color     */    get rgb(): ColorData;    set rgb(value: ColorData);    get r(): any;    set r(newValue: any);    get g(): any;    set g(newValue: any);    get b(): any;    set b(newValue: any);    /**     * Create a new color     */    constructor(colorString: string);    private getColorType;    private stringToRgb;    private hexStringToRgb;    private rgbToHex;    private onChange;    private offChange;    private emitEvent;}
-interface AnimationOptions {    animate?: Function;    stopped?: Function;    fps?: number;}declare class AnimationManager {    static FPS_DEFAULT: number;    private options;    private nextFrame;    private fpsInterval;    private continueAnimation;    constructor(options: AnimationOptions);    private animate;    /**     * Start the of animation     */    start(): void;    /**     * Stop the animation     */    stop(): void;    /**     * Get the FPS     *     * @returns {number}     */    getFPS(): number;    /**     * Set the FPS     *     * @param fps     */    setFPS(fps: number): void;    /**     * Get the animation status (true if animation is running)     *     * @returns {boolean}     */    isStarted(): boolean;}
+interface HttpRequestOptions {    url: string;    method?: HttpRequestMethod;    data?: {        [key: string]: any;    } | FormData;}class DefaultHttpRequestOptions implements HttpRequestOptions {    url: string;    method: HttpRequestMethod;}class HttpRequest {    private options;    private url;    static getMethod(method: string): HttpRequestMethod;    private getMethod;    constructor(options: HttpRequestOptions);    send(): any;    static get(url: string): Promise<any>;    static post(url: string, data: {}): Promise<any>;}/** * List of HTTP Method allowed */enum HttpRequestMethod {    GET = 0,    POST = 1,    DELETE = 2,    PUT = 3,    OPTION = 4}
+interface DragAndDropOptions {    applyDrag?: boolean;    element: HTMLElement;    elementTrigger?: HTMLElement;    offsetDrag?: number;    shadow?: {        enable: boolean;        container?: HTMLElement;    };    strict?: boolean;    targets?: HTMLElement[];    usePercent?: boolean;    isDragEnable?: () => boolean;    getZoom?: () => number;    getOffsetX?: () => number;    getOffsetY?: () => number;    onStart?: (e: PointerEvent) => void;    onMove?: (e: PointerEvent, position: Coordinate) => void;    onStop?: (e: PointerEvent) => void;    onDrop?: (element: HTMLElement, targets: HTMLElement[]) => void;}class DragAndDrop {    static defaultOffsetDrag: number;    private pressManager;    private options;    private startCursorPosition;    private startElementPosition;    constructor(options: DragAndDropOptions);    private getDefaultOptions;    private mergeProperties;    private mergeFunctions;    private defaultMerge;    private init;    private draggableElement;    private positionShadowRelativeToElement;    private onDragStart;    private onDrag;    private onDragEnd;    private setPosition;    private getMatchingTargets;    setTargets(targets: HTMLElement[]): void;}
+interface AnimationOptions {    animate?: Function;    stopped?: Function;    fps?: number;}class AnimationManager {    static FPS_DEFAULT: number;    private options;    private nextFrame;    private fpsInterval;    private continueAnimation;    constructor(options: AnimationOptions);    private animate;    /**     * Start the of animation     */    start(): void;    /**     * Stop the animation     */    stop(): void;    /**     * Get the FPS     *     * @returns {number}     */    getFPS(): number;    /**     * Set the FPS     *     * @param fps     */    setFPS(fps: number): void;    /**     * Get the animation status (true if animation is running)     *     * @returns {boolean}     */    isStarted(): boolean;}
 interface DtScrollablePositions {    vertical: {        value: number;        max: number;    };    horizontal: {        value: number;        max: number;    };}
 interface AvHideableOptions {    canHide?: (target?: Element) => Promise<boolean>;    beforeHide?: () => Promise<void>;    afterHide?: () => Promise<void>;    noHideItems?: HTMLElement[];    container?: HTMLElement;}
-interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultComponent {    states?: States;    [key: string]: any;    getStateManagerName?(): string | undefined;    getClassName(): string;}declare abstract class WebComponent extends HTMLElement implements DefaultComponent {    static get observedAttributes(): {};    private _first;    private _isReady;    get isReady(): boolean;    private _translations;    private currentState;    private statesList;    private _components;    private __onChangeFct;    private getSlugFct;    private __watch;    private __watchActions;    private __prepareForCreate;    private __prepareForUpdate;    private __loopTemplate;    private __watchActionsCb;    getClassName(): string;    constructor();    private __prepareVariables;    private __prepareWatchesActions;    private __initWatches;    private __prepareForLoop;    private __getLangTranslations;    private __prepareTranslations;    private __setTranslations;    private __getStyle;    private __getHtml;    private __prepareTemplate;    private __createStates;    protected getDefaultStateCallbacks(): State;    private __getMaxId;    private __selectElementNeeded;    private __mapSelectedElement;    private __registerOnChange;    private __endConstructor;    private connectedCallback;    private __defaultValue;    private __upgradeAttributes;    private __listBoolProps;    private __upgradeProperty;    private __addEvents;    private __applyTranslations;    private __getTranslation;    getStateManagerName(): string | undefined;    private __subscribeState;    private attributeChangedCallback;    protected postCreation(): void;    private _unsubscribeState;}
-interface ViewElementConfig {    useLive?: boolean;}
-interface DebuggerConfig {    writeCompiled?: boolean;    enableWatchHistory?: boolean;}
-declare enum WatchAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
+interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultComponent {    states?: States;    [key: string]: any;    getStateManagerName?(): string | undefined;    getClassName(): string;}abstract class WebComponent extends HTMLElement implements DefaultComponent {    static get observedAttributes(): {};    private _first;    private _isReady;    get isReady(): boolean;    private _translations;    private currentState;    private statesList;    private _components;    private __onChangeFct;    private getSlugFct;    private __watch;    private __watchActions;    private __prepareForCreate;    private __prepareForUpdate;    private __loopTemplate;    private __watchActionsCb;    getClassName(): string;    constructor();    private __prepareVariables;    private __prepareWatchesActions;    private __initWatches;    private __prepareForLoop;    private __getLangTranslations;    private __prepareTranslations;    private __setTranslations;    private __getStyle;    private __getHtml;    private __prepareTemplate;    private __createStates;    protected getDefaultStateCallbacks(): State;    private __getMaxId;    private __selectElementNeeded;    private __mapSelectedElement;    private __registerOnChange;    private __endConstructor;    private connectedCallback;    private __defaultValue;    private __upgradeAttributes;    private __listBoolProps;    private __upgradeProperty;    private __addEvents;    private __applyTranslations;    private __getTranslation;    getStateManagerName(): string | undefined;    private __subscribeState;    private attributeChangedCallback;    protected postCreation(): void;    private _unsubscribeState;}
+enum WatchAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
 interface IData {}interface CSharpData extends IData {    $type: string;}
-declare class Coordinate implements IData {    x: number;    y: number;}
-declare enum ColorTypes {    rgb = 0,    hex = 1,    rgba = 2,    unkown = 3}
-declare class ColorData implements IData {    r: number;    g: number;    b: number;}
-/**
- * Add an attribute inside on your component
- */
-declare function Attribute();
-/**
- * Add an attribute inside on your component with changes analyze
- */
-declare function Property();
-/**
- * Add an attribute inside on your component with changes analyze
- */
-declare function Property<T>(onChange: (component: T) => void);
-/**
- * Add a property inside a watcher to be notify of changing
- */
-declare function Watch();
-/**
- * Add a property inside a watcher to be notify of changing
- */
-declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
-/**
- * Signal that this variable is a link to your shadowroot
- */
-declare function ViewElement(config?:ViewElementConfig);
-/**
- * Ignore identifier check
- */
-declare function IgnoreForceIdentifier();
-/**
- * Clear parent view and use yours 
- */
-declare function OverrideView();
-/**
- * Add debbuger action function for your component
- */
-declare function Debugger(config: DebuggerConfig);
+class Coordinate implements IData {    x: number;    y: number;}
 
 
-declare class AvScrollable extends WebComponent implements DefaultComponent {
+class AvScrollable extends WebComponent implements DefaultComponent {
     disable_scroll: boolean;
     zoom: number;
     floating_scroll: boolean;
     only_vertical: boolean;
     verticalScrollVisible: boolean;
     horizontalScrollVisible: boolean;
-    observer: AvResizeObserver;
+    observer: ResizeObserver;
     wheelAction: (e: WheelEvent) => void;
     touchWheelAction: (e: MouseEvent) => void;
     contentHidderWidth: number;
@@ -149,12 +71,12 @@ declare class AvScrollable extends WebComponent implements DefaultComponent {
     protected postCreation(): void;
 }
 
-declare class AvRouterLink extends WebComponent implements DefaultComponent {
+class AvRouterLink extends WebComponent implements DefaultComponent {
     state: string;
     protected postCreation(): void;
 }
 
-declare abstract class AvRouter extends WebComponent implements DefaultComponent {
+abstract class AvRouter extends WebComponent implements DefaultComponent {
     private oldPage;
     contentEl: HTMLDivElement;
     protected abstract defineRoutes(): {
@@ -165,12 +87,12 @@ declare abstract class AvRouter extends WebComponent implements DefaultComponent
     protected postCreation(): void;
 }
 
-declare abstract class AvPage extends WebComponent implements DefaultComponent {
+abstract class AvPage extends WebComponent implements DefaultComponent {
     show: boolean;
     abstract defineTitle(): string;
 }
 
-declare class AvHideable extends WebComponent implements DefaultComponent {
+class AvHideable extends WebComponent implements DefaultComponent {
     private oldParent;
     private isVisible;
     private options;
@@ -196,7 +118,7 @@ declare class AvHideable extends WebComponent implements DefaultComponent {
     protected postCreation(): void;
 }
 
-declare abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
+abstract class AvFormElement<T> extends WebComponent implements DefaultComponent {
     /**
      * If true, the element will be required
      */
@@ -224,7 +146,7 @@ declare abstract class AvFormElement<T> extends WebComponent implements DefaultC
     protected displayErrors(): void;
 }
 
-declare class AvForm extends WebComponent implements DefaultComponent {
+class AvForm extends WebComponent implements DefaultComponent {
     /**
     * Show/Hide the loading animation
     */
@@ -257,7 +179,7 @@ declare class AvForm extends WebComponent implements DefaultComponent {
 /**
  * Generate a loop
  */
-declare class AvFor extends WebComponent implements DefaultComponent {
+class AvFor extends WebComponent implements DefaultComponent {
     /**
      * Name of item inside loop
      */
@@ -308,7 +230,7 @@ declare class AvFor extends WebComponent implements DefaultComponent {
  * Use this object to display an element from the DB
  * TODO : Check this component and check if it's usefull
  */
-declare abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
+abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
     currentInstance: T & SocketRAMManagerObject<T>;
     eventsFunctions: {
         "onUpdate": (data: T) => void;
@@ -327,10 +249,85 @@ declare abstract class DisplayElement<T extends IData> extends WebComponent impl
     protected switchInstance(newInstance: T & SocketRAMManagerObject<T>): void;
 }
 
+}
+
+declare interface ObjectConstructor {
+    transformIntoWatcher: (obj, onDataChanged) => any;
+    prepareByPath:(obj, path, currentPath?) => {canApply:boolean, objToApply:any};
+    isPathMatching:(p1:string, p2:string) => void;
+}
+declare namespace luxon {
+	class Date extends luxon.DateTime {}
+}
+declare interface Event {
+    normalize: () => void;
+    /**
+     * Cancel event and create a clone trigger on body : used for popup etc
+     */
+    cancelEvent:() => void;
+    /**
+     * Real element target on an event
+     */
+    realTarget:() => Element;
+}
+
+declare interface Element {
+    findParentByTag:<T>(tagname:string|string[], untilNode?:Element) => T | null;
+    findParentByType:<T>(type: new()=>T) => T | null;
+    findParents:<T>(tagname:string|string[], untilNode?:Element) => T[];
+    findParentByClass:<T>(classname:string|string[]) => T | null;
+    containsChild:(el:Element) => boolean;
+    getPositionOnScreen:(untilEl?:HTMLElement) => Coordinate;
+    getElementsInSlot:<T>() => T[];
+}
+declare interface Date {
+    clone: () => Date;
+}
+declare interface Array<T> {
+    unique: () => Array<T>;
+	last:() => T; 
+}
+interface ViewElementConfig {    useLive?: boolean;}
+interface DebuggerConfig {    writeCompiled?: boolean;    enableWatchHistory?: boolean;}
+/**
+ * Add an attribute inside on your component
+ */
+declare function Attribute();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property();
+/**
+ * Add an attribute inside on your component with changes analyze
+ */
+declare function Property<T>(onChange: (component: T) => void);
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch();
+/**
+ * Add a property inside a watcher to be notify of changing
+ */
+declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
+/**
+ * Signal that this variable is a link to your shadowroot
+ */
+declare function ViewElement(config?:ViewElementConfig);
+/**
+ * Clear parent view and use yours 
+ */
+declare function OverrideView();
+/**
+ * Add debbuger action function for your component
+ */
+declare function Debugger(config: DebuggerConfig);
+
+
+
 // end region js //
 // region css //
-{"display-element":[],"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
+{"av-display-element":[],"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
 // end region css //
 // region html //
-{"display-element":{"name":"display-element","description":"Use this object to display an element from the DB\r\nTODO : Check this component and check if it's usefull","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{}},"av-form":{"name":"av-form","description":"","attributes":{}},"av-form-element":{"name":"av-form-element","description":"","attributes":{}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-page":{"name":"av-page","description":"","attributes":{}},"av-router":{"name":"av-router","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{}}}
+{"av-display-element":{"name":"av-display-element","description":"Use this object to display an element from the DB\r\nTODO : Check this component and check if it's usefull","attributes":{}},"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","type":"string","values":[]},"in":{"name":"in","description":"Name of property to loop though","type":"string","values":[]},"index":{"name":"index","description":"Name of your index","type":"string","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","type":"boolean","values":[]},"method":{"name":"method","description":"Define method for your","type":"string","values":[{"name":"'get'","description":""},{"name":"'post'","description":""},{"name":"'put'","description":""}]},"action":{"name":"action","description":"","type":"string","values":[]},"use_event":{"name":"use_event","description":"","type":"boolean","values":[]}}},"av-form-element":{"name":"av-form-element","description":"","attributes":{"required":{"name":"required","description":"If true, the element will be required","type":"boolean","values":[]},"name":{"name":"name","description":"Name to use inside your form","type":"string","values":[]},"focusable":{"name":"focusable","description":"If true, the element can be focusable","type":"boolean","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-page":{"name":"av-page","description":"","attributes":{"show":{"name":"show","description":"","type":"boolean","values":[]}}},"av-router":{"name":"av-router","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{"state":{"name":"state","description":"","type":"string","values":[]}}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"disable_scroll":{"name":"disable_scroll","description":"","type":"boolean","values":[]},"zoom":{"name":"zoom","description":"","type":"number","values":[]},"floating_scroll":{"name":"floating_scroll","description":"","type":"boolean","values":[]},"only_vertical":{"name":"only_vertical","description":"","type":"boolean","values":[]}}}}
 // end region html //

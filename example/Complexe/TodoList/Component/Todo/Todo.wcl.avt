@@ -1,7 +1,7 @@
 import { AvTodoCreation } from "./TodoCreation/TodoCreation.wcl.avt";
 import { AvTodoList } from "./TodoList/TodoList.wcl.avt";
 
-export class AvTodo extends WebComponent implements DefaultComponent {
+export class AvTodo extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
     //#region static
 

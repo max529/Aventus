@@ -1,6 +1,6 @@
 import { IData } from "../data/IData.data.avt";
 import { Socket } from "../lib/Socket.lib.avt";
-import { AvGenericRAMManager, AvRAMManager } from "./RAMManager.lib.avt";
+import { GenericRAMManager, RAMManager } from "./RAMManager.lib.avt";
 
 
 export interface SocketRAMManagerObject<U> {
@@ -38,7 +38,7 @@ export interface SocketRAMManagerRouteNotPlanned<U extends IData> {
     callback: (response: { data?: U[]; }) => void;
 }
 
-export abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends AvGenericRAMManager<U, R> {
+export abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends GenericRAMManager<U, R> {
     private socketActions: {
         get: string;
         getAll: string;

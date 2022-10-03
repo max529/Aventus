@@ -125,7 +125,7 @@ export class AventusJSProgram {
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
 	private TSDefClass: { [key: string]: ClassModel } = {};
-	public isUnknowProgram:boolean = false;
+	public isUnknowProgram: boolean = false;
 
 	private jsLanguageService: ts.LanguageService | undefined;
 
@@ -446,17 +446,26 @@ export class AventusJSProgram {
 					}
 					let includesTxt: string[] = [];
 					let libsTxt: string[] = [];
+					let libsTxtNoName: string[] = [];
 					let compsTxt: string[] = [];
+					let compsTxtNoName: string[] = [];
 					let dataTxt: string[] = [];
+					let dataTxtNoName: string[] = [];
 					let ramTxt: string[] = [];
+					let ramTxtNoName: string[] = [];
 					let socketTxt: string[] = [];
+					let socketTxtNoName: string[] = [];
 					let libsTxtDoc: string[] = [];
+					let libsTxtDocNoName: string[] = [];
 					let compsTxtDoc: string[] = [];
+					let compsTxtDocNoName: string[] = [];
 					let dataTxtDoc: string[] = [];
+					let dataTxtDocNoName: string[] = [];
 					let ramTxtDoc: string[] = [];
+					let ramTxtDocNoName: string[] = [];
 					let socketTxtDoc: string[] = [];
+					let socketTxtDocNoName: string[] = [];
 					let classesNameScript: string[] = [];
-					let classesNameDoc: string[] = [];
 					if (build.inputPathRegex) {
 						let documents: AventusDoc[] = [];
 						let documentsUri: string[] = [];
@@ -515,9 +524,7 @@ export class AventusJSProgram {
 								for (let className of doc.classNamesScript) {
 									classesNameScript.push(className);
 								}
-								for (let className of doc.classNamesDoc) {
-									classesNameDoc.push(className);
-								}
+
 								if (doc.getType() == AventusType.Component) {
 									compsTxt.push(doc.getCompiledTxt())
 									compsTxtDoc.push(doc.getDocTxt())
@@ -543,6 +550,34 @@ export class AventusJSProgram {
 									socketTxtDoc.push(doc.getDocTxt())
 								}
 							}
+							if (build.noNamespacePathRegex) {
+								if (doc.path.match(build.noNamespacePathRegex)) {
+									if (doc.getType() == AventusType.Component) {
+										compsTxtNoName.push(doc.getCompiledTxt())
+										compsTxtDocNoName.push(doc.getDocTxt())
+									}
+									else if (doc.getType() == AventusType.Data) {
+										dataTxtNoName.push(doc.getCompiledTxt())
+										dataTxtDocNoName.push(doc.getDocTxt())
+									}
+									else if (doc.getType() == AventusType.Lib) {
+										libsTxtNoName.push(doc.getCompiledTxt())
+										libsTxtDocNoName.push(doc.getDocTxt())
+									}
+									else if (doc.getType() == AventusType.Static) {
+										libsTxtNoName.push(doc.getCompiledTxt())
+										libsTxtDocNoName.push(doc.getDocTxt())
+									}
+									else if (doc.getType() == AventusType.RAM) {
+										ramTxtNoName.push(doc.getCompiledTxt())
+										ramTxtDocNoName.push(doc.getDocTxt())
+									}
+									else if (doc.getType() == AventusType.Socket) {
+										socketTxtNoName.push(doc.getCompiledTxt())
+										socketTxtDocNoName.push(doc.getDocTxt())
+									}
+								}
+							}
 						}
 					}
 
@@ -561,19 +596,30 @@ export class AventusJSProgram {
 					finalTxt += ramTxt.join(EOL) + EOL;
 					finalTxt += socketTxt.join(EOL) + EOL;
 					finalTxt += compsTxt.join(EOL) + EOL;
-					finalTxt = finalTxt.trim();
+					finalTxt = finalTxt.trim() + EOL;
 					if (build.namespace) {
-						finalTxt += EOL;
 						for (let className of classesNameScript) {
-							finalTxt += build.namespace + "." + className + "=" + className + ";" + EOL;
+							if (className != "") {
+								finalTxt += build.namespace + "." + className + "=" + className + ";" + EOL;
+							}
 						}
-						finalTxt += "})(" + build.namespace + " || (" + build.namespace + " = {}));"
+						finalTxt += "})(" + build.namespace + " || (" + build.namespace + " = {}));" + EOL;
 					}
+					finalTxt += libsTxtNoName.join(EOL) + EOL;
+					finalTxt += dataTxtNoName.join(EOL) + EOL;
+					finalTxt += ramTxtNoName.join(EOL) + EOL;
+					finalTxt += socketTxtNoName.join(EOL) + EOL;
+					finalTxt += compsTxtNoName.join(EOL) + EOL;
+					finalTxt = finalTxt.trim() + EOL;
+
+
+
 					let folderPath = getFolder(build.outputFile.replace(/\\/g, "/"));
 					if (!existsSync(folderPath)) {
 						mkdirSync(folderPath, { recursive: true });
 					}
 					writeFileSync(build.outputFile, finalTxt);
+
 					if (build.generateDefinition) {
 						let finalDtxt = "";
 						finalDtxt += libsTxtDoc.join(EOL) + EOL;
@@ -584,6 +630,11 @@ export class AventusJSProgram {
 						if (build.namespace) {
 							finalDtxt = "declare namespace " + build.namespace + "{" + EOL + finalDtxt.replace(/declare /g, '') + "}" + EOL;
 						}
+						finalDtxt += libsTxtDocNoName.join(EOL) + EOL;
+						finalDtxt += dataTxtDocNoName.join(EOL) + EOL;
+						finalDtxt += ramTxtDocNoName.join(EOL) + EOL;
+						finalDtxt += socketTxtDocNoName.join(EOL) + EOL;
+						finalDtxt += compsTxtDocNoName.join(EOL) + EOL;
 						finalDtxt = "// version " + build.version + EOL + "// region js //" + EOL + finalDtxt;
 						finalDtxt += "// end region js //" + EOL;
 						finalDtxt += "// region css //" + EOL;
@@ -821,14 +872,18 @@ export class AventusJSProgram {
 							// Check if classInfo implements DefaultComponent
 							let foundDefaultComponent = false;
 							for (let implement of classInfo.implements) {
-								if (implement.typeName == 'DefaultComponent') {
+								if (implement.typeName == 'DefaultComponent' || implement.typeName == 'Aventus.DefaultComponent') {
 									foundDefaultComponent = true;
 									break;
 								}
 							}
 
 							if (foundDefaultComponent) {
-								this.TSDefClass[classInfo.name] = classInfo;
+								let name = classInfo.name;
+								if (classInfo.moduleName != "") {
+									name = classInfo.moduleName + "." + name;
+								}
+								this.TSDefClass[name] = classInfo;
 							}
 						});
 					} catch {

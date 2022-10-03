@@ -1,4 +1,4 @@
-export class AvLight implements IData {
+export class AvLight implements Aventus.IData {
     name: string = "";
     value: number = 0;
     color: string = "";

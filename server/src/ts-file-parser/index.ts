@@ -79,7 +79,6 @@ export interface TypeModel {
 }
 
 export interface BasicType extends TypeModel {
-    //typeName:string
     nameSpace: string;
     basicName: string;
     typeName: string;

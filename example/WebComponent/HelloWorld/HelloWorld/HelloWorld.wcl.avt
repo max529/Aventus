@@ -1,7 +1,7 @@
 @Debugger({
     writeCompiled: true
 })
-export class AvHelloWorld extends WebComponent implements DefaultComponent {
+export class AvHelloWorld extends Aventus.WebComponent implements Aventus.DefaultComponent {
 
     //#region static
 
@@ -9,10 +9,10 @@ export class AvHelloWorld extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @property()
+    @Property()
     hello_clicked: number = 0;
 
-    @property((target: AvHelloWorld) => {
+    @Property((target: AvHelloWorld) => {
         target.worldEl.innerHTML = "world " + target.word_clicked;
     })
     word_clicked: number = 0;
@@ -33,7 +33,7 @@ export class AvHelloWorld extends WebComponent implements DefaultComponent {
     //#region constructor
     constructor() {
         super();
-        new PressManager({
+        new Aventus.PressManager({
             element: this.worldEl,
             onPress: () => {
                 this.word_clicked++;

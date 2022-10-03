@@ -1,6 +1,0 @@
-export enum ColorTypes {
-    rgb,
-    hex,
-    rgba,
-    unkown
-}
