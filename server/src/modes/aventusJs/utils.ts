@@ -1,4 +1,5 @@
 import { normalize, sep } from "path";
+import { ExecuteCommandParams } from 'vscode-languageclient';
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     CompletionItemKind,
@@ -259,7 +260,6 @@ export function repeat(value: string, count: number) {
     return s;
 }
 
-
 export function pathToUri(path: string): string {
     if (sep === "/") {
         return "file://" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
@@ -297,4 +297,12 @@ export function getFolder(uri: string) {
     let arr = uri.split("/");
     arr.pop();
     return arr.join("/");
+}
+
+export function pathFromCommandArguments(params: ExecuteCommandParams): string {
+    let path = "";
+    if(params.arguments) {
+        path = "file://" + params.arguments[0].path;
+    }
+    return path;
 }
