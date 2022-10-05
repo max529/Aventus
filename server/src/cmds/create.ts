@@ -190,7 +190,7 @@ export class ${className} extends Aventus.GenericSocketRAMManager<${nameObject},
 
 					}
 					else {
-						connectionWithClient?.window.showErrorMessage("Can't found a config file");
+						connectionWithClient?.window.showErrorMessage("Can't find a config file");
 					}
 				}
 			}
