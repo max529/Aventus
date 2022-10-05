@@ -13,7 +13,7 @@ export class Create {
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[2]) {
 			let type = params.arguments[2].label;
-			let baseFolder: string = "file://" + params.arguments[0].external;
+			let baseFolder: string = "file://" + params.arguments[0].path;
 			if (type == "Init") {
 				if (params.arguments[3]) {
 					baseFolder = uriToPath(baseFolder);
