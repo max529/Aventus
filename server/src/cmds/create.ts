@@ -177,7 +177,7 @@ export class ${className} extends Aventus.GenericSocketRAMManager<${nameObject},
 								name = name.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
 								let firstUpperName = name.charAt(0).toUpperCase() + name.slice(1);
 								let className = firstUpperName;
-								writeFileSync(newScriptPath, `export class ${className} implements Aventus.Data {${EOL}\tpublic id: number = 0;${EOL}}`);
+								writeFileSync(newScriptPath, `export class ${className} implements Aventus.IData {${EOL}\tpublic id: number = 0;${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))
 							}
