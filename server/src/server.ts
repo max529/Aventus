@@ -16,7 +16,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { AventusJSMode } from './modes/aventusJs/mode';
 import { AventusJSONMode } from './modes/aventusJSON/mode';
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { pathToUri, uriToPath } from './modes/aventusJs/utils';
 import { PreviewComponent } from './cmds/previewComponent';
 import { BuildProject } from './cmds/buildProject';

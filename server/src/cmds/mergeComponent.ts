@@ -2,7 +2,7 @@ import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { connectionWithClient, htmlMode, jsMode, scssMode, wcMode } from '../mode';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
-import { pathToUri, uriToPath } from '../modes/aventusJs/utils';
+import { pathFromCommandArguments, pathToUri, uriToPath } from '../modes/aventusJs/utils';
 import * as aventusConfig from '../config';
 import { unlinkSync, writeFileSync } from 'fs';
 
@@ -10,7 +10,7 @@ export class MergeComponent {
 	static cmd: string = "aventus.component.merge";
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[0]) {
-			let fileUri: string = params.arguments[0].external;
+			let fileUri: string = pathFromCommandArguments(params);
 			let regex = new RegExp("(" + aventusExtension.ComponentLogic + ")|(" + aventusExtension.ComponentView + ")|(" + aventusExtension.ComponentView + ")$");
 			let fileUriNoExtension = fileUri.replace(regex, '');
 

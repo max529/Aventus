@@ -2,7 +2,7 @@ import { readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { connectionWithClient, htmlMode, jsMode, scssMode, wcMode } from '../mode';
-import { getFolder, pathToUri, uriToPath } from '../modes/aventusJs/utils';
+import { getFolder, pathFromCommandArguments, pathToUri, uriToPath } from '../modes/aventusJs/utils';
 import * as aventusConfig from '../config';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
 
@@ -10,7 +10,7 @@ export class SplitComponent {
 	static cmd: string = "aventus.component.split";
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[0]) {
-			let fileUri: string = params.arguments[0].external;
+			let fileUri: string = pathFromCommandArguments(params);
 			let filePath = uriToPath(fileUri);
 			let doc = wcMode.getDocumentByUri(fileUri);
 			if (doc) {

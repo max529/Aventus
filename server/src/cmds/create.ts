@@ -3,8 +3,9 @@ import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { connectionWithClient, jsMode, jsonMode, wcMode } from '../mode';
 import { aventusExtension } from '../modes/aventusJs/aventusDoc';
-import { getImportPath, pathToUri, uriToPath } from '../modes/aventusJs/utils';
+import { getImportPath, pathFromCommandArguments, pathToUri, uriToPath } from '../modes/aventusJs/utils';
 import * as aventusConfig from '../config';
+import * as modes from '../mode';
 import { EOL } from 'os';
 
 
@@ -13,11 +14,12 @@ export class Create {
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[2]) {
 			let type = params.arguments[2].label;
-			let baseFolder: string = "file://" + params.arguments[0].path;
+			let baseFolder: string = pathFromCommandArguments(params);
 			if (type == "Init") {
 				if (params.arguments[3]) {
 					baseFolder = uriToPath(baseFolder);
-					let config = jsMode.programManager.getProgram(baseFolder + "/aventus.conf.json", false).getConfig();
+					const currentConfigPath: string = baseFolder + "/aventus.conf.json";
+					let config = jsMode.programManager.getProgram(currentConfigPath, false).getConfig();
 					if (!config) {
 						let name: string = params.arguments[3];
 						let nameFile: string = name.replace(/ /g, "-");
@@ -28,7 +30,7 @@ export class Create {
 						mkdirSync(baseFolder + "/src/lib");
 						mkdirSync(baseFolder + "/src/ram");
 						mkdirSync(baseFolder + "/src/socket");
-						writeFileSync(baseFolder + "/aventus.conf.json", `{
+						writeFileSync(currentConfigPath, `{
 	"build": [
         {
             "name": "${name}",
@@ -44,9 +46,11 @@ export class Create {
         }
     ]
 }`);
+						let textDocument:TextDocument = TextDocument.create(pathToUri(currentConfigPath), aventusConfig.languageIdJs, 0, readFileSync(currentConfigPath, 'utf8'));	
+						modes.jsonMode.compile(textDocument);
+						jsMode.programManager.createProgram(textDocument);
+						connectionWithClient?.sendNotification("aventus/openfile", pathToUri(currentConfigPath))
 
-						jsMode.programManager.createProgram(TextDocument.create(pathToUri(baseFolder + "/aventus.conf.json"), aventusConfig.languageIdJs, 0, readFileSync(baseFolder + "/aventus.conf.json", 'utf8')));
-						connectionWithClient?.sendNotification("aventus/openfile", pathToUri(baseFolder + "/aventus.conf.json"))
 					}
 					else {
 						connectionWithClient?.window.showErrorMessage("A config file already exists");
@@ -173,7 +177,7 @@ export class ${className} extends Aventus.GenericSocketRAMManager<${nameObject},
 								name = name.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
 								let firstUpperName = name.charAt(0).toUpperCase() + name.slice(1);
 								let className = firstUpperName;
-								writeFileSync(newScriptPath, `export class ${className} implements Aventus.Data {${EOL}\tpublic id: number = 0;${EOL}}`);
+								writeFileSync(newScriptPath, `export class ${className} implements Aventus.IData {${EOL}\tpublic id: number = 0;${EOL}}`);
 								jsMode.programManager.getProgram(newScriptPath);
 								connectionWithClient?.sendNotification("aventus/openfile", pathToUri(newScriptPath))
 							}
