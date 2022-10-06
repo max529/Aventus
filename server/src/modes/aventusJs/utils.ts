@@ -302,7 +302,7 @@ export function getFolder(uri: string) {
 export function pathFromCommandArguments(params: ExecuteCommandParams): string {
     let path = "";
     if(params.arguments) {
-        path = "file://" + params.arguments[0].path;
+        path = "file://" + params.arguments[0].path.replace(":", "%3A");
     }
     return path;
 }

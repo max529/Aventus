@@ -103,7 +103,7 @@ export class AventusWcMode {
 		if (jsResult) { return jsResult; }
 		let htmlResult = await generateComplete(htmlMode, htmlInfo);
 		if (htmlResult) { return htmlResult; }
-		// TODO check why html is not auto completing
+		
 		return { isIncomplete: false, items: [] };
 	}
 	async doResolve(item: CompletionItem): Promise<CompletionItem> {
