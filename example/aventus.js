@@ -84,29 +84,29 @@ class AvScrollable extends WebComponent {
                         } else{
                             this.removeAttribute('only_vertical');
                         }
-                    }    __prepareVariables() { super.__prepareVariables(); if(this.verticalScrollVisible === undefined) {this.verticalScrollVisible = false;}if(this.horizontalScrollVisible === undefined) {this.horizontalScrollVisible = false;}if(this.observer === undefined) {this.observer = undefined;}if(this.wheelAction === undefined) {this.wheelAction = undefined;}if(this.touchWheelAction === undefined) {this.touchWheelAction = undefined;}if(this.contentHidderWidth === undefined) {this.contentHidderWidth = 0;}if(this.contentHidderHeight === undefined) {this.contentHidderHeight = 0;}if(this.content === undefined) {this.content = {"vertical":{"value":0,"max":0},"horizontal":{"value":0,"max":0}};}if(this.scrollbar === undefined) {this.scrollbar = {"vertical":{"value":0,"max":0},"horizontal":{"value":0,"max":0}};}if(this.refreshTimeout === undefined) {this.refreshTimeout = 100;}if(this.elToCalculate === undefined) {this.elToCalculate = undefined;}if(this.contentZoom === undefined) {this.contentZoom = undefined;}if(this.contentHidder === undefined) {this.contentHidder = undefined;}if(this.contentWrapper === undefined) {this.contentWrapper = undefined;}if(this.contentscroller === undefined) {this.contentscroller = undefined;}if(this.verticalScrollerContainer === undefined) {this.verticalScrollerContainer = undefined;}if(this.verticalScroller === undefined) {this.verticalScroller = undefined;}if(this.horizontalScrollerContainer === undefined) {this.horizontalScrollerContainer = undefined;}if(this.horizontalScroller === undefined) {this.horizontalScroller = undefined;} }
+                    }    __prepareVariables() { super.__prepareVariables(); if(this.verticalScrollVisible === undefined) {this.verticalScrollVisible = false;}if(this.horizontalScrollVisible === undefined) {this.horizontalScrollVisible = false;}if(this.observer === undefined) {this.observer = undefined;}if(this.wheelAction === undefined) {this.wheelAction = undefined;}if(this.touchWheelAction === undefined) {this.touchWheelAction = undefined;}if(this.contentHidderWidth === undefined) {this.contentHidderWidth = 0;}if(this.contentHidderHeight === undefined) {this.contentHidderHeight = 0;}if(this.content === undefined) {this.content = {"vertical":{"value":0,"max":0},"horizontal":{"value":0,"max":0}};}if(this.scrollbar === undefined) {this.scrollbar = {"vertical":{"value":0,"max":0},"horizontal":{"value":0,"max":0}};}if(this.refreshTimeout === undefined) {this.refreshTimeout = 100;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
-        arrStyle.push(`:host{--internal-scrollbar-content-overflow: var(--scrollbar-content-overflow, hidden);--internal-scrollbar-content-height: var(--scrollbar-content-height, auto);--internal-scrollbar-content-width: var(--scrollbar-content-width, 100%);--internal-scrollbar-container-color: var(--scrollbar-container-color, transparent);--internal-scrollbar-color: var(--scrollbar-color, #757575);--internal-scrollbar-active-color: var(--scrollbar-active-color, #757575);--internal-scroller-width: var(--scroller-width, 6px);--internal-scroller-bottom: var(--scroller-bottom, 3px);--internal-scroller-right: var(--scroller-right, 3px);--internal-scroller-left: var(--scroller-left, 3px);--internal-scroller-top: var(--scroller-top, 3px);--internal-scroller-vertical-shadow: var(--scroller-shadow, var(--scroller-vertical-shadow, none));--internal-scroller-horizontal-shadow: var(--scroller-shadow, var(--scroller-horizontal-shadow, none));--internal-scollable-delay: var(--scrollable-delay, 0.3s)}:host{-webkit-user-drag:none;-khtml-user-drag:none;-moz-user-drag:none;-o-user-drag:none}:host *{-webkit-user-drag:none;-khtml-user-drag:none;-moz-user-drag:none;-o-user-drag:none;box-sizing:border-box}:host{display:block;position:relative;height:100%;width:100%}:host .scroll-main-container{display:block;position:relative;height:100%;width:100%}:host .scroll-main-container .content-zoom{display:block;position:relative;height:100%;width:100%;transform-origin:0 0}:host .scroll-main-container .content-hidder{overflow:var(--internal-scrollbar-content-overflow);width:100%;height:100%;position:relative;display:block}:host .scroll-main-container .content-wrapper{position:absolute;display:inline-block;top:0;left:0;height:var(--internal-scrollbar-content-height);width:var(--internal-scrollbar-content-width);transition:top var(--internal-scollable-delay) linear,left var(--internal-scollable-delay) linear}:host .scroll-main-container .container-scroller{position:absolute;background-color:var(--internal-scrollbar-container-color);border-radius:5px;z-index:5;display:none}:host .scroll-main-container .scroller{background-color:var(--internal-scrollbar-color);border-radius:5px;position:absolute;z-index:5;cursor:pointer}:host .scroll-main-container .scroller.active{background-color:var(--internal-scrollbar-active-color);transition:none !important}:host .scroll-main-container .container-scroller.vertical{width:calc(var(--internal-scroller-width) + var(--internal-scroller-left));padding-left:var(--internal-scroller-left);top:var(--internal-scroller-bottom);height:calc(100% - var(--internal-scroller-bottom)*2 - var(--internal-scroller-width));right:var(--internal-scroller-right)}:host .scroll-main-container .scroller.vertical{width:calc(100% - var(--internal-scroller-left));top:0;transition:top var(--internal-scollable-delay) linear;box-shadow:var(--internal-scroller-vertical-shadow)}:host .scroll-main-container .container-scroller.horizontal{height:calc(var(--internal-scroller-width) + var(--internal-scroller-top));padding-top:var(--internal-scroller-top);left:var(--internal-scroller-right);width:calc(100% - var(--internal-scroller-right)*2 - var(--internal-scroller-width));bottom:var(--internal-scroller-bottom)}:host .scroll-main-container .scroller.horizontal{height:calc(100% - var(--internal-scroller-top));left:0;transition:left var(--internal-scollable-delay) linear;box-shadow:var(--internal-scroller-horizontal-shadow)}:host([disable_scroll]) .content-wrapper{height:100%}:host([disable_scroll]) .scroller{display:none}:host(.scrolling) .content-wrapper *{user-select:none}:host(.scrolling) ::slotted{user-select:none}`);
+        arrStyle.push(`:host{--internal-scrollbar-content-overflow: var(--scrollbar-content-overflow, hidden);--internal-scrollbar-content-height: var(--scrollbar-content-height, auto);--internal-scrollbar-content-width: var(--scrollbar-content-width, 100%);--internal-scrollbar-container-color: var(--scrollbar-container-color, transparent);--internal-scrollbar-color: var(--scrollbar-color, #757575);--internal-scrollbar-active-color: var(--scrollbar-active-color, #757575);--internal-scroller-width: var(--scroller-width, 6px);--internal-scroller-bottom: var(--scroller-bottom, 3px);--internal-scroller-right: var(--scroller-right, 3px);--internal-scroller-left: var(--scroller-left, 3px);--internal-scroller-top: var(--scroller-top, 3px);--internal-scroller-vertical-shadow: var(--scroller-shadow, var(--scroller-vertical-shadow, none));--internal-scroller-horizontal-shadow: var(--scroller-shadow, var(--scroller-horizontal-shadow, none));--internal-scollable-delay: var(--scrollable-delay, 0.3s)}:host{-webkit-user-drag:none;-khtml-user-drag:none;-moz-user-drag:none;-o-user-drag:none}:host *{box-sizing:border-box;-webkit-user-drag:none;-khtml-user-drag:none;-moz-user-drag:none;-o-user-drag:none}:host{display:block;height:100%;position:relative;width:100%}:host .scroll-main-container{display:block;height:100%;position:relative;width:100%}:host .scroll-main-container .content-zoom{display:block;height:100%;position:relative;transform-origin:0 0;width:100%}:host .scroll-main-container .content-hidder{display:block;height:100%;overflow:var(--internal-scrollbar-content-overflow);position:relative;width:100%}:host .scroll-main-container .content-wrapper{display:inline-block;height:var(--internal-scrollbar-content-height);left:0;position:absolute;top:0;transition:top var(--internal-scollable-delay) linear,left var(--internal-scollable-delay) linear;width:var(--internal-scrollbar-content-width)}:host .scroll-main-container .container-scroller{background-color:var(--internal-scrollbar-container-color);border-radius:5px;display:none;position:absolute;z-index:5}:host .scroll-main-container .scroller{background-color:var(--internal-scrollbar-color);border-radius:5px;cursor:pointer;position:absolute;z-index:5}:host .scroll-main-container .scroller.active{background-color:var(--internal-scrollbar-active-color);transition:none !important}:host .scroll-main-container .container-scroller.vertical{height:calc(100% - var(--internal-scroller-bottom)*2 - var(--internal-scroller-width));padding-left:var(--internal-scroller-left);right:var(--internal-scroller-right);top:var(--internal-scroller-bottom);width:calc(var(--internal-scroller-width) + var(--internal-scroller-left))}:host .scroll-main-container .scroller.vertical{box-shadow:var(--internal-scroller-vertical-shadow);top:0;transition:top var(--internal-scollable-delay) linear;width:calc(100% - var(--internal-scroller-left))}:host .scroll-main-container .container-scroller.horizontal{bottom:var(--internal-scroller-bottom);height:calc(var(--internal-scroller-width) + var(--internal-scroller-top));left:var(--internal-scroller-right);padding-top:var(--internal-scroller-top);width:calc(100% - var(--internal-scroller-right)*2 - var(--internal-scroller-width))}:host .scroll-main-container .scroller.horizontal{box-shadow:var(--internal-scroller-horizontal-shadow);height:calc(100% - var(--internal-scroller-top));left:0;transition:left var(--internal-scollable-delay) linear}:host([disable_scroll]) .content-wrapper{height:100%}:host([disable_scroll]) .scroller{display:none}:host(.scrolling) .content-wrapper *{user-select:none}:host(.scrolling) ::slotted{user-select:none}`);
         return arrStyle;
     }
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<div class="scroll-main-container" av-element="elToCalculate">
-    <div class="content-zoom" av-element="contentZoom">
-        <div class="content-hidder" av-element="contentHidder">
-            <div class="content-wrapper" av-element="contentWrapper">
+            html: `<div class="scroll-main-container" _id="avscrollable_0">
+    <div class="content-zoom" _id="avscrollable_1">
+        <div class="content-hidder" _id="avscrollable_2">
+            <div class="content-wrapper" _id="avscrollable_3">
                 <slot></slot>
             </div>
         </div>
     </div>
-    <div av-element="contentscroller">
-        <div class="container-scroller vertical" av-element="verticalScrollerContainer">
-            <div class="scroller vertical" av-element="verticalScroller"></div>
+    <div _id="avscrollable_4">
+        <div class="container-scroller vertical" _id="avscrollable_5">
+            <div class="scroller vertical" _id="avscrollable_6"></div>
         </div>
-        <div class="container-scroller horizontal" av-element="horizontalScrollerContainer">
-            <div class="scroller horizontal" av-element="horizontalScroller"></div>
+        <div class="container-scroller horizontal" _id="avscrollable_7">
+            <div class="scroller horizontal" _id="avscrollable_8"></div>
         </div>
     </div>
 </div>`,
@@ -114,20 +114,20 @@ class AvScrollable extends WebComponent {
                 'default':`<slot></slot>`
             },
             blocks: {
-                'default':`<div class="scroll-main-container" av-element="elToCalculate">
-    <div class="content-zoom" av-element="contentZoom">
-        <div class="content-hidder" av-element="contentHidder">
-            <div class="content-wrapper" av-element="contentWrapper">
+                'default':`<div class="scroll-main-container" _id="avscrollable_0">
+    <div class="content-zoom" _id="avscrollable_1">
+        <div class="content-hidder" _id="avscrollable_2">
+            <div class="content-wrapper" _id="avscrollable_3">
                 <slot></slot>
             </div>
         </div>
     </div>
-    <div av-element="contentscroller">
-        <div class="container-scroller vertical" av-element="verticalScrollerContainer">
-            <div class="scroller vertical" av-element="verticalScroller"></div>
+    <div _id="avscrollable_4">
+        <div class="container-scroller vertical" _id="avscrollable_5">
+            <div class="scroller vertical" _id="avscrollable_6"></div>
         </div>
-        <div class="container-scroller horizontal" av-element="horizontalScrollerContainer">
-            <div class="scroller horizontal" av-element="horizontalScroller"></div>
+        <div class="container-scroller horizontal" _id="avscrollable_7">
+            <div class="scroller horizontal" _id="avscrollable_8"></div>
         </div>
     </div>
 </div>`
@@ -137,9 +137,10 @@ class AvScrollable extends WebComponent {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvScrollable", 0])
+        temp.push(["AvScrollable", 9])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.elToCalculate = this.shadowRoot.querySelector('[_id="avscrollable_0"]');this.contentZoom = this.shadowRoot.querySelector('[_id="avscrollable_1"]');this.contentHidder = this.shadowRoot.querySelector('[_id="avscrollable_2"]');this.contentWrapper = this.shadowRoot.querySelector('[_id="avscrollable_3"]');this.contentscroller = this.shadowRoot.querySelector('[_id="avscrollable_4"]');this.verticalScrollerContainer = this.shadowRoot.querySelector('[_id="avscrollable_5"]');this.verticalScroller = this.shadowRoot.querySelector('[_id="avscrollable_6"]');this.horizontalScrollerContainer = this.shadowRoot.querySelector('[_id="avscrollable_7"]');this.horizontalScroller = this.shadowRoot.querySelector('[_id="avscrollable_8"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['disable_scroll'] = []this.__onChangeFct['disable_scroll'].push((path) => {((target) => {    if (target.disable_scroll) {        target.removeResizeObserver();        target.removeWheelAction();        target.contentZoom.style.width = '';        target.contentZoom.style.height = '';    }    else {        target.addResizeObserver();        target.addWheelAction();    }})(this);})this.__onChangeFct['zoom'] = []this.__onChangeFct['zoom'].push((path) => {((target) => {    target.changeZoom();})(this);}) }
     getClassName() {
         return "AvScrollable";
@@ -187,24 +188,24 @@ class AvRouterLink extends WebComponent {
 window.customElements.define('av-router-link', AvRouterLink);
 class AvRouter extends WebComponent {
     constructor() { super(); if (this.constructor == AvRouter) { throw "can't instanciate an abstract class"; } }
-    __prepareVariables() { super.__prepareVariables(); if(this.oldPage === undefined) {this.oldPage = undefined;}if(this.contentEl === undefined) {this.contentEl = undefined;} }
+    __prepareVariables() { super.__prepareVariables(); if(this.oldPage === undefined) {this.oldPage = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
-        arrStyle.push(``);
+        arrStyle.push(`:host{display:block}`);
         return arrStyle;
     }
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<slot name="before"></slot>
-<div class="content" av-element="contentEl"></div>
+<div class="content" _id="avrouter_0"></div>
 <slot name="after"></slot>`,
             slots: {
                 'before':`<slot name="before"></slot>`,'after':`<slot name="after"></slot>`
             },
             blocks: {
                 'default':`<slot name="before"></slot>
-<div class="content" av-element="contentEl"></div>
+<div class="content" _id="avrouter_0"></div>
 <slot name="after"></slot>`
             }
         }
@@ -212,9 +213,10 @@ class AvRouter extends WebComponent {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvRouter", 0])
+        temp.push(["AvRouter", 1])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.contentEl = this.shadowRoot.querySelector('[_id="avrouter_0"]');}
     getClassName() {
         return "AvRouter";
     }
@@ -277,7 +279,7 @@ class AvHideable extends WebComponent {
 					}
 					set 'isVisible'(val) {
 						this.__watch["isVisible"] = val;
-					}    __prepareVariables() { super.__prepareVariables(); if(this.oldParent === undefined) {this.oldParent = "undefined";}if(this.options === undefined) {this.options = undefined;}if(this.checkCloseBinded === undefined) {this.checkCloseBinded = undefined;}if(this.pressManager === undefined) {this.pressManager = undefined;}if(this.content === undefined) {this.content = undefined;}if(this.onVisibilityChangeCallbacks === undefined) {this.onVisibilityChangeCallbacks = [];} }
+					}    __prepareVariables() { super.__prepareVariables(); if(this.oldParent === undefined) {this.oldParent = "undefined";}if(this.options === undefined) {this.options = undefined;}if(this.checkCloseBinded === undefined) {this.checkCloseBinded = undefined;}if(this.pressManager === undefined) {this.pressManager = undefined;}if(this.onVisibilityChangeCallbacks === undefined) {this.onVisibilityChangeCallbacks = [];} }
     __prepareWatchesActions() {
 					this.__watchActions["isVisible"] = [((target) => {    target.onVisibilityChangeCallbacks.forEach(callback => callback(target.isVisible));})];
 						this.__watchActionsCb["isVisible"] = (action, path, value) => {
@@ -302,29 +304,30 @@ class AvHideable extends WebComponent {
 				}
     __getStyle() {
         let arrStyle = super.__getStyle();
-        arrStyle.push(`:host{position:absolute;top:0;left:0;width:0;height:0;z-index:1000;overflow:visible;display:none}::slotted(.context-menu .context-menu-item){background-color:red}:host{--inserted: "here"}`);
+        arrStyle.push(`:host{display:none;height:0;left:0;overflow:visible;position:absolute;top:0;width:0;z-index:1000}::slotted(.context-menu .context-menu-item){background-color:red}:host{--inserted: "here"}`);
         return arrStyle;
     }
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<slot></slot>
-<div av-element="content"></div>`,
+<div _id="avhideable_0"></div>`,
             slots: {
                 'default':`<slot></slot>`
             },
             blocks: {
                 'default':`<slot></slot>
-<div av-element="content"></div>`
+<div _id="avhideable_0"></div>`
             }
         }
         return info;
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvHideable", 0])
+        temp.push(["AvHideable", 1])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.content = this.shadowRoot.querySelector('[_id="avhideable_0"]');}
     __endConstructor() { super.__endConstructor(); (() => {    this.options = {        noHideItems: [this],        container: document.body,        beforeHide: this.defaultBeforeHide,        afterHide: this.defaultAfterHide,        canHide: this.defaultCanHide    };    this.checkCloseBinded = this.checkClose.bind(this);})() }
     getClassName() {
         return "AvHideable";

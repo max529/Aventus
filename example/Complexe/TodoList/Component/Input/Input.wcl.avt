@@ -13,6 +13,7 @@ export class AvInput extends Aventus.AvFormElement<string> implements Aventus.De
 
 
     //#region variables
+    @ViewElement()
     inputEl: HTMLInputElement;
     //#endregion
 

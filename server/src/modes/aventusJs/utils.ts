@@ -1,3 +1,4 @@
+import { existsSync } from 'fs';
 import { normalize, sep } from "path";
 import { ExecuteCommandParams } from 'vscode-languageclient';
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -7,6 +8,8 @@ import {
     SymbolKind,
     FormattingOptions,
 } from 'vscode-languageserver/node';
+import { wcMode } from '../../mode';
+import { aventusExtension } from './aventusDoc';
 
 
 //#region utils
@@ -26,7 +29,12 @@ export function simplifyPath(importPathTxt, currentPath) {
     }
     currentDir.pop();
     let currentDirPath = normalize(currentDir.join("/")).split("\\");
-    let importPath = normalize(currentDir.join("/") + "/" + importPathTxt).split("\\");
+    let finalImportPath = normalize(currentDir.join("/") + "/" + importPathTxt);
+    let finalImportPathComponent = finalImportPath.replace(aventusExtension.ComponentLogic, aventusExtension.Component);
+    if (wcMode.getDocumentByUri(pathToUri(finalImportPathComponent))) {
+        finalImportPath = finalImportPathComponent;
+    }
+    let importPath = finalImportPath.split("\\");
     for (let i = 0; i < currentDirPath.length; i++) {
         if (importPath.length > i) {
             if (currentDirPath[i] == importPath[i]) {
@@ -261,6 +269,9 @@ export function repeat(value: string, count: number) {
 }
 
 export function pathToUri(path: string): string {
+    if (path.startsWith("file://")) {
+        return path;
+    }
     if (sep === "/") {
         return "file://" + encodeURI(path.replace(/\\/g, '/')).replace(":", "%3A");
     }
@@ -301,7 +312,7 @@ export function getFolder(uri: string) {
 
 export function pathFromCommandArguments(params: ExecuteCommandParams): string {
     let path = "";
-    if(params.arguments) {
+    if (params.arguments) {
         path = "file://" + params.arguments[0].path.replace(":", "%3A");
     }
     return path;

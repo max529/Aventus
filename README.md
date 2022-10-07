@@ -102,14 +102,19 @@ A *.static.avt file is a file not compiled by the system. The content of the fil
 A *.def.avt file is a file representing definition for a project. It allows you to use other project in yours.
 
 ## VS Code Settings 
+C:\Users\Maxime Bétrisey\AppData\Roaming\Code\User\settings.json
 Edit settings.json and add
 
 ```json
 "emmet.includeLanguages": {
-    "Aventus HTML": "html" // allow emmet in *.wcv.avt
-}
+    "Aventus HTML": "html", // allow emmet in *.wcv.avt
+    "Aventus WebComponent": "html"  // allow emmet in *.wc.avt
+},,
 
 "[Aventus HTML]": {
+    "editor.snippetSuggestions": "top" // allow aventus suggestion first
+}
+"[Aventus WebComponent]": {
     "editor.snippetSuggestions": "top" // allow aventus suggestion first
 }
 ```

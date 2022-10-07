@@ -1,3 +1,3 @@
 <h1>My todo list</h1>
-<av-todo-list av-element="listEl"></av-todo-list>
-<av-todo-creation av-element="creationEl"></av-todo-creation>
+<av-todo-list @element="listEl"></av-todo-list>
+<av-todo-creation @element="creationEl"></av-todo-creation>

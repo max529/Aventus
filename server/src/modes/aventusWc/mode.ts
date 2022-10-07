@@ -17,7 +17,11 @@ export class AventusWcMode {
 	private documents: { [key: string]: AventusWcDoc } = {}
 	async init(files: TextDocument[]) {
 		for (let file of files) {
-			this.getDoc(file);
+			let compDoc = this.getDoc(file);
+		}
+		
+		for (let file of files) {
+			await this.doValidation(file, false);
 		}
 	}
 	mustBeRemoved(document: TextDocument) {

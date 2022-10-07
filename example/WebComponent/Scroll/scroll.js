@@ -12,8 +12,8 @@ class AvScrollTest extends Aventus.WebComponent {
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<button av-click="changeSize">change size</button>
-<av-scrollable>
+            html: `<button _id="avscrolltest_0">change size</button>
+&lt;@scrollable&gt;
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
@@ -34,12 +34,12 @@ class AvScrollTest extends Aventus.WebComponent {
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
-</av-scrollable>`,
+<!--@scrollable-->`,
             slots: {
             },
             blocks: {
-                'default':`<button av-click="changeSize">change size</button>
-<av-scrollable>
+                'default':`<button _id="avscrolltest_0">change size</button>
+&lt;@scrollable&gt;
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
@@ -60,19 +60,26 @@ class AvScrollTest extends Aventus.WebComponent {
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
-</av-scrollable>`
+<!--@scrollable-->`
             }
         }
         return info;
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvScrollTest", 0])
+        temp.push(["AvScrollTest", 1])
         return temp;
     }
     getClassName() {
         return "AvScrollTest";
     }
+    __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avscrolltest_0') != -1) {
+                    if (this._components['avscrolltest_0']) {
+                        for (var i = 0; i < this._components['avscrolltest_0'].length; i++) {
+                            this._components['avscrolltest_0'][i].addEventListener('click', (e) => { this.changeSize(e) })
+                        }
+                    }
+                } }
      changeSize(e){this.classList.toggle("big");}}
 window.customElements.define('av-scroll-test', AvScrollTest);
 AventusTest.AvScrollTest=AvScrollTest;

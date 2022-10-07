@@ -51,14 +51,23 @@ export class AvScrollable extends WebComponent implements DefaultComponent {
     scrollbar: DtScrollablePositions = { "vertical": { "value": 0, "max": 0 }, "horizontal": { "value": 0, "max": 0 } };
     refreshTimeout: number = 100;
 
+    @ViewElement()
     elToCalculate: HTMLDivElement;
+    @ViewElement()
     contentZoom: HTMLDivElement;
+    @ViewElement()
     contentHidder: HTMLDivElement;
+    @ViewElement()
     contentWrapper: HTMLDivElement;
+    @ViewElement()
     contentscroller: HTMLDivElement;
+    @ViewElement()
     verticalScrollerContainer: HTMLDivElement;
+    @ViewElement()
     verticalScroller: HTMLDivElement;
+    @ViewElement()
     horizontalScrollerContainer: HTMLDivElement;
+    @ViewElement()
     horizontalScroller: HTMLDivElement;
 
     //#endregion

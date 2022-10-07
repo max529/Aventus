@@ -9,6 +9,9 @@ import { existsSync } from 'fs';
 import { customCssProperty } from './CSSNode';
 import { SCSSDoc } from '../aventusJs/compiler/component/def';
 import { connectionWithClient, jsMode } from '../../mode';
+import postcss from 'postcss';
+import * as postcssSorting from 'postcss-sorting';
+import * as postcssScss from 'postcss-scss';
 
 export class AventusSCSSMode {
 	public customLanguageService: LanguageService | undefined = undefined;
@@ -25,11 +28,11 @@ export class AventusSCSSMode {
 		}
 	}
 	getFiles() {
-        return this.listFiles;
-    }
-    getFile(uri: string) {
-        return this.listFiles[uri];
-    }
+		return this.listFiles;
+	}
+	getFile(uri: string) {
+		return this.listFiles[uri];
+	}
 	async doComplete(document: TextDocument, position: Position): Promise<CompletionList> {
 		let result: CompletionList = { isIncomplete: false, items: [] };
 		if (this.customLanguageService) {
@@ -144,7 +147,30 @@ export class AventusSCSSMode {
 				insertSpaces: false,
 				tabSize: 4,
 			}
-			return this.customLanguageService.format(document, range, formatConfig);
+			let result = await this.customLanguageService.format(document, range, formatConfig);
+			if (result.length == 1) {
+				let start = document.offsetAt(result[0].range.start)
+				let end = document.offsetAt(result[0].range.end)
+				let length = document.getText().length;
+				if (start == 0 && end == length) {
+					let orderResult = await postcss([postcssSorting({
+						order: [
+							'custom-properties',
+							'dollar-variables',
+							'declarations',
+							'at-rules',
+							'rules',
+						],
+						'properties-order': 'alphabetical'
+					})]).process(result[0].newText, {
+						parser: postcssScss,
+						from: './temp.scss',
+						to: './temp.scss'
+					})
+					result[0].newText = orderResult.css;
+				}
+			}
+			return result;
 		}
 		return [];
 	}
@@ -253,7 +279,7 @@ export class AventusSCSSMode {
 		}
 		return result;
 	}
-	// TODO add a linter to order all property
+	
 
 	public addDefinition(uri: string, doc: SCSSDoc): void {
 		this.documentationInfoDef[uri] = doc;

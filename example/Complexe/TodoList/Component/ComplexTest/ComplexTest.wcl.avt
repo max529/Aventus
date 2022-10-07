@@ -20,7 +20,9 @@ export class AvComplexTest extends Aventus.WebComponent implements Aventus.Defau
 	@Watch()
 	data: AvLight[] = [];
 
+    @ViewElement()
 	salut: HTMLElement;
+    @ViewElement()
 	valueTest: HTMLElement;
 	//#endregion
 

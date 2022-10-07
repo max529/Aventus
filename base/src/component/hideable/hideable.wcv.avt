@@ -1,2 +1,2 @@
 <slot></slot>
-<div av-element="content"></div>
+<div @element="content"></div>

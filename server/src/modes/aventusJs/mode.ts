@@ -141,6 +141,7 @@ export class AventusJSMode {
                                     let newImport = /"(.*)"/g.exec(txtChange.newText);
                                     if (newImport && newImport.length > 1) {
                                         let finalPath = simplifyPath(newImport[1], document.uri);
+                                        
                                         item.detail += "\r\nimport from " + finalPath;
                                         txtChange.newText = txtChange.newText.replace(newImport[1], finalPath);
                                     }

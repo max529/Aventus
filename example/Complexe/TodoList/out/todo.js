@@ -161,7 +161,7 @@ class AvTodoItem extends Aventus.WebComponent {
 }
 window.customElements.define('av-todo-item', AvTodoItem);
 class AvTodoCreation extends Aventus.WebComponent {
-    __prepareVariables() { super.__prepareVariables(); if(this.inputEl === undefined) {this.inputEl = undefined;}if(this.todoList === undefined) {this.todoList = undefined;} }
+    __prepareVariables() { super.__prepareVariables(); if(this.todoList === undefined) {this.todoList = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
@@ -171,15 +171,15 @@ class AvTodoCreation extends Aventus.WebComponent {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<av-form>
-	<av-input label="Todo name" av-element="inputEl"></av-input>
-	<button av-press="addTodo">Add</button>
+	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
+	<button @press="addTodo" _id="avtodocreation_1">Add</button>
 </av-form>`,
             slots: {
             },
             blocks: {
                 'default':`<av-form>
-	<av-input label="Todo name" av-element="inputEl"></av-input>
-	<button av-press="addTodo">Add</button>
+	<av-input label="Todo name" _id="avtodocreation_0"></av-input>
+	<button @press="addTodo" _id="avtodocreation_1">Add</button>
 </av-form>`
             }
         }
@@ -187,16 +187,24 @@ class AvTodoCreation extends Aventus.WebComponent {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvTodoCreation", 0])
+        temp.push(["AvTodoCreation", 2])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avtodocreation_0"]');}
     getClassName() {
         return "AvTodoCreation";
     }
+    __addEvents(ids = null) { super.__addEvents(ids); 
+                new PressManager({
+                    "element": this._components['avtodocreation_1'],
+                    "onPress": (e, pressInstance) => {
+                        this.addTodo(e, pressInstance);
+                     },
+                });
+                 }
      addTodo(){var _a;let data = new AvTodoData();data.name = this.inputEl.value;(_a = this.todoList) === null || _a === void 0 ? void 0 : _a.addItem(data);}}
 window.customElements.define('av-todo-creation', AvTodoCreation);
 class AvTodo extends Aventus.WebComponent {
-    __prepareVariables() { super.__prepareVariables(); if(this.listEl === undefined) {this.listEl = undefined;}if(this.creationEl === undefined) {this.creationEl = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(`:host{display:flex;flex-direction:column}:host av-todo-list{margin-bottom:30px}`);
@@ -206,23 +214,24 @@ class AvTodo extends Aventus.WebComponent {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<h1>My todo list</h1>
-<av-todo-list av-element="listEl"></av-todo-list>
-<av-todo-creation av-element="creationEl"></av-todo-creation>`,
+<av-todo-list _id="avtodo_0"></av-todo-list>
+<av-todo-creation _id="avtodo_1"></av-todo-creation>`,
             slots: {
             },
             blocks: {
                 'default':`<h1>My todo list</h1>
-<av-todo-list av-element="listEl"></av-todo-list>
-<av-todo-creation av-element="creationEl"></av-todo-creation>`
+<av-todo-list _id="avtodo_0"></av-todo-list>
+<av-todo-creation _id="avtodo_1"></av-todo-creation>`
             }
         }
         return info;
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvTodo", 0])
+        temp.push(["AvTodo", 2])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.listEl = this.shadowRoot.querySelector('[_id="avtodo_0"]');this.creationEl = this.shadowRoot.querySelector('[_id="avtodo_1"]');}
     getClassName() {
         return "AvTodo";
     }
@@ -236,8 +245,7 @@ class AvInput extends Aventus.AvFormElement {
                     set 'label'(val) {
 						if(val === undefined || val === null){this.removeAttribute('label')}
 						else{this.setAttribute('label',val)}
-                    }    __prepareVariables() { super.__prepareVariables(); if(this.inputEl === undefined) {this.inputEl = undefined;} }
-    __getStyle() {
+                    }    __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(``);
         return arrStyle;
@@ -246,12 +254,12 @@ class AvInput extends Aventus.AvFormElement {
         let parentInfo = super.__getHtml();
         let info = {
             html: `<label for="test" _id="avinput_0"></label>
-<input id="test" av-element="inputEl" av-input="inputChanged">`,
+<input id="test" _id="avinput_1">`,
             slots: {
             },
             blocks: {
                 'default':`<label for="test" _id="avinput_0"></label>
-<input id="test" av-element="inputEl" av-input="inputChanged">`
+<input id="test" _id="avinput_1">`
             }
         }
                 let newHtml = parentInfo.html
@@ -266,9 +274,10 @@ class AvInput extends Aventus.AvFormElement {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvInput", 1])
+        temp.push(["AvInput", 2])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avinput_1"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avinput_0'].length;i++){
 									this._components['avinput_0'][i].innerHTML = ""+this.label+"".toString();
@@ -278,6 +287,13 @@ class AvInput extends Aventus.AvFormElement {
         return "AvInput";
     }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
+    __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avinput_1') != -1) {
+                    if (this._components['avinput_1']) {
+                        for (var i = 0; i < this._components['avinput_1'].length; i++) {
+                            this._components['avinput_1'][i].addEventListener('input', (e) => { this.inputChanged(e) })
+                        }
+                    }
+                } }
      getDefaultValue(){return "";} inputChanged(){this.value = this.inputEl.value;this.onValueChanged();}}
 window.customElements.define('av-input', AvInput);
 class AvComplexTest extends Aventus.WebComponent {
@@ -293,8 +309,7 @@ class AvComplexTest extends Aventus.WebComponent {
 					}
 					set 'data'(val) {
 						this.__watch["data"] = val;
-					}    __prepareVariables() { super.__prepareVariables(); if(this.salut === undefined) {this.salut = undefined;}if(this.valueTest === undefined) {this.valueTest = undefined;} }
-    __prepareWatchesActions() {
+					}    __prepareWatchesActions() {
 					this.__watchActions["data"] = [];
 						this.__watchActionsCb["data"] = (action, path, value) => {
 							for (let fct of this.__watchActions["data"]) {
@@ -324,12 +339,12 @@ class AvComplexTest extends Aventus.WebComponent {
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<h2 av-element="salut" _id="avcomplextest_0"></h2>
+            html: `<h2 _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`,
             slots: {
             },
             blocks: {
-                'default':`<h2 av-element="salut" _id="avcomplextest_0"></h2>
+                'default':`<h2 _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`
             }
         }
@@ -373,7 +388,7 @@ class AvComplexTest extends Aventus.WebComponent {
 							}
 					return result;
 				};
-				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div av-element="valueTest" _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
+				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
 					let result = {};
 					let arr_avcomplextest_1 = Array.from(el.querySelectorAll('[_id="avcomplextest_1"]'));let arr_avcomplextest_3 = Array.from(el.querySelectorAll('[_id="avcomplextest_3"]'));let arr_avcomplextest_2 = Array.from(el.querySelectorAll('[_id="avcomplextest_2"]'));
 					result["color"] = [];result["$index$_i"] = [];result["name"] = [];result["$index$_i"] = [];result["j"] = [];result["value"] = [];result["value"] = [];
@@ -445,6 +460,7 @@ class AvComplexTest extends Aventus.WebComponent {
         temp.push(["AvComplexTest", 6])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.salut = this.shadowRoot.querySelector('[_id="avcomplextest_0"]');this.valueTest = this.shadowRoot.querySelector('[_id="avcomplextest_2"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
 									for(var i = 0;i<this._components['avcomplextest_0'].length;i++){
 									this._components['avcomplextest_0'][i].innerHTML = ""+this.testvariable+"".toString();

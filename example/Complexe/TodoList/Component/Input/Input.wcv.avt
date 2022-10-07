@@ -1,2 +1,2 @@
 <label for="test">{{label}}</label>
-<input id="test" av-element="inputEl" av-input="inputChanged"/>
+<input id="test" @element="inputEl" @input="inputChanged"/>

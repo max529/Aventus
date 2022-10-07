@@ -1,7 +1,5 @@
-import { AvForm } from "../../form/form/form.wcl.avt";
 import { StateManager } from "../../../lib/StateManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
-import { AvHideable } from "../../hideable/hideable.wcl.avt";
 import { AvPage } from "../Page/Page.wcl.avt";
 
 export abstract class AvRouter extends WebComponent implements DefaultComponent {
@@ -18,6 +16,7 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
 
     //#region variables
     private oldPage: AvPage;
+    @ViewElement()
     public contentEl: HTMLDivElement;
     //#endregion
 
@@ -39,13 +38,17 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
         let routes = this.defineRoutes();
 
         for(let key in routes) {
-            this.initRoute(key, new routes[key]());
+            this.initRoute(key, routes[key]);
         }
     }
-    private initRoute(path: string, element: AvPage) {
-        this.contentEl.appendChild(element);
+    private initRoute(path: string, elementCtr: new () => AvPage) {
+        let element:AvPage = undefined;
         StateManager.getInstance("navigation").subscribe(path, {
             active: (currentState) => {
+                if(!element){
+                    element = new elementCtr();
+                    this.contentEl.appendChild(element);
+                }
                 if(this.oldPage && this.oldPage != element) {
                     this.oldPage.show = false;
                 }

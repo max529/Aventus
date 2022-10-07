@@ -1,2 +1,2 @@
-<span class="hello" av-element="helloEl" av-press="onHelloClicked">Hello {{hello_clicked}}</span>
-<span class="world" av-element="worldEl">World 2</span>
+<span class="hello" @element="helloEl" @press="onHelloClicked">Hello {{hello_clicked}}</span>
+<span class="world" @element="worldEl">World 2</span>

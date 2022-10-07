@@ -23,6 +23,8 @@ export class AvHideable extends WebComponent implements DefaultComponent {
     private options: AvHideableOptions;
     private checkCloseBinded: (e: Event) => {};
     private pressManager: PressManager;
+
+    @ViewElement()
     private content: HTMLDivElement;
     private onVisibilityChangeCallbacks: ((isVisible: boolean) => void)[] = [];
     //#endregion
@@ -145,7 +147,7 @@ export class AvHideable extends WebComponent implements DefaultComponent {
 
     async hide(options?: {
         force?: boolean,
-        target?: Element
+        target?: Element;
     }) {
         if(this.isVisible) {
             if(options?.force || await this.options.canHide(options?.target)) {
@@ -163,7 +165,7 @@ export class AvHideable extends WebComponent implements DefaultComponent {
     private checkClose(e: PointerEvent | InternalPointerEvent) {
         let realTargetEl: Element;
 
-        if (e instanceof PointerEvent) {
+        if(e instanceof PointerEvent) {
             realTargetEl = e.realTarget();
         } else {
             realTargetEl = e.detail.realEvent.realTarget();

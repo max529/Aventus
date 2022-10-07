@@ -16,8 +16,7 @@ class AvSelect extends Aventus.AvFormElement {
 					}
 					set 'value_display'(val) {
 						this.__watch["value_display"] = val;
-					}    __prepareVariables() { super.__prepareVariables(); if(this.hider === undefined) {this.hider = undefined;}if(this.options === undefined) {this.options = undefined;}if(this.baseEl === undefined) {this.baseEl = undefined;}if(this.test === undefined) {this.test = undefined;} }
-    __prepareWatchesActions() {
+					}    __prepareWatchesActions() {
 					this.__watchActions["value_display"] = [];
 						this.__watchActionsCb["value_display"] = (action, path, value) => {
 							for (let fct of this.__watchActions["value_display"]) {
@@ -47,16 +46,16 @@ class AvSelect extends Aventus.AvFormElement {
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<label av-element="test" _id="avselect_0"></label>
-<div class="selected" av-element="baseEl">
-    <span _id="avselect_1"></span>
+            html: `<label _id="avselect_0"></label>
+<div class="selected" _id="avselect_1">
+    <span _id="avselect_2"></span>
     <svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
         <path d="M7 10l5 5 5-5z"></path>
         <path d="M0 0h24v24H0z" fill="none"></path>
     </svg>
 </div>
-<av-hideable av-element="hider">
-    <div class="container" av-element="options">
+<av-hideable _id="avselect_3">
+    <div class="container" _id="avselect_4">
         <slot></slot>
     </div>
 </av-hideable>`,
@@ -64,16 +63,16 @@ class AvSelect extends Aventus.AvFormElement {
                 'default':`<slot></slot>`
             },
             blocks: {
-                'default':`<label av-element="test" _id="avselect_0"></label>
-<div class="selected" av-element="baseEl">
-    <span _id="avselect_1"></span>
+                'default':`<label _id="avselect_0"></label>
+<div class="selected" _id="avselect_1">
+    <span _id="avselect_2"></span>
     <svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
         <path d="M7 10l5 5 5-5z"></path>
         <path d="M0 0h24v24H0z" fill="none"></path>
     </svg>
 </div>
-<av-hideable av-element="hider">
-    <div class="container" av-element="options">
+<av-hideable _id="avselect_3">
+    <div class="container" _id="avselect_4">
         <slot></slot>
     </div>
 </av-hideable>`
@@ -91,16 +90,17 @@ class AvSelect extends Aventus.AvFormElement {
     }
     __getMaxId() {
         let temp = super.__getMaxId();
-        temp.push(["AvSelect", 2])
+        temp.push(["AvSelect", 5])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.hider = this.shadowRoot.querySelector('[_id="avselect_3"]');this.options = this.shadowRoot.querySelector('[_id="avselect_4"]');this.baseEl = this.shadowRoot.querySelector('[_id="avselect_1"]');this.test = this.shadowRoot.querySelector('[_id="avselect_0"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['label'] = []this.__onChangeFct['label'].push((path) => {if("label".startsWith(path)){
 									for(var i = 0;i<this._components['avselect_0'].length;i++){
 									this._components['avselect_0'][i].innerHTML = ""+this.label+"".toString();
 								}
 							}})this.__onChangeFct['value_display'] = []this.__onChangeFct['value_display'].push((path) => {if("value_display".startsWith(path)){
-									for(var i = 0;i<this._components['avselect_1'].length;i++){
-									this._components['avselect_1'][i].innerHTML = ""+this.value_display+"".toString();
+									for(var i = 0;i<this._components['avselect_2'].length;i++){
+									this._components['avselect_2'][i].innerHTML = ""+this.value_display+"".toString();
 								}
 							}}) }
     __endConstructor() { super.__endConstructor(); (() => {})() }

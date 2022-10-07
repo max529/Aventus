@@ -15,6 +15,7 @@ export class AvTodoCreation extends Aventus.WebComponent implements Aventus.Defa
 
 
 	//#region variables
+	@ViewElement()
 	private inputEl:AvInput;
 	public todoList:AvTodoList;
 	//#endregion

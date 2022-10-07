@@ -14,7 +14,9 @@ export class AvTodo extends Aventus.WebComponent implements Aventus.DefaultCompo
 
 
     //#region variables
+	@ViewElement()
     listEl: AvTodoList;
+	@ViewElement()
     creationEl: AvTodoCreation;
 	//#endregion
 

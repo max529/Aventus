@@ -20,20 +20,22 @@ export class AventusHTMLMode {
 		for (let file of documents) {
 			this.listFiles[file.uri] = file
 		}
-		this.customLanguageService = getHTMLLanguageService({
-			useDefaultDataProvider: true,
-			customDataProviders: [
-				{
-					getId: this.getId.bind(this),
-					isApplicable(languageId) {
-						return languageId == languageIdHTML;
-					},
-					provideTags: this.provideTags.bind(this),
-					provideAttributes: this.provideAttributes.bind(this),
-					provideValues: this.provideValues.bind(this)
-				}
-			]
-		})
+		if (this.customLanguageService === undefined) {
+			this.customLanguageService = getHTMLLanguageService({
+				useDefaultDataProvider: true,
+				customDataProviders: [
+					{
+						getId: this.getId.bind(this),
+						isApplicable(languageId) {
+							return languageId == languageIdHTML;
+						},
+						provideTags: this.provideTags.bind(this),
+						provideAttributes: this.provideAttributes.bind(this),
+						provideValues: this.provideValues.bind(this)
+					}
+				]
+			})
+		}
 	}
 	public getFiles() {
 		return this.listFiles;

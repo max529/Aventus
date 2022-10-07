@@ -1,5 +1,5 @@
-<button av-click="changeSize">change size</button>
-<av-scrollable>
+<button @click="changeSize">change size</button>
+<@scrollable>
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
@@ -20,4 +20,4 @@
 	<div class="item"></div>
 	<div class="item"></div>
 	<div class="item"></div>
-</av-scrollable>
+</@scrollable>

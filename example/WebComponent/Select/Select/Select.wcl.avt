@@ -21,9 +21,13 @@ export class AvSelect extends Aventus.AvFormElement<string> implements Aventus.D
     @Watch()
     value_display: string = "";
 
+    @ViewElement()
     hider: Aventus.AvHideable;
+    @ViewElement()
     options: HTMLDivElement;
+    @ViewElement()
     baseEl: HTMLDivElement;
+    @ViewElement()
     test: HTMLLabelElement;
     
     //#endregion

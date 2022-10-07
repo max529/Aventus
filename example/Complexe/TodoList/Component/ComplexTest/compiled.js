@@ -11,8 +11,7 @@ class AvComplexTest extends Aventus.WebComponent {
 					}
 					set 'data'(val) {
 						this.__watch["data"] = val;
-					}    __prepareVariables() { super.__prepareVariables(); if(this.salut === undefined) {this.salut = undefined;}if(this.valueTest === undefined) {this.valueTest = undefined;} }
-    __prepareWatchesActions() {
+					}    __prepareWatchesActions() {
 					this.__watchActions["data"] = [];
 						this.__watchActionsCb["data"] = (action, path, value) => {
 							for (let fct of this.__watchActions["data"]) {
@@ -42,12 +41,12 @@ class AvComplexTest extends Aventus.WebComponent {
     __getHtml() {
         let parentInfo = super.__getHtml();
         let info = {
-            html: `<h2 av-element="salut" _id="avcomplextest_0"></h2>
+            html: `<h2 _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`,
             slots: {
             },
             blocks: {
-                'default':`<h2 av-element="salut" _id="avcomplextest_0"></h2>
+                'default':`<h2 _id="avcomplextest_0"></h2>
 <av-for item="light" in="data" index="i" _id="avcomplextest_4"></av-for>`
             }
         }
@@ -91,7 +90,7 @@ class AvComplexTest extends Aventus.WebComponent {
 							}
 					return result;
 				};
-				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div av-element="valueTest" _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
+				this.__loopTemplate['avcomplextest_4'] = `    <div _id="avcomplextest_1"></div>    <div _id="avcomplextest_2"></div>    <av-for item="value" in="light.values" class="values" index="j" _id="avcomplextest_5"></av-for>`;this.__prepareForCreate['avcomplextest_4'] = (el, data, key, indexes) => {
 					let result = {};
 					let arr_avcomplextest_1 = Array.from(el.querySelectorAll('[_id="avcomplextest_1"]'));let arr_avcomplextest_3 = Array.from(el.querySelectorAll('[_id="avcomplextest_3"]'));let arr_avcomplextest_2 = Array.from(el.querySelectorAll('[_id="avcomplextest_2"]'));
 					result["color"] = [];result["$index$_i"] = [];result["name"] = [];result["$index$_i"] = [];result["j"] = [];result["value"] = [];result["value"] = [];
@@ -163,6 +162,7 @@ class AvComplexTest extends Aventus.WebComponent {
         temp.push(["AvComplexTest", 6])
         return temp;
     }
+    __mapSelectedElement() { super.__mapSelectedElement(); this.salut = this.shadowRoot.querySelector('[_id="avcomplextest_0"]');this.valueTest = this.shadowRoot.querySelector('[_id="avcomplextest_2"]');}
     __registerOnChange() { super.__registerOnChange(); this.__onChangeFct['testvariable'] = []this.__onChangeFct['testvariable'].push((path) => {if("testvariable".startsWith(path)){
 									for(var i = 0;i<this._components['avcomplextest_0'].length;i++){
 									this._components['avcomplextest_0'][i].innerHTML = ""+this.testvariable+"".toString();

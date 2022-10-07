@@ -285,7 +285,7 @@ modes.connectionWithClient?.onDocumentFormatting(async (textDocumentPosition, to
 	if (mode) {
 		let range = {
 			start: document.positionAt(0),
-			end: document.positionAt(document.getText().length - 1)
+			end: document.positionAt(document.getText().length)
 		};
 		return mode.format(document, range, textDocumentPosition.options);
 	}
