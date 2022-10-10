@@ -417,14 +417,14 @@ Object.transformIntoWatcher = function (obj, onDataChanged) {
                         proxyData.history.push({
                             object: JSON.parse(JSON.stringify(currentProxyData.baseData, jsonReplacer)),
                             trace: stacks.reverse(),
-                            action:WatchAction[type],
+                            action:Aventus.WatchAction[type],
                             path:pathToSend
                         });
                     }
 
                     [...currentProxyData.callbacks].forEach((cb) => {
 
-                        cb(WatchAction[type], pathToSend, value);
+                        cb(Aventus.WatchAction[type], pathToSend, value);
                     });
 
                 }
