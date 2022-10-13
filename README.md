@@ -109,11 +109,11 @@ Edit settings.json and add
 "emmet.includeLanguages": {
     "Aventus HTML": "html", // allow emmet in *.wcv.avt
     "Aventus WebComponent": "html"  // allow emmet in *.wc.avt
-},,
+},
 
 "[Aventus HTML]": {
     "editor.snippetSuggestions": "top" // allow aventus suggestion first
-}
+},
 "[Aventus WebComponent]": {
     "editor.snippetSuggestions": "top" // allow aventus suggestion first
 }
