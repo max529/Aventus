@@ -588,7 +588,7 @@ export class AventusJSProgram {
 						}
 					}
 					if (build.namespace) {
-						finalTxt += "var " + build.namespace + ";(function (" + build.namespace + ") {"
+						finalTxt += "var " + build.namespace + ";(function (" + build.namespace + ") {\r\n var namespace = '" + build.namespace + "';"
 					}
 					finalTxt += includesTxt.join(EOL) + EOL;
 					finalTxt += libsTxt.join(EOL) + EOL;
@@ -853,7 +853,7 @@ export class AventusJSProgram {
 		return undefined;
 	}
 	private loadDef(pathToImport: string) {
-		// add import from web
+		// TODO add import from web
 		pathToImport = normalize(pathToImport);
 		let uriToImport = pathToUri(pathToImport.replace(/\\/g, '/'));
 		if (existsSync(pathToImport) && statSync(pathToImport).isFile()) {
@@ -910,5 +910,8 @@ export class AventusJSProgram {
 			console.log("can't found " + pathToImport);
 		}
 	}
+}
+export class AventusJSBuild {
+	
 }
 

@@ -46,6 +46,9 @@ class AvHelloWorld extends Aventus.WebComponent {
     getClassName() {
         return "AvHelloWorld";
     }
+    getNamespace(){
+        return namespace;
+    }
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('hello_clicked')){ this['hello_clicked'] = ''; }if(!this.hasAttribute('word_clicked')){ this['word_clicked'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('hello_clicked');this.__upgradeProperty('word_clicked'); }
     __addEvents(ids = null) { super.__addEvents(ids); 

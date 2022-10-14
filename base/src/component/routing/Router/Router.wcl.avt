@@ -1,7 +1,12 @@
+import { ResourceLoader } from "../../../lib/ResourceLoader.lib.avt";
 import { StateManager } from "../../../lib/StateManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
 import { AvPage } from "../Page/Page.wcl.avt";
-
+export type AvRouteAsyncOption = {
+    route: string,
+    scriptUrl: string,
+    render: () => new () => AvPage;
+};
 export abstract class AvRouter extends WebComponent implements DefaultComponent {
 
     //#region static
@@ -18,6 +23,8 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
     private oldPage: AvPage;
     @ViewElement()
     public contentEl: HTMLDivElement;
+
+    private allRoutes: { [key: string]: AvRouteAsyncOption; } = {};
     //#endregion
 
 
@@ -32,21 +39,48 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
 
 
     //#region methods
-    protected abstract defineRoutes(): { [key: string]: new () => AvPage; };
+    /**
+     * Add all your routes inside this function (addRoute or addRouteAsync)
+     */
+    protected abstract defineRoutes(): void;
+
+    protected addRouteAsync<T extends AvPage>(options: AvRouteAsyncOption) {
+        this.allRoutes[options.route] = options;
+    }
+    protected addRoute(route: string, elementCtr: new () => AvPage) {
+        this.allRoutes[route] = {
+            route: route,
+            scriptUrl: '',
+            render: () => elementCtr
+        };
+    }
 
     private register(): void {
-        let routes = this.defineRoutes();
+        try {
+            this.defineRoutes();
 
-        for(let key in routes) {
-            this.initRoute(key, routes[key]);
+            for(let key in this.allRoutes) {
+                this.initRoute(key);
+            }
+        } catch(e) {
+            console.log(e);
+            debugger;
         }
     }
-    private initRoute(path: string, elementCtr: new () => AvPage) {
-        let element:AvPage = undefined;
+    private initRoute(path: string) {
+        let element: AvPage = undefined;
+        let allRoutes = this.allRoutes;
+        let namespace = this.getNamespace();
         StateManager.getInstance("navigation").subscribe(path, {
-            active: (currentState) => {
-                if(!element){
-                    element = new elementCtr();
+            active: async (currentState) => {
+                if(!element) {
+                    let options = allRoutes[path];
+                    if(options.scriptUrl != "") {
+                        await ResourceLoader.loadInHead(options.scriptUrl);
+                    }
+
+                    let constructor = options.render.bind(window[namespace])();
+                    element = new constructor;
                     this.contentEl.appendChild(element);
                 }
                 if(this.oldPage && this.oldPage != element) {
@@ -66,17 +100,17 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
         this.register();
         if(window.localStorage.getItem("navigation_url")) {
             StateManager.getInstance("navigation").setActiveState(window.localStorage.getItem("navigation_url"));
-			window.localStorage.removeItem("navigation_url")
+            window.localStorage.removeItem("navigation_url");
         }
         else {
             StateManager.getInstance("navigation").setActiveState(window.location.pathname);
         }
-		window.onpopstate = (e) => {
-			if(window.location.pathname != StateManager.getInstance("navigation").getActiveState()) {
-				StateManager.getInstance("navigation").setActiveState(window.location.pathname);
-			}
-		}
+        window.onpopstate = (e) => {
+            if(window.location.pathname != StateManager.getInstance("navigation").getActiveState()) {
+                StateManager.getInstance("navigation").setActiveState(window.location.pathname);
+            }
+        };
     }
-	//#endregion
-	
+    //#endregion
+
 }

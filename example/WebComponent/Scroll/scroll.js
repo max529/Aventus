@@ -1,4 +1,5 @@
 var AventusTest;(function (AventusTest) {
+ var namespace = 'AventusTest';
 
 
 
@@ -72,6 +73,9 @@ class AvScrollTest extends Aventus.WebComponent {
     }
     getClassName() {
         return "AvScrollTest";
+    }
+    getNamespace(){
+        return namespace;
     }
     __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avscrolltest_0') != -1) {
                     if (this._components['avscrolltest_0']) {

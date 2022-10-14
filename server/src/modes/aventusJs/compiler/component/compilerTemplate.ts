@@ -45,6 +45,9 @@ export var compilerTemplate = `class $classname extends $parentClass {
     getClassName() {
         return "$classname";
     }
+    getNamespace(){
+        return namespace;
+    }
 
     $defaultValue
     $upgradeAttributes

@@ -1,4 +1,5 @@
 var AventusTest;(function (AventusTest) {
+ var namespace = 'AventusTest';
 
 class AvTodoData {    id = 0;    name = "";    state = AvTodoState.Waiting;}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
 class AvLight {    name = "";    value = 0;    color = "";    values = [];}
@@ -92,6 +93,9 @@ class AvTodoList extends Aventus.WebComponent {
     getClassName() {
         return "AvTodoList";
     }
+    getNamespace(){
+        return namespace;
+    }
      addItem(item){this.items.push(item);}}
 window.customElements.define('av-todo-list', AvTodoList);
 class AvTodoItem extends Aventus.WebComponent {
@@ -158,6 +162,9 @@ class AvTodoItem extends Aventus.WebComponent {
     getClassName() {
         return "AvTodoItem";
     }
+    getNamespace(){
+        return namespace;
+    }
 }
 window.customElements.define('av-todo-item', AvTodoItem);
 class AvTodoCreation extends Aventus.WebComponent {
@@ -193,6 +200,9 @@ class AvTodoCreation extends Aventus.WebComponent {
     __mapSelectedElement() { super.__mapSelectedElement(); this.inputEl = this.shadowRoot.querySelector('[_id="avtodocreation_0"]');}
     getClassName() {
         return "AvTodoCreation";
+    }
+    getNamespace(){
+        return namespace;
     }
     __addEvents(ids = null) { super.__addEvents(ids); 
                 new PressManager({
@@ -234,6 +244,9 @@ class AvTodo extends Aventus.WebComponent {
     __mapSelectedElement() { super.__mapSelectedElement(); this.listEl = this.shadowRoot.querySelector('[_id="avtodo_0"]');this.creationEl = this.shadowRoot.querySelector('[_id="avtodo_1"]');}
     getClassName() {
         return "AvTodo";
+    }
+    getNamespace(){
+        return namespace;
     }
      postCreation(){this.creationEl.todoList = this.listEl;}}
 window.customElements.define('av-todo', AvTodo);
@@ -285,6 +298,9 @@ class AvInput extends Aventus.AvFormElement {
 							}}) }
     getClassName() {
         return "AvInput";
+    }
+    getNamespace(){
+        return namespace;
     }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
     __addEvents(ids = null) { super.__addEvents(ids); if (ids == null || ids.indexOf('avinput_1') != -1) {
@@ -468,6 +484,9 @@ class AvComplexTest extends Aventus.WebComponent {
 							}}) }
     getClassName() {
         return "AvComplexTest";
+    }
+    getNamespace(){
+        return namespace;
     }
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('testvariable')){ this['testvariable'] = 'test'; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('testvariable'); }

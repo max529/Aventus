@@ -1,4 +1,5 @@
 var AventusTest;(function (AventusTest) {
+ var namespace = 'AventusTest';
 
 
 
@@ -50,6 +51,9 @@ class AvHelloWorld extends Aventus.WebComponent {
     __endConstructor() { super.__endConstructor(); (() => {    new Aventus.PressManager({        element: this.worldEl,        onPress: () => {            this.word_clicked++;        }    });})() }
     getClassName() {
         return "AvHelloWorld";
+    }
+    getNamespace(){
+        return namespace;
     }
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('hello_clicked')){ this['hello_clicked'] = ''; }if(!this.hasAttribute('word_clicked')){ this['word_clicked'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('hello_clicked');this.__upgradeProperty('word_clicked'); }

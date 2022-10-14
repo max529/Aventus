@@ -1,4 +1,5 @@
 var AventusTest;(function (AventusTest) {
+ var namespace = 'AventusTest';
 
 
 
@@ -107,6 +108,9 @@ class AvSelect extends Aventus.AvFormElement {
     getClassName() {
         return "AvSelect";
     }
+    getNamespace(){
+        return namespace;
+    }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
      getDefaultValue(){return "";} selectValueText(){for (var i = 0; i < this.children.length; i++) {    if (this.children[i] instanceof AvOption) {        let optionEl = this.children[i];        if (this.value == optionEl.value) {            this.value_display = this.children[i].innerHTML;            return;        }    }}this.value_display = '';} openOptions(){this.options.innerHTML = '';var list = this.children;for (var i = 0; i < list.length; i++) {    if (list[i] instanceof AvOption) {        let optionEl = list[i];        if (optionEl.value == this.value) {            optionEl.selected = true;        }        else {            optionEl.selected = false;        }        var clone = optionEl.cloneNode(true);        clone.addEventListener('click', (e) => {            this.selectOption(e.currentTarget);        });        this.options.appendChild(clone);    }}this.hider.show();var offset = this.baseEl.getPositionOnScreen();this.options.style.left = offset.x + 'px';this.options.style.top = offset.y + this.baseEl.offsetHeight + 2 + 'px';this.options.style.minWidth = this.offsetWidth + 'px';} selectOption(opt){this.value = opt.value;this.value_display = opt.innerHTML;this.onValueChanged();this.hider.hide({    force: true});} postCreation(){let valueAttr = this.getAttribute("value");if (valueAttr) {    this.value = valueAttr;    this.removeAttribute("value");}var list = this.children;for (var i = 0; i < list.length; i++) {    if (!(list[i] instanceof AvOption)) {        list[i].remove();        i--;    }    else {        let optionEl = list[i];        if (optionEl.selected) {            this.value = optionEl.value;        }    }}this.addEventListener('click', () => {    this.openOptions();});let form = this.findParentByTag("av-form");if (form) {    form.subscribe(this);}setTimeout(() => {    this.selectValueText();});}}
 window.customElements.define('av-select', AvSelect);
@@ -161,6 +165,9 @@ class AvOption extends Aventus.WebComponent {
     }
     getClassName() {
         return "AvOption";
+    }
+    getNamespace(){
+        return namespace;
     }
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('value')){ this['value'] = ''; }if(!this.hasAttribute('selected')) { this.attributeChangedCallback('selected', false, false); } }
     __listBoolProps() { return ["selected"].concat(super.__listBoolProps()).filter((v, i, a) => a.indexOf(v) === i); }
