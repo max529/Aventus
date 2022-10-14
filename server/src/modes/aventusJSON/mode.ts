@@ -179,6 +179,9 @@ export class AventusJSONMode {
 	getConfig(uri: string): AventusConfig | undefined {
 		return this.configs[uri];
 	}
+	getConfigs(): { [key: string]: AventusConfig } {
+		return this.configs;
+	}
 	getConfigFiles() {
 		return this.listFoundConfig;
 	}

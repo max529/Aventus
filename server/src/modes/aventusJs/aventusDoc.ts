@@ -46,16 +46,14 @@ export class AventusDoc {
 	private compiledTxt: string;
 	private docTxt: string;
 	public hasError: boolean = false
-	private program: AventusJSProgram;
 	private type: AventusType;
 	public classNamesScript: string[];
 	public classNamesDoc: string[];
 	public HTMLDoc: HTMLDoc = {};
 	public SCSSDoc: SCSSDoc = {};
 	private lastCompiledWebComponent: CompileComponentResult | undefined = undefined;
-	constructor(document: TextDocument, program: AventusJSProgram) {
+	constructor(document: TextDocument) {
 		this.document = document;
-		this.program = program;
 		this.path = uriToPath(document.uri);
 		this.type = this.prepareType();
 		this.compiledTxt = "";
@@ -94,11 +92,11 @@ export class AventusDoc {
 		return AventusType.Unknow;
 	}
 
-	doValidation(config: AventusConfig, program: AventusJSProgram, virtualDoc:boolean): Diagnostic[] {
+	doValidation(config: AventusConfig, virtualDoc:boolean): Diagnostic[] {
 		let compileError: Diagnostic[] = [];
 
 		if (this.type == AventusType.Component) {
-			let compiled = compileComponent(this.document, config, program, virtualDoc);
+			let compiled = compileComponent(this.document, config, virtualDoc);
 			if (compiled.success) {
 				this.lastCompiledWebComponent = compiled;
 			}
