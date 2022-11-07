@@ -1,4 +1,4 @@
-import { AvOption } from "../option/option.wcl.avt";
+import { AvOption } from "../Option/option.wcl.avt";
 
 @Debugger({
     writeCompiled: true

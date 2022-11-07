@@ -42,7 +42,9 @@
 		padding-right: 24px;
 		line-height: 24px;
 		vertical-align: middle;
+		transform: translate3d(0, 0, 0);
 		-webkit-transform: translate3d(0, 0, 0);
+		user-select: none;
 		-moz-user-select: none;
 		width: 100%;
 		box-sizing: border-box;

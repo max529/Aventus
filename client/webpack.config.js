@@ -13,10 +13,10 @@ const path = require('path');
 module.exports = withDefaults({
 	context: path.join(__dirname),
 	entry: {
-		extension: './src/extension.ts',
+		index: './src/index.ts',
 	},
 	output: {
-		filename: 'extension.js',
+		filename: 'index.js',
 		path: path.join(__dirname, 'out')
 	}
 });
