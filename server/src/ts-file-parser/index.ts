@@ -1,7 +1,3 @@
-import * as helpers from "./src/helpers";
-export * as helpers from "./src/helpers";
-import * as tsStructureParser from "./src/tsStructureParser";
-export * as tsStructureParser from "./src/tsStructureParser";
 export interface Module {
     variables: { name: string, start: number, end: number }[];
     classes: ClassModel[];

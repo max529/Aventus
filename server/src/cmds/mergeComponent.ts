@@ -1,60 +1,73 @@
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { connectionWithClient, htmlMode, jsMode, scssMode, wcMode } from '../mode';
-import { aventusExtension } from '../modes/aventusJs/aventusDoc';
-import { pathFromCommandArguments, pathToUri, uriToPath } from '../modes/aventusJs/utils';
-import * as aventusConfig from '../config';
 import { unlinkSync, writeFileSync } from 'fs';
+import { getPathFromCommandArguments, uriToPath } from '../tools';
+import { AventusExtension, AventusLanguageId } from '../definition';
+import { FilesManager } from '../FilesManager';
+import { ClientConnection } from '../Connection';
 
 export class MergeComponent {
 	static cmd: string = "aventus.component.merge";
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[0]) {
-			let fileUri: string = pathFromCommandArguments(params);
-			let regex = new RegExp("(" + aventusExtension.ComponentLogic + ")|(" + aventusExtension.ComponentView + ")|(" + aventusExtension.ComponentView + ")$");
+			let fileUri: string = getPathFromCommandArguments(params);
+			let regex = new RegExp("(" + AventusExtension.ComponentLogic + ")|(" + AventusExtension.ComponentView + ")|(" + AventusExtension.ComponentView + ")$");
 			let fileUriNoExtension = fileUri.replace(regex, '');
 
 			let maxVersion = 0;
-			let jsDoc = jsMode.getFile(fileUriNoExtension + aventusExtension.ComponentLogic);
-			if (jsDoc.version > maxVersion) { maxVersion = jsDoc.version; }
+			let jsDoc = FilesManager.getInstance().getByUri(fileUriNoExtension + AventusExtension.ComponentLogic);
+			if (jsDoc && jsDoc.version > maxVersion) { maxVersion = jsDoc.version; }
+			let jsTxt = jsDoc ? jsDoc.content : "";
 
-			let cssDoc = scssMode.getFile(fileUriNoExtension + aventusExtension.ComponentStyle);
-			if (cssDoc.version > maxVersion) { maxVersion = cssDoc.version; }
+			let scssDoc = FilesManager.getInstance().getByUri(fileUriNoExtension + AventusExtension.ComponentStyle);
+			if (scssDoc && scssDoc.version > maxVersion) { maxVersion = scssDoc.version; }
+			let scssTxt = scssDoc ? scssDoc.content : "";
 
-			let htmlDoc = htmlMode.getFile(fileUriNoExtension + aventusExtension.ComponentView);
-			if (htmlDoc.version > maxVersion) { maxVersion = htmlDoc.version; }
+
+			let htmlDoc = FilesManager.getInstance().getByUri(fileUriNoExtension + AventusExtension.ComponentView);
+			if (htmlDoc && htmlDoc.version > maxVersion) { maxVersion = htmlDoc.version; }
+			let htmlTxt = htmlDoc ? htmlDoc.content : "";
+
 
 			let mergeTxt =
 				`
 <script>
-	${addTab(jsDoc.getText())}
+	${addTab(jsTxt)}
 </script>
 
 <template>
-	${addTab(htmlDoc.getText())}
+	${addTab(htmlTxt)}
 </template>
 
 <style>
-	${addTab(cssDoc.getText())}
+	${addTab(scssTxt)}
 </style>
 `;
 			let compDoc = TextDocument.create(
-				fileUriNoExtension + aventusExtension.Component,
-				aventusConfig.languageIdWc,
+				fileUriNoExtension + AventusExtension.Component,
+				AventusLanguageId.WebComponent,
 				maxVersion + 1,
 				mergeTxt
 			);
 			writeFileSync(uriToPath(compDoc.uri), mergeTxt);
-			unlinkSync(uriToPath(cssDoc.uri));
-			unlinkSync(uriToPath(jsDoc.uri));
-			unlinkSync(uriToPath(htmlDoc.uri));
+			if (scssDoc) {
+				unlinkSync(scssDoc.path);
+				FilesManager.getInstance().onClose(scssDoc.document);
+				ClientConnection.getInstance().sendNotification("aventus/closefile", scssDoc.uri);
+			}
+			if (jsDoc) {
+				unlinkSync(jsDoc.path);
+				FilesManager.getInstance().onClose(jsDoc.document);
+				ClientConnection.getInstance().sendNotification("aventus/closefile", jsDoc.uri);
+			}
+			if (htmlDoc) {
+				unlinkSync(htmlDoc.path);
+				FilesManager.getInstance().onClose(htmlDoc.document);
+				ClientConnection.getInstance().sendNotification("aventus/closefile", htmlDoc.uri);
+			}
 
-			scssMode.mustBeRemoved(cssDoc);
-			jsMode.mustBeRemoved(jsDoc);
-			htmlMode.mustBeRemoved(htmlDoc);
-
-			wcMode.doValidation(compDoc, true);
-			connectionWithClient?.sendNotification("aventus/openfile", compDoc.uri)
+			FilesManager.getInstance().registerFile(compDoc);
+			ClientConnection.getInstance().sendNotification("aventus/openfile", compDoc.uri);
 		}
 	}
 }

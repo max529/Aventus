@@ -5,7 +5,6 @@
 import * as ts from "typescript";
 import * as tsm from "./tsASTMatchers";
 export * as tsm from "./tsASTMatchers";
-import * as fsUtil from "./fsUtils";
 import { AliasNode, ClassModel, EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
 import { TypeKind } from "../index";
 import { ArrayType } from "../index";
@@ -22,9 +21,12 @@ import { classDecl } from "../index";
 import { EnumMemberDeclaration } from "./../index";
 import { JSONTransformer } from "./jsonTransformer";
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { uriToPath } from '../../modes/aventusJs/utils';
-import { aventusExtension } from '../../modes/aventusJs/aventusDoc';
-import { jsMode } from '../../mode';
+import { AventusExtension } from "../../definition";
+import { uriToPath } from "../../tools";
+import { FilesManager } from '../../FilesManager';
+import { dirname, resolve } from 'path';
+import { existsSync, readFileSync } from 'fs';
+
 
 function parse(content: string) {
     return ts.createSourceFile("sample.ts", content, ts.ScriptTarget.ES3, true);
@@ -32,10 +34,10 @@ function parse(content: string) {
 var fld = tsm.Matching.field();
 
 export function getClass(className: string, uri: string): ClassModel | undefined {
-    let jsURI = uri.replace(aventusExtension.Component, aventusExtension.ComponentLogic);
-    let document = jsMode.getFile(jsURI);
-    if (document) {
-        let result = parseDocument(document);
+    let jsURI = uri.replace(AventusExtension.Component, AventusExtension.ComponentLogic);
+    let file = FilesManager.getInstance().getByUri(jsURI);
+    if (file) {
+        let result = parseDocument(file.document);
         for (let _class of result.classes) {
             if (_class.name == className) {
                 return _class;
@@ -45,10 +47,10 @@ export function getClass(className: string, uri: string): ClassModel | undefined
     return undefined;
 }
 export function getAlias(aliasName: string, uri: string): AliasNode | undefined {
-    let jsURI = uri.replace(aventusExtension.Component, aventusExtension.ComponentLogic);
-    let document = jsMode.getFile(jsURI);
-    if (document) {
-        let result = parseDocument(document);
+    let jsURI = uri.replace(AventusExtension.Component, AventusExtension.ComponentLogic);
+    let file = FilesManager.getInstance().getByUri(jsURI);
+    if (file) {
+        let result = parseDocument(file.document);
         for (let alias of result.aliases) {
             if (alias.name == aliasName) {
                 return alias;
@@ -143,7 +145,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 if (y.kind === ts.SyntaxKind.StringLiteral) {
                     var localPath = y.getText().substring(1, y.getText().length - 1);
                     if (localPath[0] === ".") {
-                        var localP = fsUtil.resolve(fsUtil.dirname(mpth) + "/", localPath);
+                        var localP = resolve(dirname(mpth) + "/", localPath);
                         localAbsPath = localP.split(pth.sep);
                         localAbsPathString = localP;
                     } else {
@@ -235,12 +237,12 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
 
             var literal = <ts.StringLiteral>path.expression;
             var importPath = literal.text;
-            var absPath = fsUtil.resolve(fsUtil.dirname(mpth) + "/", importPath) + ".ts";
-            if (!fsUtil.existsSync(absPath)) {
+            var absPath = resolve(dirname(mpth) + "/", importPath) + ".ts";
+            if (!existsSync(absPath)) {
                 throw new Error("Path " + importPath + " resolve to " + absPath + "do not exists");
             }
             if (!modules[absPath]) {
-                var cnt = fsUtil.readFileSync(absPath);
+                var cnt = readFileSync(absPath, 'utf8');
                 var mod = parseStruct(cnt, modules, absPath);
             }
             module.imports[namespace] = modules[absPath];
@@ -418,6 +420,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             }
             return tsm.Matching.SKIP;
         }
+        return;
     });
     return module;
 }
@@ -795,6 +798,7 @@ export function buildType(t: ts.TypeNode | undefined, path: string, module: Modu
     } else {
         return basicType("mock", null);
     }
+    return;
     //throw new Error("Case not supported: " + t.kind);
 }
 function parseQualified2(n: any): string | undefined {

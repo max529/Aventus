@@ -1,9 +1,10 @@
+import { FilesManager } from '../../server/src/FilesManager';
+import { ProjectManager } from '../../server/src/project/ProjectManager';
+import { pathToUri } from '../../server/src/tools';
+
 process.env["AVENTUS_CLI"] = "true";
 process.env["aventus_server_folder"] = __dirname+"/../..";
 
-import { jsMode } from '../../server/src/mode';
-import { pathToUri } from '../../server/src/modes/aventusJs/utils';
-import { init } from '../../server/src/server';
 
 async function main() {
 	let projectToCompile = ""
@@ -15,8 +16,9 @@ async function main() {
 		projectToCompile = 'D:\\404\\5_Prog_SVN\\2_Services\\Access\\Release\\currentRelease\\Export\\typescript'
 	}
 	projectToCompile = projectToCompile.replace(/\\/g, "/")
-	await init([pathToUri(projectToCompile)]);
+	ProjectManager.getInstance();
+    await FilesManager.getInstance().loadAllAventusFiles([pathToUri(projectToCompile)]);
 
-	let program = jsMode.programManager.getPrograms();
+	FilesManager.getInstance().onShutdown();
 }
 main();

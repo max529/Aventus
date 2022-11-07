@@ -1,55 +1,47 @@
-import { readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { unlinkSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { connectionWithClient, htmlMode, jsMode, scssMode, wcMode } from '../mode';
-import { getFolder, pathFromCommandArguments, pathToUri, uriToPath } from '../modes/aventusJs/utils';
-import * as aventusConfig from '../config';
-import { aventusExtension } from '../modes/aventusJs/aventusDoc';
+import { ClientConnection } from '../Connection';
+import { AventusExtension, AventusLanguageId } from '../definition';
+import { FilesManager } from '../FilesManager';
+import { AventusWebComponentSingleFile } from '../language-services/ts/component/File';
+import { getPathFromCommandArguments, uriToPath } from '../tools';
 
 export class SplitComponent {
 	static cmd: string = "aventus.component.split";
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments[0]) {
-			let fileUri: string = pathFromCommandArguments(params);
-			let filePath = uriToPath(fileUri);
-			let doc = wcMode.getDocumentByUri(fileUri);
-			if (doc) {
-				let currentVersion = doc.document.version;
-				let cssContent = reduceTab(doc.getSCSSInfo().text);
-				let jsContent = reduceTab(doc.getSCSSInfo().text);
-				let htmlContent = reduceTab(doc.getSCSSInfo().text);
-				writeFileSync(filePath.replace(aventusExtension.Component, aventusExtension.ComponentStyle), cssContent);
-				writeFileSync(filePath.replace(aventusExtension.Component, aventusExtension.ComponentLogic), jsContent);
-				writeFileSync(filePath.replace(aventusExtension.Component, aventusExtension.ComponentView), htmlContent);
-				wcMode.mustBeRemoved(doc.document);
-				unlinkSync(filePath);
-				let cssDoc = TextDocument.create(
-					fileUri.replace(aventusExtension.Component, aventusExtension.ComponentStyle),
-					aventusConfig.languageIdSCSS,
-					currentVersion + 1,
-					cssContent
-				);
-				let jsDoc = TextDocument.create(
-					fileUri.replace(aventusExtension.Component, aventusExtension.ComponentLogic),
-					aventusConfig.languageIdJs,
-					currentVersion + 1,
-					jsContent
-				);
-				let htmlDoc = TextDocument.create(
-					fileUri.replace(aventusExtension.Component, aventusExtension.ComponentView),
-					aventusConfig.languageIdHTML,
-					currentVersion + 1,
-					htmlContent
-				);
+			let fileUri: string = getPathFromCommandArguments(params);
+			let wcDoc = FilesManager.getInstance().getByUri(fileUri);
+			if (wcDoc) {
+				let resultTemp = AventusWebComponentSingleFile.getRegion(wcDoc);
+				let scssUri = fileUri.replace(AventusExtension.Component, AventusExtension.ComponentStyle);
+				let scssDoc: TextDocument = TextDocument.create(scssUri, AventusLanguageId.SCSS, wcDoc.version + 1, resultTemp.cssText);
+				writeFileSync(uriToPath(scssUri), scssDoc.getText());
 
-				scssMode.doValidation(cssDoc, true);
-				jsMode.doValidation(jsDoc, true);
-				htmlMode.doValidation(htmlDoc, true);
-				connectionWithClient?.sendNotification("aventus/openfile",jsDoc.uri)
+
+				let htmlUri = fileUri.replace(AventusExtension.Component, AventusExtension.ComponentView);
+				let htmlDoc: TextDocument = TextDocument.create(htmlUri, AventusLanguageId.HTML, wcDoc.version + 1, resultTemp.htmlText);
+				writeFileSync(uriToPath(htmlUri), htmlDoc.getText());
+
+				let tsUri = fileUri.replace(AventusExtension.Component, AventusExtension.ComponentLogic);
+				let tsDoc: TextDocument = TextDocument.create(tsUri, AventusLanguageId.TypeScript, wcDoc.version + 1, resultTemp.scriptText);
+				writeFileSync(uriToPath(tsUri), tsDoc.getText());
+
+				unlinkSync(wcDoc.path);
+				FilesManager.getInstance().onClose(wcDoc.document);
+				ClientConnection.getInstance().sendNotification("aventus/closefile", wcDoc.uri);
+
+
+
+				FilesManager.getInstance().registerFile(scssDoc);
+				FilesManager.getInstance().registerFile(htmlDoc);
+				FilesManager.getInstance().registerFile(tsDoc);
+				ClientConnection.getInstance().sendNotification("aventus/openfile", tsDoc.uri);
 			}
 		}
 	}
 }
-function reduceTab(text){
+function reduceTab(text) {
 	return text.split("\n\t").join("\n").trim();
 }

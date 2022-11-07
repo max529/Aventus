@@ -1,6 +1,7 @@
-import { ExecuteCommandParams } from 'vscode-languageserver';
-import { jsMode } from '../mode';
-import { pathToUri } from '../modes/aventusJs/utils';
+import { ExecuteCommandParams } from "vscode-languageserver/node";
+import { ProjectManager } from '../project/ProjectManager';
+import { pathToUri } from "../tools";
+
 
 export class BuildProject {
 	static cmd: string = "aventus.compile";
@@ -8,7 +9,7 @@ export class BuildProject {
 		if (params.arguments && params.arguments[0]) {
 			let uri: string = pathToUri(params.arguments[0].detail);
 			let name: string = params.arguments[0].label;
-			jsMode.programManager.getProgram(uri, false).build(name);
+			ProjectManager.getInstance().getProjectByUri(uri)?.getBuild(name)?.build();
 		}
 	}
 }

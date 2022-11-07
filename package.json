@@ -1,8 +1,8 @@
 {
 	"name": "aventus",
 	"displayName": "Aventus",
-	"description": "This extension allow compilation of Avenuts Framework",
-	"version": "0.0.1",
+	"description": "This extension allow compilation of Aventus Framework",
+	"version": "1.0.0-alpha.0",
 	"license": "MIT",
 	"author": {
 		"name": "Cobwebsite",
@@ -23,7 +23,7 @@
 	"activationEvents": [
 		"*"
 	],
-	"main": "./client/out/extension",
+	"main": "./client/out/index",
 	"contributes": {
 		"languages": [
 			{
@@ -160,14 +160,6 @@
 				"title": "Aventus : Restart"
 			},
 			{
-				"command": "aventus.preview",
-				"title": "Aventus : Show Preview",
-				"icon": {
-					"dark": "./icons/eye-white.svg",
-					"light": "./icons/eye.svg"
-				}
-			},
-			{
 				"command": "aventus.compile",
 				"title": "Aventus : Compile"
 			},
@@ -199,13 +191,6 @@
 				{
 					"when": "resourceFilename =~ /^.*\\.(wcl|wcs|wcv).avt/",
 					"command": "aventus.component.merge",
-					"group": "navigation@-50"
-				}
-			],
-			"editor/title": [
-				{
-					"when": "resourceFilename =~ /^.*\\.wcl.avt/",
-					"command": "aventus.preview",
 					"group": "navigation@-50"
 				}
 			]
@@ -250,13 +235,13 @@
 		"postcss-scss": "^4.0.5",
 		"postcss-sorting": "^7.0.1",
 		"sass": "^1.53.0",
-		"typescript": "^4.8.2",
+		"typescript": "^4.8.4",
 		"uglify-js": "^3.17.1",
 		"vscode-css-languageservice": "^6.0.1",
 		"vscode-html-languageservice": "^5.0.0",
 		"vscode-json-languageservice": "^5.0.0",
 		"vscode-languageclient": "^6.1.3",
 		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-textdocument": "^1.0.5"
+		"vscode-languageserver-textdocument": "^1.0.7"
 	}
 }

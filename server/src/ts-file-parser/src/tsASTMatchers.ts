@@ -212,6 +212,7 @@ export module Matching {
             if (r) {
                 return r;
             }
+            return undefined;
         });
         return r;
     }
