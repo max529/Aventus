@@ -68,7 +68,7 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
     public getPrimaryKey(): string {
         return 'id';
     }
-    private getSocket(): Socket {
+    protected getSocket(): Socket {
         return Socket.getInstance(this._getSocketName());
     }
     protected _getSocketName(): string | undefined {

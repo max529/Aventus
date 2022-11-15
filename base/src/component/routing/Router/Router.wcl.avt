@@ -79,7 +79,7 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
                         await ResourceLoader.loadInHead(options.scriptUrl);
                     }
 
-                    let constructor = options.render.bind(window[namespace])();
+                    let constructor = options.render();//.bind(window[namespace])();
                     element = new constructor;
                     this.contentEl.appendChild(element);
                 }

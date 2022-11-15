@@ -1,9 +1,11 @@
-import { FilesManager } from '../../server/src/FilesManager';
-import { ProjectManager } from '../../server/src/project/ProjectManager';
-import { pathToUri } from '../../server/src/tools';
 
 process.env["AVENTUS_CLI"] = "true";
-process.env["aventus_server_folder"] = __dirname+"/../..";
+process.env["DEBUG"] = "true";
+process.env["aventus_server_folder"] = __dirname + "/../..";
+
+import { startServer, stopServer } from '../../server/src/server';
+import { pathToUri } from '../../server/src/tools';
+
 
 
 async function main() {
@@ -13,12 +15,20 @@ async function main() {
 	}
 	else {
 		projectToCompile = __dirname;
-		projectToCompile = 'D:\\404\\5_Prog_SVN\\2_Services\\Access\\Release\\currentRelease\\Export\\typescript'
+		projectToCompile = 'D:\\404\\5_Prog_SVN\\2_Services\\Project\\Release\\currentRelease\\Export\\typescript'
 	}
 	projectToCompile = projectToCompile.replace(/\\/g, "/")
-	ProjectManager.getInstance();
-    await FilesManager.getInstance().loadAllAventusFiles([pathToUri(projectToCompile)]);
+	await startServer([pathToUri(projectToCompile)]);
 
-	FilesManager.getInstance().onShutdown();
+	//await delay(1000 * 60);
+	stopServer();
+
 }
 main();
+
+
+async function delay(x: number) {
+	return new Promise<void>((resolve) => {
+		setTimeout(() => resolve(), x)
+	})
+}

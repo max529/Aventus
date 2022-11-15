@@ -1,5 +1,6 @@
 var AventusTest;(function (AventusTest) {
- var namespace = 'AventusTest';class AvSelect extends Aventus.AvFormElement {
+ var namespace = 'AventusTest';
+class AvSelect extends Aventus.AvFormElement {
     static get observedAttributes() {return ["label"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'label'() {
                     return this.getAttribute('label');
@@ -36,7 +37,7 @@ var AventusTest;(function (AventusTest) {
             }
     __getStyle() {
         let arrStyle = super.__getStyle();
-        arrStyle.push(``);
+        arrStyle.push(`:host{position:relative;margin-top:18px;display:inline-block}:host label{font-family:"Nunito",sans-serif;-webkit-font-smoothing:antialiased;font-weight:400;color:#757575;transform:translate(0, -75%) scale(0.75);position:absolute;left:0;top:2px;font-size:16px;font-weight:400;pointer-events:none;transform-origin:0;transition:transform .1s ease-in,color .1s ease-in,-webkit-transform .1s ease-in}:host .selected{position:relative;display:inline-block;color:#212121;min-width:100px;letter-spacing:0;box-shadow:none;background-size:100% 2px;background-repeat:no-repeat;background-position:center bottom;background-color:rgba(0,0,0,0);background-image:linear-gradient(to top, transparent 1px, #afafaf 1px);font-size:12px;font-weight:400;border:none;padding-bottom:2px;border-radius:0;height:24px;padding-right:24px;line-height:24px;vertical-align:middle;transform:translate3d(0, 0, 0);-webkit-transform:translate3d(0, 0, 0);user-select:none;-moz-user-select:none;width:100%;box-sizing:border-box}:host .selected svg{position:absolute;right:0;top:0;bottom:0;margin:auto 0;z-index:0;fill:rgba(0,0,0,.87)}:host av-hideable .container{position:absolute;border-radius:5px;background-color:#fff;max-width:400px;z-index:5;box-shadow:0 2px 2px 0 rgba(0,0,0,.14),0 1px 5px 0 rgba(0,0,0,.12),0 3px 1px -2px rgba(0,0,0,.2)}`);
         return arrStyle;
     }
     __getHtml() {
@@ -109,6 +110,7 @@ var AventusTest;(function (AventusTest) {
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
      getDefaultValue(){return "";} selectValueText(){for (var i = 0; i < this.children.length; i++) {    if (this.children[i] instanceof AvOption) {        let optionEl = this.children[i];        if (this.value == optionEl.value) {            this.value_display = this.children[i].innerHTML;            return;        }    }}this.value_display = '';} openOptions(){this.options.innerHTML = '';var list = this.children;for (var i = 0; i < list.length; i++) {    if (list[i] instanceof AvOption) {        let optionEl = list[i];        if (optionEl.value == this.value) {            optionEl.selected = true;        }        else {            optionEl.selected = false;        }        var clone = optionEl.cloneNode(true);        clone.addEventListener('click', (e) => {            this.selectOption(e.currentTarget);        });        this.options.appendChild(clone);    }}this.hider.show();var offset = this.baseEl.getPositionOnScreen();this.options.style.left = offset.x + 'px';this.options.style.top = offset.y + this.baseEl.offsetHeight + 2 + 'px';this.options.style.minWidth = this.offsetWidth + 'px';} selectOption(opt){this.value = opt.value;this.value_display = opt.innerHTML;this.onValueChanged();this.hider.hide({    force: true});} postCreation(){let valueAttr = this.getAttribute("value");if (valueAttr) {    this.value = valueAttr;    this.removeAttribute("value");}var list = this.children;for (var i = 0; i < list.length; i++) {    if (!(list[i] instanceof AvOption)) {        list[i].remove();        i--;    }    else {        let optionEl = list[i];        if (optionEl.selected) {            this.value = optionEl.value;        }    }}this.addEventListener('click', () => {    this.openOptions();});let form = this.findParentByTag("av-form");if (form) {    form.subscribe(this);}setTimeout(() => {    this.selectValueText();});}}
 window.customElements.define('av-select', AvSelect);
+
 class AvOption extends Aventus.WebComponent {
     get 'value'() {
                     return this.getAttribute('value');
