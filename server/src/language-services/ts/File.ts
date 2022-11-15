@@ -31,7 +31,7 @@ export abstract class AventusTsFile extends AventusBaseFile {
     }
     
 
-    protected override onDelete() {
+    protected override async onDelete() {
         if (this.mustBeAddedToLanguageService()) {
             this.tsLanguageService.removeFile(this);
         }

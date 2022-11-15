@@ -81,16 +81,16 @@ export class AventusDefinitionFile extends AventusTsFile {
                 htmlDef
             };
         }
-       
+
     }
 
     protected async onContentChange(): Promise<Diagnostic[]> {
         return [];
     }
-    protected onSave() {
+    protected async onSave() {
 
     }
-    protected override onDelete(): void {
+    protected override async onDelete(): Promise<void> {
         super.onDelete();
         if (this.file.path.replace(AventusExtension.Definition, ".js") != this.build.getOutputPath()) {
             this.tsLanguageService.removeFile(this);
@@ -165,9 +165,9 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     protected async onContentChange(): Promise<Diagnostic[]> {
         return [];
     }
-    protected onSave() {
+    protected async onSave() {
     }
-    protected onDelete(): void {
+    protected async onDelete(): Promise<void> {
         super.onDelete();
         delete this.build.tsDefFiles[this.file.uri];
         this.build.rebuildDefinitionWebComponent();
@@ -203,9 +203,9 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
     protected async onContentChange(): Promise<Diagnostic[]> {
         return [];
     }
-    protected onSave() {
+    protected async onSave() {
     }
-    protected onDelete() {
+    protected async onDelete() {
         this.build.scssLanguageService.removeDefinition(this);
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
@@ -232,9 +232,9 @@ export class AventusDefinitionHTMLFile extends AventusBaseFile {
     protected async onContentChange(): Promise<Diagnostic[]> {
         return [];
     }
-    protected onSave() {
+    protected async onSave() {
     }
-    protected onDelete() {
+    protected async onDelete() {
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
         return { isIncomplete: false, items: [] };

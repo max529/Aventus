@@ -15,7 +15,7 @@ export class AventusStaticFile extends AventusTsFile {
     protected async onContentChange(): Promise<Diagnostic[]> {
         return [];
     }
-    protected onSave() {
+    protected async onSave() {
         let result: TsCompileResult = {
             nameCompiled: [],
             nameDoc: [],

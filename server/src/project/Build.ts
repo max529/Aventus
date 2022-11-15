@@ -46,6 +46,7 @@ export class Build {
     }
 
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
+        console.log("creating build "+buildConfig.name);
         this.project = project;
         this.buildConfig = buildConfig;
         this.onNewFileUUID = FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
@@ -79,7 +80,9 @@ export class Build {
             // insert aventus as first
             buildConfig.include.splice(0, 0, includeBase);
         }
-        this.loadFiles();
+    }
+    public async init(){
+        await this.loadFiles();
     }
 
     public getOutputPath() {
@@ -129,16 +132,24 @@ export class Build {
         this.build();
     }
     public build() {
-        if (this.timerBuild) {
-            clearTimeout(this.timerBuild);
-        }
-        this.timerBuild = setTimeout(() => {
+        if (ClientConnection.getInstance().isCLI()) {
             this._build();
-        }, 300)
+        }
+        else {
+            if (this.timerBuild) {
+                clearTimeout(this.timerBuild);
+            }
+            this.timerBuild = setTimeout(() => {
+                this._build();
+            }, 300)
+        }
     }
     private _build() {
         if (!this.allowBuild) {
             return
+        }
+        if (ClientConnection.getInstance().isDebug()) {
+            console.log("building "+this.buildConfig.name);
         }
         let compiledCode: string[] = [];
         let compiledCodeDoc: string[] = [];
@@ -182,7 +193,7 @@ export class Build {
         let finalTxt = '';
         finalTxt += this.buildLoadInclude().join(EOL) + EOL;
         let namespace = this.buildConfig.namespace;
-        finalTxt += "var " + namespace + ";(function (" + namespace + ") {\r\n var namespace = '" + namespace + "';"
+        finalTxt += "var " + namespace + ";(function (" + namespace + ") {\r\n var namespace = '" + namespace + "';\r\n"
 
         finalTxt += compiledCode.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;
@@ -296,7 +307,7 @@ export class Build {
      * Trigger when a new file is detected
      * @param file 
      */
-    private onNewFile(file: AventusFile) {
+    private async onNewFile(file: AventusFile) {
         if (this.buildConfig.inputPathRegex) {
             if (file.path.match(this.buildConfig.inputPathRegex)) {
                 this.registerFile(file);
@@ -313,7 +324,7 @@ export class Build {
     /**
      * Load all aventus file needed for this build
      */
-    private loadFiles() {
+    private async loadFiles() {
         this.allowBuild = false;
         if (this.buildConfig.inputPathRegex) {
             let files: AventusFile[] = FilesManager.getInstance().getFilesMatching(this.buildConfig.inputPathRegex);
@@ -335,9 +346,11 @@ export class Build {
             }
             this.registerDef(pathToImport);
         }
-
+        if(ClientConnection.getInstance().isDebug()){
+            console.log("loaded all files needed");
+        }
         this.allowBuild = true;
-        this.rebuildAll();
+        await this.rebuildAll();
     }
     /**
      * Register one file inside this build
@@ -376,7 +389,7 @@ export class Build {
     public registerOnFileDelete(file: AventusFile) {
         this.onFileDeleteUUIDs[file.uri] = file.onDelete(this.onFileDelete.bind(this));
     }
-    public onFileDelete(file: AventusFile) {
+    public async onFileDelete(file: AventusFile) {
         file.removeOnDelete(this.onFileDeleteUUIDs[file.uri]);
         // be sure to remove element
         if (file.uri.endsWith(AventusExtension.ComponentStyle)) {
@@ -392,7 +405,7 @@ export class Build {
             delete this.tsFiles[file.uri];
         }
 
-        this.rebuildAll();
+        await this.rebuildAll();
     }
 
     private registerDef(pathToImport: string) {

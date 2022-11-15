@@ -17,10 +17,10 @@ export class AventusHTMLFile extends AventusBaseFile {
         this.compile();
         return diagnostics;
     }
-    protected onSave() {
+    protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic))
         if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
-            (jsFile as InternalAventusFile).triggerSave(jsFile.document);
+            await (jsFile as InternalAventusFile).triggerSave(jsFile.document);
         }
     }
     private compile() {
@@ -40,7 +40,7 @@ export class AventusHTMLFile extends AventusBaseFile {
             console.error(e);
         }
     }
-    protected onDelete() {
+    protected async onDelete() {
 
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {

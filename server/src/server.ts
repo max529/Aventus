@@ -3,7 +3,7 @@ import { CodeActionKind, InitializedParams, InitializeParams, TextDocuments, Tex
 import { Commands } from "./cmds";
 import { ClientConnection } from './Connection';
 import { AventusExtension } from "./definition";
-import { FilesManager } from './FilesManager';
+import { FilesManager, FilesWatcher } from './FilesManager';
 import { ProjectManager } from './project/ProjectManager';
 
 // all documents loaded
@@ -55,11 +55,10 @@ ClientConnection.getInstance().connection?.onInitialize((_params: InitializePara
     };
 })
 ClientConnection.getInstance().connection?.onInitialized((_params: InitializedParams) => {
-    ProjectManager.getInstance();
-    FilesManager.getInstance().loadAllAventusFiles(workspaces);
+    startServer(workspaces);
 })
 ClientConnection.getInstance().connection?.onShutdown(() => {
-    FilesManager.getInstance().onShutdown();
+    stopServer();
 });
 
 ClientConnection.getInstance().connection?.onCompletion(async (textDocumentPosition, token) => {
@@ -132,4 +131,18 @@ function isAllowed(document: TextDocument) {
         return true;
     }
     return false;
+}
+
+
+export async function startServer(workspaces: string[]) {
+    ProjectManager.getInstance();
+    await FilesManager.getInstance().loadAllAventusFiles(workspaces);
+    if (ClientConnection.getInstance().isDebug()) {
+        console.log("start server done");
+    }
+}
+export async function stopServer() {
+    await FilesWatcher.getInstance().destroy();
+    ProjectManager.getInstance().destroyAll();
+    await FilesManager.getInstance().onShutdown();
 }

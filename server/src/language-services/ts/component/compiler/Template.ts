@@ -61,6 +61,6 @@ export function AventusWebcomponentTemplate (){
 
     $methods$
 }
-
-window.customElements.define('$balisename$', $classname$);`
+$definition$
+`
 }

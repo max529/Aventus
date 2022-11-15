@@ -68,7 +68,7 @@ export class AventusDataFile extends AventusTsFile {
         }
         return this.diagnostics;
     }
-    protected onSave() {
+    protected async onSave() {
         if (this.diagnostics.length == 0) {
             this.setCompileResult(genericTsCompile(this.file));
         }

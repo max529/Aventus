@@ -53,7 +53,7 @@ export class Create {
 		if (!project) {
 			let configPath = uriToPath(configUri);
 			let nameFile: string = name.replace(/ /g, "-");
-			let baseFolder = getFolder(configUri);
+			let baseFolder = uriToPath(getFolder(configUri));
 			mkdirSync(baseFolder + "/dist");
 			mkdirSync(baseFolder + "/src");
 			mkdirSync(baseFolder + "/src/components");

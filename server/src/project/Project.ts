@@ -21,7 +21,7 @@ export class Project {
     public getConfigFile() {
         return this.configFile;
     }
-    public getOutputFiles(){
+    public getOutputFiles() {
         return this.outputFiles;
     }
 
@@ -34,7 +34,10 @@ export class Project {
             // it's core project => remove all completions with generic def
             this._isCoreBuild = true;
         }
-        this.onConfigSave();
+
+    }
+    public async init() {
+        await this.onConfigSave();
     }
     /**
      * Validate config and send error
@@ -65,11 +68,13 @@ export class Project {
         this.builds = [];
         this.config = newConfig;
         if (this.config) {
-            for(let build of this.config.build){
+            for (let build of this.config.build) {
                 this.outputFiles.push(build.outputFile);
             }
             for (let build of this.config.build) {
-                this.builds.push(new Build(this, build));
+                let newBuild = new Build(this, build)
+                this.builds.push(newBuild);
+                await newBuild.init()
             }
             if (this.config.static) {
                 for (let _static of this.config.static) {
@@ -108,4 +113,5 @@ export class Project {
             _static.destroy();
         }
     }
+
 }

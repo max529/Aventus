@@ -1,5 +1,5 @@
 import { FSWatcher, watch } from 'chokidar';
-import { randomUUID } from "crypto";
+import { v4 as randomUUID } from 'uuid';
 import { existsSync, lstatSync, readdirSync, readFileSync } from "fs";
 import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -20,10 +20,10 @@ export interface AventusFile {
     onContentChange(cb: onContentChangeType): string;
     removeOnContentChange(uuid: string): void;
 
-    onSave(cb: (file: AventusFile) => void): string;
+    onSave(cb: (file: AventusFile) => Promise<void>): string;
     removeOnSave(uuid: string): void;
 
-    onDelete(cb: (file: AventusFile) => void): string;
+    onDelete(cb: (file: AventusFile) => Promise<void>): string;
     removeOnDelete(uuid: string): void;
 
     onCompletion(cb: onCompletionType): string;
@@ -66,13 +66,13 @@ export class FilesManager {
              * Loop between all workspaces to find all aventus files
              * @param workspacePath 
              */
-            let readWorkspace = (workspacePath) => {
+            let readWorkspace = async (workspacePath) => {
                 let folderContent = readdirSync(workspacePath);
                 for (let i = 0; i < folderContent.length; i++) {
                     let currentPath = workspacePath + '/' + folderContent[i];
                     if (lstatSync(currentPath).isDirectory()) {
                         if (folderContent[i] != "node_modules") {
-                            readWorkspace(currentPath);
+                            await readWorkspace(currentPath);
                         }
                     } else {
                         if (folderContent[i] == AventusExtension.Config) {
@@ -80,62 +80,56 @@ export class FilesManager {
                         }
                         else if (folderContent[i].endsWith(AventusExtension.Base)) {
                             let textDoc = TextDocument.create(pathToUri(currentPath), AventusLanguageId.HTML, 0, readFileSync(currentPath, 'utf8'));
-                            this.registerFile(textDoc);
+                            await this.registerFile(textDoc);
                         }
                     }
                 }
             }
-            readWorkspace(workspacePath);
+            await readWorkspace(workspacePath);
         }
         for (let configFile of configFiles) {
-            this.registerFile(configFile);
+            await this.registerFile(configFile);
         }
 
     }
-    public onShutdown() {
+    public async onShutdown() {
         for (let fileUri in this.files) {
-            this.files[fileUri].triggerDelete();
+            await this.files[fileUri].triggerDelete();
             delete this.files[fileUri];
         }
     }
 
-    public registerFile(document: TextDocument) {
+    public async registerFile(document: TextDocument): Promise<void> {
+        if (ClientConnection.getInstance().isDebug()) {
+            console.log("registering " + document.uri);
+        }
         if (!this.files[document.uri]) {
-            this.files[document.uri] = new InternalAventusFile(document);
-            for (let uuid in this.onNewFileCb) {
-                this.onNewFileCb[uuid](this.files[document.uri]);
-            }
+            await this.triggerOnNewFile(document);
         }
         else {
             this.files[document.uri].triggerContentChange(document);
         }
     }
-    public onContentChange(document: TextDocument) {
+    public async onContentChange(document: TextDocument) {
         if (!this.files[document.uri]) {
-            this.files[document.uri] = new InternalAventusFile(document);
-            for (let uuid in this.onNewFileCb) {
-                this.onNewFileCb[uuid](this.files[document.uri]);
-            }
+            this.triggerOnNewFile(document);
         }
         else {
             this.files[document.uri].triggerContentChange(document);
         }
     }
-    public onSave(document: TextDocument) {
+    public async onSave(document: TextDocument) {
         if (!this.files[document.uri]) {
-            this.files[document.uri] = new InternalAventusFile(document);
-            for (let uuid in this.onNewFileCb) {
-                this.onNewFileCb[uuid](this.files[document.uri]);
-            }
+            this.triggerOnNewFile(document);
         }
         else {
             this.files[document.uri].triggerSave(document);
         }
     }
-    public onClose(document: TextDocument) {
+    public async onClose(document: TextDocument) {
         if (!existsSync(uriToPath(document.uri))) {
             if (this.files[document.uri]) {
-                this.files[document.uri].triggerDelete();
+                await this.files[document.uri].triggerDelete();
                 delete this.files[document.uri];
             }
         }
@@ -181,8 +175,19 @@ export class FilesManager {
     }
 
     //#region event new file
-    private onNewFileCb: { [uuid: string]: (document: AventusFile) => void } = {};
-    public onNewFile(cb: (document: AventusFile) => void): string {
+    private onNewFileCb: { [uuid: string]: (document: AventusFile) => Promise<void> } = {};
+    public async triggerOnNewFile(document: TextDocument): Promise<void> {
+        if (ClientConnection.getInstance().isDebug()) {
+            console.log("triggerOnNewFile " + document.uri);
+        }
+        this.files[document.uri] = new InternalAventusFile(document);
+        let proms: Promise<void>[] = [];
+        for (let uuid in this.onNewFileCb) {
+            proms.push(this.onNewFileCb[uuid](this.files[document.uri]));
+        }
+        await Promise.all(proms);
+    }
+    public onNewFile(cb: (document: AventusFile) => Promise<void>): string {
         let uuid = randomUUID();
         while (this.onNewFileCb[uuid] != undefined) {
             uuid = randomUUID();
@@ -214,7 +219,7 @@ export class FilesManager {
 }
 
 export class FilesWatcher {
-    private static instance: FilesWatcher;
+    private static instance: FilesWatcher | undefined;
     public static getInstance(): FilesWatcher {
         if (!this.instance) {
             this.instance = new FilesWatcher();
@@ -269,12 +274,16 @@ export class FilesWatcher {
             this.files[uri].triggerContentChange(document);
         }
     }
-    public onRemove(path: string) {
+    public async onRemove(path: string) {
         let uri = pathToUri(path);
         if (this.files[uri]) {
-            this.files[uri].triggerDelete();
+            await this.files[uri].triggerDelete();
             delete this.files[uri];
         }
+    }
+    public async destroy() {
+        await this.watcher.close();
+        FilesWatcher.instance = undefined;
     }
     //#region event new file
     private onNewFileCb: { [uuid: string]: (document: AventusFile) => void } = {};
@@ -392,16 +401,16 @@ export class InternalAventusFile implements AventusFile {
 
     //#region save
 
-    private onSaveCb: { [uuid: string]: (document: AventusFile) => void } = {};
+    private onSaveCb: { [uuid: string]: (document: AventusFile) => Promise<void> } = {};
 
-    public triggerSave(document: TextDocument) {
+    public async triggerSave(document: TextDocument): Promise<void> {
         this.document = document;
         for (let uuid in this.onSaveCb) {
             this.onSaveCb[uuid](this);
         }
     }
 
-    public onSave(cb: (file: AventusFile) => void): string {
+    public onSave(cb: (file: AventusFile) => Promise<void>): string {
         let uuid = randomUUID();
         while (this.onSaveCb[uuid] != undefined) {
             uuid = randomUUID();
@@ -417,12 +426,14 @@ export class InternalAventusFile implements AventusFile {
 
     //#region delete
 
-    private onDeleteCb: { [uuid: string]: (document: AventusFile) => void } = {};
+    private onDeleteCb: { [uuid: string]: (document: AventusFile) => Promise<void> } = {};
 
-    public triggerDelete() {
+    public async triggerDelete(): Promise<void> {
+        let proms: Promise<void>[] = [];
         for (let uuid in this.onDeleteCb) {
-            this.onDeleteCb[uuid](this);
+            proms.push(this.onDeleteCb[uuid](this));
         }
+        await Promise.all(proms);
         // delete all cb
         this.removeAllCallbacks();
     }
@@ -438,7 +449,7 @@ export class InternalAventusFile implements AventusFile {
         this.onSaveCb = {};
     }
 
-    public onDelete(cb: (file: AventusFile) => void): string {
+    public onDelete(cb: (file: AventusFile) => Promise<void>): string {
         let uuid = randomUUID();
         while (this.onDeleteCb[uuid] != undefined) {
             uuid = randomUUID();

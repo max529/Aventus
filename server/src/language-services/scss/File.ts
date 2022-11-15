@@ -30,7 +30,7 @@ export class AventusSCSSFile extends AventusBaseFile {
         this.compileRoot();
         return this.diagnostics;
     }
-    protected onSave() {
+    protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic))
         if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
             (jsFile as InternalAventusFile).triggerContentChange(jsFile.document);
@@ -97,14 +97,14 @@ export class AventusSCSSFile extends AventusBaseFile {
             console.error(e);
         }
     }
-    protected onDelete() {
+    protected async onDelete() {
         for (let dependanceUri in this.dependances) {
             this.removeDependance(dependanceUri);
         }
         for (let usedByUri in this.usedBy) {
             delete this.usedBy[usedByUri].dependances[this.file.uri];
             delete this.usedBy[usedByUri];
-            this.usedBy[usedByUri].onContentChange();
+            await this.usedBy[usedByUri].onContentChange();
         }
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {

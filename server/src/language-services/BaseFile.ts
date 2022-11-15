@@ -64,10 +64,10 @@ export abstract class AventusBaseFile {
         }
     }
     protected abstract onContentChange(): Promise<Diagnostic[]>;
-    protected abstract onSave(): void;
-    protected abstract onDelete(): void;
-    private _onDelete() {
-        this.onDelete();
+    protected abstract onSave(): Promise<void>;
+    protected abstract onDelete(): Promise<void>;
+    private async _onDelete(): Promise<void> {
+        await this.onDelete();
         this.removeEvents();
     }
 

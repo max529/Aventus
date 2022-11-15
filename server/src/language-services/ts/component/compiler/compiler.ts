@@ -189,13 +189,15 @@ export class AventusWebcomponentCompiler {
         }
         this.getClassName(classInfo);
 
-        this.htmlDoc = {
-            [this.tagName]: {
-                name: this.tagName,
-                description: classInfo.documentation.join(EOL),
-                attributes: {}
-            }
-        };
+        if (!classInfo.isAbstract) {
+            this.htmlDoc = {
+                [this.tagName]: {
+                    name: this.tagName,
+                    description: classInfo.documentation.join(EOL),
+                    attributes: {}
+                }
+            };
+        }
 
         return classInfo;
     }
@@ -569,8 +571,13 @@ export class AventusWebcomponentCompiler {
     }
     private writeFileName() {
         this.writeFileReplaceVar("classname", this.className)
-        this.writeFileReplaceVar("balisename", this.tagName);
         this.writeFileReplaceVar("parentClass", this.parentClassName);
+        if (this.classInfo?.isAbstract) {
+            this.writeFileReplaceVar("definition", "")
+        }
+        else {
+            this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");")
+        }
     }
     private writeFileTemplateHtml() {
         let body = this.jQuery('body').html()?.replace('&#xFEFF;', '');
@@ -728,10 +735,10 @@ export class AventusWebcomponentCompiler {
 
             if (field.inParent) {
                 removeVarNameToCheck(field);
-                if (this.variablesIdInView.hasOwnProperty(field.name)) {
-                    // allow override value
-                    simpleVariables.push(field);
-                }
+                // if (this.variablesIdInView.hasOwnProperty(field.name)) {
+                //     // allow override value
+                //     simpleVariables.push(field);
+                // }
                 continue;
             }
             if (field.propType == "State") {

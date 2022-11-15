@@ -25,7 +25,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.htmlDoc);
         return this.compilationResult.diagnostics;
     }
-    protected onSave() {
+    protected async onSave() {
         if (!this.compilationResult) {
             this.onContentChange();
         }
@@ -49,8 +49,8 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             unlinkSync(this.file.folderPath + '/compiled.js')
         }
     }
-    protected onDelete(): void {
-        super.onDelete();
+    protected async onDelete(): Promise<void> {
+        await super.onDelete();
         this.build.scssLanguageService.removeInternalDefinition(this.file.uri);
         this.build.htmlLanguageService.removeInternalDefinition(this.file.uri);
 
@@ -167,7 +167,7 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
 
         return diagnostics;
     }
-    protected onSave() {
+    protected async onSave() {
         this.build.disableBuild();
         (this.style.file as InternalAventusFile).triggerSave(this.style.file.document);
         (this.view.file as InternalAventusFile).triggerSave(this.view.file.document);
@@ -387,8 +387,8 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
         return [];
     }
 
-    protected onDelete(): void {
-        super.onDelete();
+    protected async onDelete(): Promise<void> {
+        await super.onDelete();
         delete this.build.tsFiles[this.file.uri];
     }
 

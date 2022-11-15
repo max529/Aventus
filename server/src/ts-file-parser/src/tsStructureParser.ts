@@ -451,6 +451,7 @@ function buildField(f: ts.PropertyDeclaration, path: string, module: Module): Fi
                 ts.SyntaxKind.ReadonlyKeyword,
                 ts.SyntaxKind.ConstKeyword,
                 ts.SyntaxKind.OverrideKeyword,
+                ts.SyntaxKind.AbstractKeyword,
                 ts.SyntaxKind.PublicKeyword,
                 ts.SyntaxKind.Decorator
             ]

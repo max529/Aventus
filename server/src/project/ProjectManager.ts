@@ -14,10 +14,11 @@ export class ProjectManager {
     private constructor() {
         FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
     }
-    private onNewFile(file: AventusFile) {
+    private async onNewFile(file: AventusFile) {
         if (file.document.uri.endsWith(AventusExtension.Config)) {
             if (!this.projects[file.document.uri]) {
                 this.projects[file.document.uri] = new Project(file);
+                await this.projects[file.document.uri].init()
                 file.onDelete(this.onDeleteFile.bind(this));
             }
             else {
@@ -25,7 +26,7 @@ export class ProjectManager {
             }
         }
     }
-    private onDeleteFile(file: AventusFile) {
+    private async onDeleteFile(file: AventusFile) {
         if (this.projects[file.document.uri]) {
             this.projects[file.document.uri].destroy();
             delete this.projects[file.document.uri];
@@ -34,6 +35,12 @@ export class ProjectManager {
 
     public getProjectByUri(uri: string): Project | undefined {
         return this.projects[uri];
+    }
+
+    public destroyAll(){
+        for(let projectUri in this.projects){
+            this.projects[projectUri].destroy()
+        }
     }
 }
 
