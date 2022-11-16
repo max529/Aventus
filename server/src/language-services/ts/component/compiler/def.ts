@@ -8,8 +8,8 @@ export interface CompileComponentResult {
 	diagnostics: Diagnostic[],
 	writeCompiled: Boolean,
 	result: {
-		nameCompiled: string,
-		nameDoc: string,
+		nameCompiled: string[],
+		nameDoc: string[],
 		src: string,
 		doc: string,
 		dependances: string[],

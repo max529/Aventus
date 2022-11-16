@@ -5,7 +5,6 @@ import { AventusExtension, AventusLanguageId } from "../../../definition";
 import { AventusFile, InternalAventusFile } from "../../../FilesManager";
 import { Build } from "../../../project/Build";
 import { ClassModel } from "../../../ts-file-parser";
-import { parseDocument } from "../../../ts-file-parser/src/tsStructureParser";
 import { AventusBaseFile } from "../../BaseFile";
 import { AventusTsFile } from "../File";
 
@@ -130,6 +129,7 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     }
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
+        this.refreshFileParsed(false);
         this.loadDefinitionInsideBuild();
         this.build.tsDefFiles[this.file.uri] = this;
         this.build.rebuildDefinitionWebComponent();
@@ -137,7 +137,7 @@ export class AventusDefinitionTsFile extends AventusTsFile {
 
     private loadDefinitionInsideBuild() {
         try {
-            let structJs = parseDocument(this.file.document);
+            let structJs = this.fileParsed;
             structJs.classes.forEach(classInfo => {
                 // Check if classInfo implements DefaultComponent
                 let foundDefaultComponent = false;

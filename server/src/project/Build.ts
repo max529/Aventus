@@ -46,7 +46,7 @@ export class Build {
     }
 
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
-        console.log("creating build "+buildConfig.name);
+        console.log("creating build " + buildConfig.name);
         this.project = project;
         this.buildConfig = buildConfig;
         this.onNewFileUUID = FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
@@ -81,7 +81,7 @@ export class Build {
             buildConfig.include.splice(0, 0, includeBase);
         }
     }
-    public async init(){
+    public async init() {
         await this.loadFiles();
     }
 
@@ -149,7 +149,7 @@ export class Build {
             return
         }
         if (ClientConnection.getInstance().isDebug()) {
-            console.log("building "+this.buildConfig.name);
+            console.log("building " + this.buildConfig.name);
         }
         let compiledCode: string[] = [];
         let compiledCodeDoc: string[] = [];
@@ -197,12 +197,27 @@ export class Build {
 
         finalTxt += compiledCode.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;
-
+        let subNamespace: string[] = [];
         if (this.buildConfig.namespace) {
             let namespace = this.buildConfig.namespace;
             for (let className of classesName) {
                 if (className != "") {
-                    finalTxt += namespace + "." + className + "=" + className + ";" + EOL;
+                    let classNameSplitted = className.split(".");
+                    let currentNamespace = "";
+                    for (let i = 0; i < classNameSplitted.length - 1; i++) {
+                        if (currentNamespace.length == 0) {
+                            currentNamespace = classNameSplitted[i]
+                        }
+                        else {
+                            currentNamespace += "." + classNameSplitted[i];
+                        }
+                        if (subNamespace.indexOf(currentNamespace) == -1) {
+                            subNamespace.push(currentNamespace);
+                            finalTxt += namespace + "." + subNamespace + "= {};" + EOL;
+                        }
+                    }
+                    let finalName = classNameSplitted[classNameSplitted.length - 1];
+                    finalTxt += namespace + "." + className + "=" + finalName + ";" + EOL;
                 }
             }
             finalTxt += "})(" + namespace + " || (" + namespace + " = {}));" + EOL;
@@ -346,7 +361,7 @@ export class Build {
             }
             this.registerDef(pathToImport);
         }
-        if(ClientConnection.getInstance().isDebug()){
+        if (ClientConnection.getInstance().isDebug()) {
             console.log("loaded all files needed");
         }
         this.allowBuild = true;

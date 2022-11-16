@@ -2,7 +2,6 @@ import { Position, CompletionList, CompletionItem, Hover, Definition, Range, For
 import { AventusExtension } from "../../../definition";
 import { AventusFile } from "../../../FilesManager";
 import { createErrorTsPos } from "../../../tools";
-import { parseDocument } from "../../../ts-file-parser/src/tsStructureParser";
 import { genericTsCompile } from "../compiler";
 import { AventusTsFile } from "../File";
 
@@ -13,9 +12,10 @@ export class AventusDataFile extends AventusTsFile {
     }
 
     protected async onContentChange(): Promise<Diagnostic[]> {
+        this.refreshFileParsed();
         let document = this.file.document;
         this.diagnostics = this.tsLanguageService.doValidation(this.file);
-        const struct = parseDocument(document);
+        const struct = this.fileParsed;
         for (let enumTemp of struct.enumDeclarations) {
             if (!enumTemp.isExported) {
                 this.diagnostics.push(createErrorTsPos(document, 'Enum must be exported', enumTemp.start, enumTemp.end));
@@ -70,7 +70,7 @@ export class AventusDataFile extends AventusTsFile {
     }
     protected async onSave() {
         if (this.diagnostics.length == 0) {
-            this.setCompileResult(genericTsCompile(this.file));
+            this.setCompileResult(genericTsCompile(this));
         }
         else {
             this.setCompileResult(this.getDefaultCompileResult());
@@ -88,8 +88,9 @@ export class AventusDataFile extends AventusTsFile {
     protected onDefinition(document: AventusFile, position: Position): Promise<Definition | null> {
         return this.tsLanguageService.findDefinition(document, position);
     }
-    protected onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
-        return this.tsLanguageService.format(document, range, options);
+    protected async onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
+        let changes = await this.tsLanguageService.format(document, range, options);
+        return changes;
     }
     protected onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return this.tsLanguageService.doCodeAction(document, range);

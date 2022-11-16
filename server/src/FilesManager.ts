@@ -316,6 +316,7 @@ export class InternalAventusFile implements AventusFile {
 
     public constructor(document: TextDocument) {
         this.document = document;
+        this._version = this.document.version;
     }
 
     get uri() {
@@ -324,9 +325,11 @@ export class InternalAventusFile implements AventusFile {
     get path() {
         return uriToPath(this.document.uri);
     }
+    private _version: number = 0;
     get version() {
-        return this.document.version;
+        return this._version;
     }
+    
     get content() {
         return this.document.getText();
     }
@@ -343,6 +346,7 @@ export class InternalAventusFile implements AventusFile {
     private delayContentChange: NodeJS.Timer | undefined;
     public async manualTriggerContentChange(document: TextDocument): Promise<Diagnostic[]> {
         this.document = document;
+        this._version = this.document.version;
         let diagnostics: Diagnostic[] = [];
         for (let uuid in this.onContentChangeCb) {
             let diagTemp = await this.onContentChangeCb[uuid](this);
@@ -359,6 +363,7 @@ export class InternalAventusFile implements AventusFile {
         }
         this.delayContentChange = setTimeout(async () => {
             this.document = document;
+            this._version = this.document.version;
             let diagnostics: Diagnostic[] = [];
             for (let uuid in this.onContentChangeCb) {
                 let diagTemp = await this.onContentChangeCb[uuid](this);
@@ -373,6 +378,7 @@ export class InternalAventusFile implements AventusFile {
     }
     public async triggerContentChangeNoDelay(document: TextDocument) {
         this.document = document;
+        this._version = this.document.version;
         let diagnostics: Diagnostic[] = [];
         for (let uuid in this.onContentChangeCb) {
             let diagTemp = await this.onContentChangeCb[uuid](this);

@@ -1,4 +1,5 @@
 export interface Module {
+    namespaces: NamespaceDeclaration[],
     variables: { name: string, start: number, end: number }[];
     classes: ClassModel[];
     functions: FunctionDeclaration[];
@@ -7,6 +8,15 @@ export interface Module {
     aliases: AliasNode[];
     enumDeclarations: EnumDeclaration[];
     name: string;
+}
+export interface NamespaceDeclaration {
+    name: string,
+    start: number,
+    end: number,
+    body: {
+        start: number,
+        end: number
+    }
 }
 export interface FunctionDeclarationParams {
     name: string,
@@ -22,6 +32,7 @@ export interface FunctionDeclaration {
     params?: FunctionDeclarationParams[];
     start: number,
     end: number,
+    namespace: NamespaceDeclaration
 }
 
 
@@ -61,6 +72,15 @@ export class EnumDeclaration {
     isExported: boolean = false;
     start: number = 0;
     end: number = 0;
+    namespace: NamespaceDeclaration = {
+        start: 0,
+        end: 0,
+        name: '',
+        body: {
+            start: 0,
+            end: 0,
+        }
+    };
 }
 
 export enum TypeKind {
@@ -174,6 +194,7 @@ export interface ClassModel {
     annotationOverridings: { [key: string]: Annotation[] };
     start: number,
     end: number,
+    namespace: NamespaceDeclaration;
 }
 
 let DefaultClassModel: ClassModel = {
@@ -195,9 +216,19 @@ let DefaultClassModel: ClassModel = {
     moduleName: '',
     annotationOverridings: {},
     start: 0,
-    end: 0
+    end: 0,
+    namespace: {
+        start: 0,
+        end: 0,
+        name: '',
+        body: {
+            start: 0,
+            end: 0,
+        }
+    }
 }
 export { DefaultClassModel }
+
 
 export function classDecl(name: string, isInteface: boolean): ClassModel {
     return {
@@ -219,6 +250,15 @@ export function classDecl(name: string, isInteface: boolean): ClassModel {
         moduleName: '',
         annotationOverridings: {},
         start: 0,
-        end: 0
+        end: 0,
+        namespace: {
+            start: 0,
+            end: 0,
+            name: '',
+            body: {
+                start: 0,
+                end: 0,
+            }
+        }
     };
 }

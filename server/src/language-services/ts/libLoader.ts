@@ -19,6 +19,10 @@ const NODE_MODULES = join(serverFolder, 'node_modules');
 
 export function loadLibrary(name: string): string {
 	let content = contents[name];
+	if(typeof content === 'string'){
+		return content;
+	}
+	
 	let libPath;
 	let showError = true;
 	if (name == "aventus.def" || name == "aventus.def.ts") {
@@ -44,24 +48,6 @@ export function loadLibrary(name: string): string {
 		}
 		else if (libPath.indexOf("/node_modules/@types/typescript__") != -1) {
 			//showError = false;
-		}
-		else if (libPath.endsWith(".ts")) {
-			libPath = libPath.replace(".ts", "");
-			if (!libPath.endsWith(".avt")) {
-				libPath += ".avt";
-			}
-			let doc = FilesManager.getInstance().getByPath(libPath);
-			if(doc){
-				return doc.content;
-			}
-			return "";
-		}
-		else if (libPath.endsWith(".avt")) {
-			let doc = FilesManager.getInstance().getByPath(libPath);
-			if(doc){
-				return doc.content;
-			}
-			return "";
 		}
 		else {
 			showError = false;

@@ -4,7 +4,7 @@ import { AventusExtension } from "../../../../definition";
 import { Build } from "../../../../project/Build";
 import { createErrorTs, createErrorTsPos, pathToUri } from "../../../../tools";
 import { BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType } from "../../../../ts-file-parser";
-import { getAlias, parseDocument } from "../../../../ts-file-parser/src/tsStructureParser";
+import { getAlias } from "../../../../ts-file-parser/src/tsStructureParser";
 import { AventusHTMLFile } from "../../../html/File";
 import { AventusSCSSFile } from "../../../scss/File";
 import { AventusWebComponentLogicalFile } from "../File";
@@ -20,14 +20,15 @@ import { EOL } from "os";
 import { HTMLDoc } from "../../../html/helper/definition";
 import { SCSSDoc } from "../../../scss/helper/CSSNode";
 import { AventusSCSSLanguageService } from "../../../scss/LanguageService";
+import { AventusTsFile } from '../../File';
 
 
 export class AventusWebcomponentCompiler {
     private file: AventusFile;
+    private jsTxt: string = "";
     private scssTxt: string = "";
     private htmlTxt: string = "";
     private template: string;
-    private diagnostics: Diagnostic[] = [];
     private document: TextDocument;
     private build: Build;
     private jsonStructure: Module;
@@ -37,6 +38,8 @@ export class AventusWebcomponentCompiler {
     private tagName: string = "";
     private jQuery: cheerio.CheerioAPI;
     private htmlDoc: HTMLDoc | undefined;
+    private otherContent: string = "";
+    private otherDoc: string = "";
     //#region variable to use for preparation
     private dependances: string[] = [];
     private variablesIdInView: { [name: string]: string } = {};
@@ -55,6 +58,19 @@ export class AventusWebcomponentCompiler {
     private listBoolProperties: string[] = [];
     private propertiesChanged: { [propName: string]: string } = {};
     private foundedWatch: string[] = [];
+    private result: CompileComponentResult = {
+        diagnostics: [],
+        writeCompiled: false,
+        result: {
+            nameCompiled: [],
+            nameDoc: [],
+            src: '',
+            doc: '',
+            dependances: [],
+            htmlDoc: {},
+            scssDoc: {}
+        }
+    }
     //#endregion
 
     public constructor(logicalFile: AventusWebComponentLogicalFile, build: Build) {
@@ -74,58 +90,60 @@ export class AventusWebcomponentCompiler {
         this.scssTxt = scssFile ? scssFile.compileResult : '';
         this.htmlTxt = htmlFile ? htmlFile.compileResult : '';
         this.htmlTxt = this.htmlTxt.replace(/\\\{\{(.*?)\}\}/g, "|!*$1*!|");
-        let jsTxt = this.file.content;
-        this.diagnostics = build.tsLanguageService.doValidation(this.file);
+        this.jsTxt = this.file.content;
+        this.result.diagnostics = build.tsLanguageService.doValidation(this.file);
         this.jQuery = cheerio.load(this.htmlTxt);
 
         this.template = AventusWebcomponentTemplate();
         this.document = logicalFile.file.document;
         this.build = build;
-        this.jsonStructure = parseDocument(this.document);
+        this.jsonStructure = logicalFile.fileParsed;
     }
 
     public compile(): CompileComponentResult {
         let classInfo = this.getClassInfo();
-        let result: CompileComponentResult = {
-            diagnostics: this.diagnostics,
-            writeCompiled: false,
-            result: {
-                nameCompiled: '',
-                nameDoc: '',
-                src: '',
-                doc: '',
-                dependances: [],
-                htmlDoc: {},
-                scssDoc: {}
-            }
-        }
+
         if (classInfo) {
             this.classInfo = classInfo;
             this.loadParent(this.jsonStructure);
             this.prepareViewRecu(this.jQuery._root);
+            this.prepareOtherContent();
             this.writeFile();
-            result.writeCompiled = classInfo.debuggerOption.writeCompiled ? true : false;
-            result.result.nameCompiled = classInfo.name;
-            result.result.nameDoc = classInfo.name;
-            result.result.src = this.template;
-            result.result.doc = this.prepareDocTs();
-            result.result.dependances = this.dependances;
-            result.result.htmlDoc = this.htmlDoc ? this.htmlDoc : {};
-            result.result.scssDoc = this.prepareDocSCSS();
+
+            let finalSrc = this.otherContent;
+            if (finalSrc.length > 0 && !finalSrc.endsWith("\n")) {
+                finalSrc += EOL;
+            }
+            finalSrc += this.template;
+
+            let finalDoc = this.otherDoc;
+            if (finalDoc.length > 0 && !finalDoc.endsWith("\n")) {
+                finalDoc += EOL;
+            }
+            finalDoc += this.prepareDocTs();
+
+            this.result.writeCompiled = classInfo.debuggerOption.writeCompiled ? true : false;
+            this.result.result.nameCompiled.push(classInfo.name);
+            this.result.result.nameDoc.push(classInfo.name);
+            this.result.result.src = finalSrc;
+            this.result.result.doc = finalDoc;
+            this.result.result.dependances = this.dependances;
+            this.result.result.htmlDoc = this.htmlDoc ? this.htmlDoc : {};
+            this.result.result.scssDoc = this.prepareDocSCSS();
         }
-        return result;
+        return this.result;
     }
     //#region load info from files
     private getClassInfo(): CompilerClassInfo | null {
 
         if (this.jsonStructure.functions.length > 0) {
             for (let fct of this.jsonStructure.functions) {
-                this.diagnostics.push(createErrorTsPos(this.document, "You can't declare function outside of your class", fct.start, fct.end))
+                this.result.diagnostics.push(createErrorTsPos(this.document, "You can't declare function outside of your class", fct.start, fct.end))
             }
         }
         if (this.jsonStructure.variables.length > 0) {
             for (let variable of this.jsonStructure.variables) {
-                this.diagnostics.push(createErrorTsPos(this.document, "You can't declare variable outside of your class", variable.start, variable.end))
+                this.result.diagnostics.push(createErrorTsPos(this.document, "You can't declare variable outside of your class", variable.start, variable.end))
             }
         }
         let customClassInfo: CustomClassInfo = {
@@ -135,6 +153,13 @@ export class AventusWebcomponentCompiler {
             ...DefaultClassModel,
             ...customClassInfo
         };
+
+        let nbClasses = 0;
+        for (let i = 0; i < this.jsonStructure.functions.length; i++) {
+            let fct = this.jsonStructure.functions[i];
+            this.result.diagnostics.push(createErrorTsPos(this.document, "You can't write function outside of your class", fct.start, fct.end))
+        }
+
         for (let i = 0; i < this.jsonStructure.classes.length; i++) {
             if (!this.jsonStructure.classes[i].isInterface) {
                 let foundDefaultComponent = false;
@@ -152,17 +177,17 @@ export class AventusWebcomponentCompiler {
                         }
                     }
                     else {
-                        this.diagnostics.push(createErrorTs(this.document, "Only one class is allowed inside a file. Get " + classInfo.name + " and " + this.jsonStructure.classes[i].name));
+                        this.result.diagnostics.push(createErrorTs(this.document, "Only one class is allowed inside a file. Get " + classInfo.name + " and " + this.jsonStructure.classes[i].name));
                     }
                 }
                 else {
-                    this.diagnostics.push(createErrorTs(this.document, "Only class that implements DefaultComponent can be used"));
+                    this.result.diagnostics.push(createErrorTs(this.document, "Only class that implements DefaultComponent can be used"));
                 }
             }
-
         }
+        
         if (classInfo.name == "") {
-            this.diagnostics.push(createErrorTs(this.document, "Can't found a class to compile inside"))
+            this.result.diagnostics.push(createErrorTs(this.document, "Can't found a class to compile inside"))
             return null;
         }
         for (let decorator of classInfo.decorators) {
@@ -236,8 +261,7 @@ export class AventusWebcomponentCompiler {
                             let newUri = pathToUri(newPath);
                             let parentScript = this.build.tsFiles[newUri];
                             if (parentScript) {
-                                let parentStructure = parseDocument(parentScript.file.document);
-                                this.loadParent(parentStructure, false);
+                                this.loadParent(parentScript.fileParsed, false);
                             }
                             return;
                         }
@@ -253,7 +277,7 @@ export class AventusWebcomponentCompiler {
                     }
                     return;
                 }
-                this.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
+                this.result.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
             }
         }
     }
@@ -318,6 +342,56 @@ export class AventusWebcomponentCompiler {
             }
         }
         return result;
+    }
+    private prepareOtherContent() {
+        this.otherContent = "";
+        for (let i = 0; i < this.jsonStructure.classes.length; i++) {
+            if (this.jsonStructure.classes[i].isInterface) {
+                let _interface = this.jsonStructure.classes[i];
+                _interface.extends.forEach(extension => {
+                    if (this.dependances.indexOf(extension.typeName) == -1) {
+                        this.dependances.push(extension.typeName);
+                    }
+                })
+                let classContent = this.removeComments(this.removeDecoratorFromClassContent(_interface));
+                classContent = this.replaceFirstExport(classContent);
+                let result = AventusTsLanguageService.compileTs(classContent, _interface.namespace.name);
+                if (result.compiled.length > 0) {
+                    this.otherContent += result.compiled;
+                    this.result.result.nameCompiled.push(_interface.name);
+                }
+                if (result.doc.length > 0) {
+                    this.otherDoc += result.doc;
+                    this.result.result.nameDoc.push(_interface.name);
+                }
+            }
+        }
+        for (let enm of this.jsonStructure.enumDeclarations) {
+            let enumContent = this.removeComments(this.removeDecoratorFromClassContent(enm));
+            enumContent = this.replaceFirstExport(enumContent);
+            let result = AventusTsLanguageService.compileTs(enumContent, enm.namespace.name);
+            if (result.compiled.length > 0) {
+                this.otherContent += result.compiled;
+                this.result.result.nameCompiled.push(enm.name);
+            }
+            if (result.doc.length > 0) {
+                this.otherDoc += result.doc;
+                this.result.result.nameDoc.push(enm.name);
+            }
+        }
+        for (let alias of this.jsonStructure.aliases) {
+            let aliasContent = this.removeComments(alias.content);
+            aliasContent = this.replaceFirstExport(aliasContent);
+            let result = AventusTsLanguageService.compileTs(aliasContent, '');
+            if (result.compiled.length > 0) {
+                this.otherContent += result.compiled;
+                this.result.result.nameCompiled.push(alias.name);
+            }
+            if (result.doc.length > 0) {
+                this.otherDoc += result.doc;
+                this.result.result.nameDoc.push(alias.name);
+            }
+        }
     }
     //#endregion
 
@@ -486,7 +560,7 @@ export class AventusWebcomponentCompiler {
                 if (key === 'item') {
                     itemFound = true;
                     if (["__itemName", "__template", "__inName"].indexOf(key) != -1) {
-                        this.diagnostics.push(createErrorTs(this.document, "You can't use __template, __itemName or __inName as name for item inside av-for"));
+                        this.result.diagnostics.push(createErrorTs(this.document, "You can't use __template, __itemName or __inName as name for item inside av-for"));
                     }
                     itemName = el.attribs[key];
                 }
@@ -502,7 +576,7 @@ export class AventusWebcomponentCompiler {
                 }
             }
             if (!inFound || !itemFound) {
-                this.diagnostics.push(createErrorTs(this.document, "Your loop must have an attribute item and an attribute in"));
+                this.result.diagnostics.push(createErrorTs(this.document, "Your loop must have an attribute item and an attribute in"));
                 return;
             }
             let idTemp = this.prepareViewGetId(el);
@@ -800,7 +874,7 @@ export class AventusWebcomponentCompiler {
         this.writeFileReplaceVar("listBool", listBoolTxt);
 
         for (let missingVar of varNameToCheck) {
-            this.diagnostics.push(createErrorTs(this.document, "missing variable " + missingVar));
+            this.result.diagnostics.push(createErrorTs(this.document, "missing variable " + missingVar));
         }
 
     }
@@ -809,7 +883,7 @@ export class AventusWebcomponentCompiler {
         let variablesSimple = "";
         for (let field of fields) {
             if (this.variablesIdInView.hasOwnProperty(field.name)) {
-                this.diagnostics.push(createErrorTsPos(this.document, "Please add @ViewElement", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "Please add @ViewElement", field.start, field.end));
                 return;
             }
             let value = "undefined";
@@ -924,7 +998,7 @@ export class AventusWebcomponentCompiler {
             let formattedType = this.getTypeForAttribute(this.document, field);
 
             for (let diag of formattedType.diagnostics) {
-                this.diagnostics.push(diag);
+                this.result.diagnostics.push(diag);
             }
             if (formattedType.diagnostics.length > 0) {
                 return;
@@ -932,7 +1006,7 @@ export class AventusWebcomponentCompiler {
 
 
             if (field.name.toLowerCase() != field.name) {
-                this.diagnostics.push(createErrorTsPos(this.document, "an attribute must be in lower case", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "an attribute must be in lower case", field.start, field.end));
             }
             var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
                 key = key.toLowerCase();
@@ -1078,14 +1152,14 @@ export class AventusWebcomponentCompiler {
             let formattedType = this.getTypeForAttribute(this.document, field);
 
             for (let diag of formattedType.diagnostics) {
-                this.diagnostics.push(diag);
+                this.result.diagnostics.push(diag);
             }
             if (formattedType.diagnostics.length > 0) {
                 return;
             }
 
             if (field.name.toLowerCase() != field.name) {
-                this.diagnostics.push(createErrorTsPos(this.document, "a property must be in lower case", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "a property must be in lower case", field.start, field.end));
             }
             var _createDefaultValue = (key, defaultValueProp: string | undefined) => {
                 key = key.toLowerCase();
@@ -1245,7 +1319,7 @@ export class AventusWebcomponentCompiler {
             let args = watch.args;
             let value = "";
             if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
-                this.diagnostics.push(createErrorTsPos(this.document, "A watchable prop must be initialized", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "A watchable prop must be initialized", field.start, field.end));
             }
             else {
                 // constraint is a function
@@ -1345,7 +1419,7 @@ this.clearWatchHistory = () => {
         let variablesInViewStatic = "";
         for (let field of fields) {
             if (!this.variablesIdInView.hasOwnProperty(field.name)) {
-                this.diagnostics.push(createErrorTsPos(this.document, "Can't find this variable inside the view", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "Can't find this variable inside the view", field.start, field.end));
             }
             else {
                 let id = this.variablesIdInView[field.name];
@@ -1379,7 +1453,7 @@ this.clearWatchHistory = () => {
                         }
                     }
                     else {
-                        this.diagnostics.push(createErrorTsPos(this.document, "You must add the decorator ViewElement", field.start, field.end));
+                        this.result.diagnostics.push(createErrorTsPos(this.document, "You must add the decorator ViewElement", field.start, field.end));
                     }
                 }
             }
@@ -1477,7 +1551,7 @@ this.clearWatchHistory = () => {
                     propertiesChangedTxt += `this.__onChangeFct['${realKey}'].push((path) => {${this.propertiesChanged[key]}})` + EOL;
                 }
                 else {
-                    this.diagnostics.push(createErrorTs(this.document, realKey + ' can\'t be found'));
+                    this.result.diagnostics.push(createErrorTs(this.document, realKey + ' can\'t be found'));
                 }
             }
         }
@@ -1614,7 +1688,7 @@ this.clearWatchHistory = () => {
                     }
                 }
                 if (!found) {
-                    this.diagnostics.push(createErrorTs(this.document, 'variable ' + firstInNamePart + ' inside in of for loop must be watchable'));
+                    this.result.diagnostics.push(createErrorTs(this.document, 'variable ' + firstInNamePart + ' inside in of for loop must be watchable'));
                 }
             }
             loopTxt += `this.__loopTemplate['${key}'] = \`${item.__template}\`;` + EOL;
@@ -1767,8 +1841,8 @@ this.clearWatchHistory = () => {
     //#region prepare doc
     private prepareDocTs() {
         let doc = "";
-        if (this.jsonStructure.classes.length == 1) {
-            let classContent = this.removeComments(this.removeDecoratorFromClassContent(this.jsonStructure.classes[0]));
+        if (this.classInfo) {
+            let classContent = this.removeComments(this.removeDecoratorFromClassContent(this.classInfo));
             classContent = this.replaceFirstExport(classContent);
             doc = AventusTsLanguageService.compileDocTs(classContent);
         }

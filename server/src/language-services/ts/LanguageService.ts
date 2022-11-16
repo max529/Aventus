@@ -2,7 +2,7 @@ import { EOL } from 'os';
 import { normalize, sep } from 'path';
 import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleResolutionKind, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
 import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, DiagnosticSeverity, FormattingOptions, Hover, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
-import { AventusLanguageId } from '../../definition';
+import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../FilesManager';
 import { Build } from '../../project/Build';
 import { convertRange } from '../../tools';
@@ -12,6 +12,7 @@ import { loadLibrary } from './libLoader';
 
 export class AventusTsLanguageService {
     private languageService: LanguageService;
+    private languageServiceNamespace: LanguageService;
     private build: Build;
     private filesNeeded: string[] = ['custom://@types/luxon/index.d.ts'];
     private filesLoaded: { [uri: string]: AventusTsFile } = {}
@@ -19,9 +20,10 @@ export class AventusTsLanguageService {
     public constructor(build: Build) {
         this.build = build;
         this.languageService = createLanguageService(this.createHost());
+        this.languageServiceNamespace = createLanguageService(this.createHostNamespace());
     }
 
-    private createHost(): LanguageServiceHost {
+    private createHostNamespace(): LanguageServiceHost {
         const host: LanguageServiceHost = {
             getCompilationSettings: () => compilerOptions,
             getScriptFileNames: () => {
@@ -34,7 +36,7 @@ export class AventusTsLanguageService {
                 if (this.filesLoaded[fileName]) {
                     return String(this.filesLoaded[fileName].file.version);
                 }
-                return '1'; // default lib an jquery.d.ts are static
+                return '1';
             },
             getScriptSnapshot: (fileName: string) => {
                 let text = '';
@@ -59,6 +61,87 @@ export class AventusTsLanguageService {
                 }
             },
             fileExists: (fileName: string): boolean => {
+                if (fileName.endsWith(AventusExtension.Base + ".ts")) {
+                    fileName = fileName.replace(AventusExtension.Base + ".ts", AventusExtension.Base);
+                }
+                if (this.filesLoaded[fileName]) {
+                    return true;
+                } else {
+                    return !!loadLibrary(fileName);
+                }
+            },
+            directoryExists: (path: string): boolean => {
+                // typescript tries to first find libraries in node_modules/@types and node_modules/@typescript
+                // there's no node_modules in our setup
+                if (path.startsWith('node_modules')) {
+                    return false;
+                }
+                return true;
+            },
+            resolveModuleNames(moduleNames, containingFile, reusedNames, redirectedReference, options, containingSourceFile?) {
+                const resolvedModules: ResolvedModule[] = [];
+                for (const moduleName of moduleNames) {
+                    let result = resolveModuleName(moduleName, containingFile, compilerOptions, this)
+                    if (result.resolvedModule) {
+                        if (result.resolvedModule.resolvedFileName.endsWith(".avt.ts")) {
+                            result.resolvedModule.resolvedFileName = result.resolvedModule.resolvedFileName.replace(".avt.ts", ".avt");
+                        }
+                        resolvedModules.push(result.resolvedModule);
+                    }
+                    else {
+                        let temp: ResolvedModuleFull = {
+                            extension: Extension.Ts,
+                            resolvedFileName: moduleName,
+                        }
+                        resolvedModules.push(temp);
+                    }
+                }
+                return resolvedModules;
+            },
+        };
+        return host;
+    }
+    private createHost(): LanguageServiceHost {
+        const host: LanguageServiceHost = {
+            getCompilationSettings: () => compilerOptions,
+            getScriptFileNames: () => {
+                return this.filesNeeded
+            },
+            getScriptKind: (fileName) => {
+                return ScriptKind.TS;
+            },
+            getScriptVersion: (fileName: string) => {
+                if (this.filesLoaded[fileName]) {
+                    return String(this.filesLoaded[fileName].file.version);
+                }
+                return '1';
+            },
+            getScriptSnapshot: (fileName: string) => {
+                let text = '';
+                if (this.filesLoaded[fileName]) {
+                    text = this.filesLoaded[fileName].contentForLanguageService;
+                } else {
+                    text = loadLibrary(fileName);
+                }
+                return {
+                    getText: (start, end) => text?.substring(start, end) || '',
+                    getLength: () => text?.length || 0,
+                    getChangeRange: () => undefined
+                };
+            },
+            getCurrentDirectory: () => '',
+            getDefaultLibFileName: (_options: CompilerOptions) => 'es2022.full',
+            readFile: (fileName: string, _encoding?: string | undefined): string | undefined => {
+                if (this.filesLoaded[fileName]) {
+                    return this.filesLoaded[fileName].contentForLanguageService;
+                } else {
+                    return loadLibrary(fileName);
+                }
+            },
+            fileExists: (fileName: string): boolean => {
+                if (fileName.endsWith(AventusExtension.Base + ".ts")) {
+                    fileName = fileName.replace(AventusExtension.Base + ".ts", AventusExtension.Base);
+                }
                 if (this.filesLoaded[fileName]) {
                     return true;
                 } else {
@@ -275,7 +358,7 @@ export class AventusTsLanguageService {
         }
         let options = { ...formatingOptions };
 
-        let edits = this.languageService.getFormattingEditsForRange(document.uri, start, end, options);
+        let edits = this.languageServiceNamespace.getFormattingEditsForRange(document.uri, start, end, options);
         if (edits) {
             let result: TextEdit[] = [];
             for (let edit of edits) {
@@ -357,15 +440,20 @@ export class AventusTsLanguageService {
 
 
 
-    public static compileTs(txt: string): { compiled: string, doc: string } {
+    public static compileTs(txt: string, namespace: string): { compiled: string, doc: string } {
         let result = {
             compiled: "",
             doc: ""
         }
 
         result.compiled = transpile(txt, compilerOptions);
-        result.doc = this.compileDocTs(txt);
-        // Loop through all the input files
+        let doc = this.compileDocTs(txt);
+        if (namespace.length > 0) {
+            result.doc += "namespace " + namespace + " {\r\n" + doc + "}\r\n";
+        }
+        else {
+            result.doc += doc;
+        }
         return result;
     }
 

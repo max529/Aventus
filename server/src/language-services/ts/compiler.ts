@@ -1,8 +1,7 @@
 import { existsSync, unlinkSync, writeFileSync } from "fs";
-import { CompilerOptions, createLanguageService, LanguageService, LanguageServiceHost, ScriptKind, transpile } from "typescript";
-import { AventusFile } from "../../FilesManager";
-import { ClassModel, EnumDeclaration } from "../../ts-file-parser";
-import { parseDocument } from "../../ts-file-parser/src/tsStructureParser";
+import { pathToUri } from '../../tools';
+import { BasicType, ClassModel, EnumDeclaration, TypeKind } from "../../ts-file-parser";
+import { AventusTsFile } from './File';
 import { AventusTsLanguageService } from "./LanguageService";
 
 export interface TsCompileResult {
@@ -13,9 +12,8 @@ export interface TsCompileResult {
     dependances: string[]
 }
 
-export function genericTsCompile(file: AventusFile): TsCompileResult {
-    let document = file.document;
-    const struct = parseDocument(document);
+export function genericTsCompile(file: AventusTsFile): TsCompileResult {
+    const struct = file.fileParsed;
     let scriptTxt = "";
     let docTxt = "";
     let classesNameSript: string[] = [];
@@ -25,22 +23,28 @@ export function genericTsCompile(file: AventusFile): TsCompileResult {
 
     struct.classes.forEach(cls => {
         cls.extends.forEach(extension => {
-            if (dependances.indexOf(extension.typeName) == -1) {
-                dependances.push(extension.typeName);
+            if (extension.typeKind == TypeKind.BASIC) {
+
+                if (dependances.indexOf(extension.typeName) == -1) {
+                    dependances.push(extension.typeName);
+                }
             }
         })
         let classContent = removeComments(removeDecoratorFromClassContent(cls));
         classContent = replaceFirstExport(classContent);
-        let result = AventusTsLanguageService.compileTs(classContent);
+        let result = AventusTsLanguageService.compileTs(classContent, cls.namespace.name);
 
-
+        let namespaceTxt = cls.namespace.name;
+        if (namespaceTxt.length > 0) {
+            namespaceTxt += ".";
+        }
         if (result.compiled.length > 0) {
             scriptTxt += result.compiled;
-            classesNameSript.push(cls.name);
+            classesNameSript.push(namespaceTxt + cls.name);
         }
         if (result.doc.length > 0) {
             docTxt += result.doc;
-            classesNameDoc.push(cls.name);
+            classesNameDoc.push(namespaceTxt + cls.name);
         }
         for (let decorator of cls.decorators) {
             if (decorator.name == "Debugger") {
@@ -57,7 +61,7 @@ export function genericTsCompile(file: AventusFile): TsCompileResult {
     struct.enumDeclarations.forEach(enm => {
         let enumContent = removeComments(removeDecoratorFromClassContent(enm));
         enumContent = replaceFirstExport(enumContent);
-        let result = AventusTsLanguageService.compileTs(enumContent);
+        let result = AventusTsLanguageService.compileTs(enumContent, enm.namespace.name);
         if (result.compiled.length > 0) {
             scriptTxt += result.compiled;
             classesNameSript.push(enm.name);
@@ -81,7 +85,7 @@ export function genericTsCompile(file: AventusFile): TsCompileResult {
     struct.aliases.forEach(alias => {
         let aliasContent = removeComments(alias.content);
         aliasContent = replaceFirstExport(aliasContent);
-        let result = AventusTsLanguageService.compileTs(aliasContent);
+        let result = AventusTsLanguageService.compileTs(aliasContent, '');
         if (result.compiled.length > 0) {
             scriptTxt += result.compiled;
             classesNameSript.push(alias.name);
@@ -92,7 +96,7 @@ export function genericTsCompile(file: AventusFile): TsCompileResult {
         }
     })
 
-    let debugPath = file.path.replace(".avt", ".js");
+    let debugPath = file.file.path.replace(".avt", ".js");
     if (debugTxt != "") {
         writeFileSync(debugPath, debugTxt);
     }

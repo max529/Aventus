@@ -20,6 +20,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     }
 
     protected async onContentChange(): Promise<Diagnostic[]> {
+        this.refreshFileParsed();
         this.compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
         this.build.scssLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.scssDoc);
         this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.htmlDoc);
@@ -33,8 +34,8 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
                 doc: this.compilationResult.result.doc,
-                nameCompiled: [this.compilationResult.result.nameCompiled],
-                nameDoc: [this.compilationResult.result.nameDoc],
+                nameCompiled: this.compilationResult.result.nameCompiled,
+                nameDoc: this.compilationResult.result.nameDoc,
                 src: this.compilationResult.result.src
             })
         }

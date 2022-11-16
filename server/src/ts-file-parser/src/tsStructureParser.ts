@@ -5,7 +5,7 @@
 import * as ts from "typescript";
 import * as tsm from "./tsASTMatchers";
 export * as tsm from "./tsASTMatchers";
-import { AliasNode, ClassModel, EnumDeclaration, FunctionDeclarationParams, TypeModel } from "../index";
+import { AliasNode, ClassModel, EnumDeclaration, FunctionDeclarationParams, NamespaceDeclaration, TypeModel } from "../index";
 import { TypeKind } from "../index";
 import { ArrayType } from "../index";
 import { Annotation } from "../index";
@@ -64,7 +64,8 @@ let savedModule: {
         version: number,
         module: Module,
     }
-} = {}
+} = {};
+
 export function parseDocument(document: TextDocument): Module {
     if (savedModule[document.uri]) {
         if (savedModule[document.uri].version < document.version) {
@@ -82,12 +83,29 @@ export function parseDocument(document: TextDocument): Module {
     }
     return savedModule[document.uri].module;
 }
-
 function parseStruct(content: string, modules: { [path: string]: Module }, mpth: string): Module {
+
     var mod = parse(content);
-    var module: Module = { variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], imports: {}, _imports: [], name: mpth };
+    var module: Module = { namespaces: [], variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], imports: {}, _imports: [], name: mpth };
     modules[mpth] = module;
     var currentModule: string = "";
+    const getNamespace = (pos: number): NamespaceDeclaration => {
+        for (let _namespace of module.namespaces) {
+            if (pos > _namespace.start && pos < _namespace.end) {
+                return _namespace;
+            }
+        }
+        return {
+            start: 0,
+            end: 0,
+            name: '',
+            body: {
+                start: 0,
+                end: 0,
+            }
+        }
+    }
+
     tsm.Matching.visit(mod, x => {
         if (x.kind === ts.SyntaxKind.VariableDeclaration) {
             x.forEachChild(c => {
@@ -111,6 +129,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                         params,
                         start: (x as ts.FunctionDeclaration).pos,
                         end: (x as ts.FunctionDeclaration).end,
+                        namespace: getNamespace((x as ts.FunctionDeclaration).pos)
                     });
                 }
                 else if (c.kind == ts.SyntaxKind.Identifier) {
@@ -216,7 +235,8 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     name,
                     params,
                     start: functionDeclaration.pos,
-                    end: functionDeclaration.end
+                    end: functionDeclaration.end,
+                    namespace: getNamespace(functionDeclaration.pos)
                 });
             }
         }
@@ -225,7 +245,19 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
         if (x.kind === ts.SyntaxKind.ModuleDeclaration) {
             var cmod = <ts.ModuleDeclaration>x;
             currentModule = cmod.name.text;
+            if (cmod.body) {
+                module.namespaces.push({
+                    start: cmod.pos,
+                    end: cmod.end,
+                    name: cmod.name.text,
+                    body: {
+                        start: cmod.body.getStart() + 1,
+                        end: cmod.body.getEnd() - 1,
+                    }
+                })
+            }
         }
+
         if (x.kind === ts.SyntaxKind.ImportEqualsDeclaration) {
             var imp = <ts.ImportEqualsDeclaration>x;
             var namespace = imp.name.text;
@@ -291,6 +323,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     start: e.pos,
                     end: e.end,
                     documentation: [],
+                    namespace: getNamespace(e.pos)
                 };
                 let jsDocTxt: string[] = [];
                 const decorators = ts.canHaveDecorators(e) ? ts.getDecorators(e) : undefined;
@@ -337,6 +370,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             }
 
             clazz.moduleName = currentModule;
+            clazz.namespace = getNamespace(c.pos);
             let jsDocTxt: string[] = [];
             if (c["jsDoc"]) {
                 for (let jsDoc of c["jsDoc"]) {
@@ -808,9 +842,9 @@ function parseQualified2(n: any): string | undefined {
         preset = n.expression.text + "."
     }
     if (!n.name) {
-        return preset+n.text;
+        return preset + n.text;
     }
-    return preset+n.name.text;
+    return preset + n.name.text;
 }
 function parseQualified(n: ts.EntityName): string | undefined {
     if (n.kind === ts.SyntaxKind.Identifier) {
