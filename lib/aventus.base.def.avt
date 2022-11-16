@@ -74,6 +74,11 @@ class AvRouterLink extends WebComponent implements DefaultComponent {
     protected postCreation(): void;
 }
 
+type AvRouteAsyncOption = {
+    route: string;
+    scriptUrl: string;
+    render: () => new () => AvPage;
+};
 abstract class AvRouter extends WebComponent implements DefaultComponent {
     private oldPage;
     contentEl: HTMLDivElement;
@@ -148,6 +153,7 @@ abstract class AvFormElement<T> extends WebComponent implements DefaultComponent
     protected displayErrors(): void;
 }
 
+type MethodType = 'get' | 'post' | 'put';
 class AvForm extends WebComponent implements DefaultComponent {
     /**
     * Show/Hide the loading animation
@@ -279,7 +285,7 @@ declare interface Element {
     findParents:<T>(tagname:string|string[], untilNode?:Element) => T[];
     findParentByClass:<T>(classname:string|string[]) => T | null;
     containsChild:(el:Element) => boolean;
-    getPositionOnScreen:(untilEl?:HTMLElement) => Coordinate;
+    getPositionOnScreen:(untilEl?:HTMLElement) => Aventus.Coordinate;
     getElementsInSlot:<T>() => T[];
 }
 declare interface Date {
@@ -310,7 +316,7 @@ declare function Watch();
 /**
  * Add a property inside a watcher to be notify of changing
  */
-declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
+declare function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
 /**
  * Signal that this variable is a link to your shadowroot
  */
@@ -319,6 +325,10 @@ declare function ViewElement(config?:ViewElementConfig);
  * Clear parent view and use yours 
  */
 declare function OverrideView();
+/**
+ * Declare namespace
+ */
+declare function Namespace(name:string);
 /**
  * Add debbuger action function for your component
  */

@@ -190,45 +190,6 @@ class AvRouterLink extends WebComponent {
      postCreation(){StateManager.getInstance("navigation").subscribe(this.state, {    active: () => {        this.classList.add("active");    },    inactive: () => {        this.classList.remove("active");    }});new PressManager({    element: this,    onPress: () => {        StateManager.getInstance("navigation").setActiveState(this.state);    }});}}
 window.customElements.define('av-router-link', AvRouterLink);
 
-class AvRouter extends WebComponent {
-    constructor() { super(); if (this.constructor == AvRouter) { throw "can't instanciate an abstract class"; } }
-    __prepareVariables() { super.__prepareVariables(); if(this.oldPage === undefined) {this.oldPage = undefined;}if(this.allRoutes === undefined) {this.allRoutes = {};} }
-    __getStyle() {
-        let arrStyle = super.__getStyle();
-        arrStyle.push(`:host{display:block}`);
-        return arrStyle;
-    }
-    __getHtml() {
-        let parentInfo = super.__getHtml();
-        let info = {
-            html: `<slot name="before"></slot>
-<div class="content" _id="avrouter_0"></div>
-<slot name="after"></slot>`,
-            slots: {
-                'before':`<slot name="before"></slot>`,'after':`<slot name="after"></slot>`
-            },
-            blocks: {
-                'default':`<slot name="before"></slot>
-<div class="content" _id="avrouter_0"></div>
-<slot name="after"></slot>`
-            }
-        }
-        return info;
-    }
-    __getMaxId() {
-        let temp = super.__getMaxId();
-        temp.push(["AvRouter", 1])
-        return temp;
-    }
-    __mapSelectedElement() { super.__mapSelectedElement(); this.contentEl = this.shadowRoot.querySelector('[_id="avrouter_0"]');}
-    getClassName() {
-        return "AvRouter";
-    }
-    getNamespace(){
-        return namespace;
-    }
-     addRouteAsync(options){this.allRoutes[options.route] = options;} addRoute(route,elementCtr){this.allRoutes[route] = {    route: route,    scriptUrl: '',    render: () => elementCtr};} register(){try {    this.defineRoutes();    for (let key in this.allRoutes) {        this.initRoute(key);    }}catch (e) {    console.log(e);    debugger;}} initRoute(path){let element = undefined;let allRoutes = this.allRoutes;let namespace = this.getNamespace();StateManager.getInstance("navigation").subscribe(path, {    active: async (currentState) => {        if (!element) {            let options = allRoutes[path];            if (options.scriptUrl != "") {                await ResourceLoader.loadInHead(options.scriptUrl);            }            let constructor = options.render();            element = new constructor;            this.contentEl.appendChild(element);        }        if (this.oldPage && this.oldPage != element) {            this.oldPage.show = false;        }        element.show = true;        this.oldPage = element;        if (window.location.pathname != currentState) {            let newUrl = window.location.origin + currentState;            document.title = element.defineTitle();            window.history.pushState({}, element.defineTitle(), newUrl);        }    }});} postCreation(){this.register();if (window.localStorage.getItem("navigation_url")) {    StateManager.getInstance("navigation").setActiveState(window.localStorage.getItem("navigation_url"));    window.localStorage.removeItem("navigation_url");}else {    StateManager.getInstance("navigation").setActiveState(window.location.pathname);}window.onpopstate = (e) => {    if (window.location.pathname != StateManager.getInstance("navigation").getActiveState()) {        StateManager.getInstance("navigation").setActiveState(window.location.pathname);    }};}}
-
 class AvPage extends WebComponent {
     constructor() { super(); if (this.constructor == AvPage) { throw "can't instanciate an abstract class"; } }
     get 'show'() {
@@ -670,7 +631,6 @@ Aventus.Coordinate=Coordinate;
 Aventus.WebComponent=WebComponent;
 Aventus.AvScrollable=AvScrollable;
 Aventus.AvRouterLink=AvRouterLink;
-Aventus.AvRouter=AvRouter;
 Aventus.AvPage=AvPage;
 Aventus.AvHideable=AvHideable;
 Aventus.AvFormElement=AvFormElement;

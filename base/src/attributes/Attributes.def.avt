@@ -17,7 +17,7 @@ declare function Watch();
 /**
  * Add a property inside a watcher to be notify of changing
  */
-declare function Watch<T>(onChange: (component: T, action: WatchAction, path: string, value: any) => void);
+declare function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
 /**
  * Signal that this variable is a link to your shadowroot
  */
@@ -26,6 +26,10 @@ declare function ViewElement(config?:ViewElementConfig);
  * Clear parent view and use yours 
  */
 declare function OverrideView();
+/**
+ * Declare namespace
+ */
+declare function Namespace(name:string);
 /**
  * Add debbuger action function for your component
  */

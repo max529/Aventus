@@ -2,6 +2,7 @@ import { ResourceLoader } from "../../../lib/ResourceLoader.lib.avt";
 import { StateManager } from "../../../lib/StateManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
 import { AvPage } from "../Page/Page.wcl.avt";
+
 export type AvRouteAsyncOption = {
     route: string,
     scriptUrl: string,
