@@ -68,14 +68,14 @@ export interface AventusConfigBuild {
 	version: string,
 	inputPath: string[],
 	inputPathRegex?: RegExp,
-	noNamespacePath?:string[],
-	noNamespacePathRegex?: RegExp,
+	outsideModulePath?:string[],
+	outsideModulePathRegex?: RegExp,
 	outputFile: string,
 	generateDefinition?: boolean
 	compileOnSave?: boolean
 	includeBase?: boolean,
 	include: { definition: string, src?: string, libraryName?: string }[],
-	namespace: string,
+	module: string,
 	componentPrefix: string
 }
 export interface AventusConfigStatic {

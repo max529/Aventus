@@ -5,7 +5,9 @@ import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definit
 import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../FilesManager';
 import { Build } from '../../project/Build';
-import { convertRange } from '../../tools';
+import { convertRange, pathToUri } from '../../tools';
+import { AliasNode, ClassModel, EnumDeclaration } from '../../ts-file-parser';
+import { correctTypeInsideDefinition } from '../../ts-file-parser/src/tsDefinitionParser';
 import { AventusTsFile } from './File';
 import { loadLibrary } from './libLoader';
 
@@ -439,21 +441,97 @@ export class AventusTsLanguageService {
 
 
 
+    private static removeComments(txt: string): string {
+        let regex = /(\".*?\"|\'.*?\')|(\/\*.*?\*\/|\/\/[^(\r\n|\n)]*$)/gm
+        txt = txt.replace(regex, (match, grp1, grp2) => {
+            if (grp2) {
+                return "";
+            }
+            return grp1;
+        })
+        return txt;
+    }
+    private static removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration | AliasNode) {
+        let classContent = cls.content.trim();
+        cls.decorators.forEach(decorator => {
+            classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
+        });
 
-    public static compileTs(txt: string, namespace: string): { compiled: string, doc: string } {
-        let result = {
+        return classContent.trim();
+    }
+    private static replaceFirstExport(txt: string): string {
+        return txt.replace(/^\s*export\s+(class|interface|enum|type|abstract)/m, "$1");
+    }
+    public static compileTs(element: ClassModel | EnumDeclaration | AliasNode, file: AventusTsFile): CompileTsResult {
+        let result: CompileTsResult = {
             compiled: "",
-            doc: ""
+            doc: "",
+            dependances: [],
+            classScript: "",
+            classDoc: "",
+            debugTxt: ""
         }
+        // prepare info
+        let typeToFullname: { [type: string]: string } = {};
+        const struct = file.fileParsed;
+        for (let _import of struct._imports) {
+            let key = pathToUri(_import.absPathString);
+            let importedFile = file.build.tsFiles[key];
+            if (importedFile) {
+                for (let _class of importedFile.fileParsed.classes) {
+                    if (_class.namespace.name != "") {
+                        typeToFullname[_class.name] = _class.namespace.name + '.' + _class.name;
+                    }
+                }
+            }
+        }
+        for (let extend of element.extends) {
+            let name = extend.typeName;
+            if (typeToFullname[extend.typeName]) {
+                name = typeToFullname[extend.typeName]
+            }
+            if (result.dependances.indexOf(name) == -1) {
+                result.dependances.push(name);
+            }
+        }
+
+        // prepare content
+        let txt = this.removeComments(this.removeDecoratorFromClassContent(element));
+        txt = this.replaceFirstExport(txt);
 
         result.compiled = transpile(txt, compilerOptions);
-        let doc = this.compileDocTs(txt);
-        if (namespace.length > 0) {
-            result.doc += "namespace " + namespace + " {\r\n" + doc + "}\r\n";
+        let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname);
+
+        let namespaceTxt = element.namespace.name;
+        if (namespaceTxt.length > 0) {
+            namespaceTxt += ".";
+            if (doc.length > 0) {
+                result.doc = "namespace " + namespaceTxt + " {\r\n" + doc + "}\r\n";
+            }
         }
         else {
-            result.doc += doc;
+            result.doc = doc;
         }
+
+        if (result.compiled.length > 0) {
+            result.classScript = namespaceTxt + element.name
+        }
+        if (result.doc.length > 0) {
+            result.classDoc = namespaceTxt + element.name
+        }
+
+        for (let decorator of element.decorators) {
+            if (decorator.name == "Debugger") {
+                if (decorator.arguments.length > 0) {
+                    for (let arg of decorator.arguments) {
+                        if (arg.writeCompiled) {
+                            result.debugTxt = result.compiled
+                        }
+                    }
+                }
+            }
+        }
+
         return result;
     }
 
@@ -506,8 +584,8 @@ export class AventusTsLanguageService {
         return compilerOptions;
     }
 }
-
 //#region definition const + tools function
+type CompileTsResult = { compiled: string, doc: string, dependances: string[], classScript: string, classDoc: string, debugTxt: string }
 
 const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g;
 

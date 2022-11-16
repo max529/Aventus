@@ -1,5 +1,6 @@
 import { normalize } from "path";
 import { Diagnostic, getLanguageService, LanguageService } from "vscode-json-languageservice";
+import { CompletionItem, CompletionList, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
 import { AventusExtension } from "../../definition";
 import { AventusFile } from "../../FilesManager";
 import { createErrorTs, getFolder, uriToPath } from "../../tools";
@@ -9,8 +10,8 @@ import { AventusConfigSchema } from "./schema";
 export class AventusJSONLanguageService {
     private static instance: AventusJSONLanguageService;
     public static getInstance(): AventusJSONLanguageService {
-        if(!this.instance){
-            this.instance  = new AventusJSONLanguageService();
+        if (!this.instance) {
+            this.instance = new AventusJSONLanguageService();
         }
         return this.instance;
     }
@@ -60,6 +61,29 @@ export class AventusJSONLanguageService {
         return null;
     }
 
+    public async format(file: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
+        return await this.languageService.format(file.document, range, options);
+    }
+    public async doComplete(file: AventusFile, position: Position): Promise<CompletionList> {
+        let document = file.document;
+        let jsonDoc = this.languageService.parseJSONDocument(document);
+        let result = await this.languageService.doComplete(file.document, position, jsonDoc);
+        if (result) {
+            return result;
+        }
+        return {
+            isIncomplete: false,
+            items: []
+        }
+    }
+    public async doResolve(item: CompletionItem): Promise<CompletionItem> {
+        return await this.languageService.doResolve(item);
+    }
+    public async doHover(file: AventusFile, position: Position): Promise<Hover | null> {
+        let document = file.document;
+        let jsonDoc = this.languageService.parseJSONDocument(document);
+        return await this.languageService.doHover(document, position, jsonDoc);
+    }
 
     private prepareConfigFile(uri: string, config: AventusConfig) {
         for (let build of config.build) {
@@ -111,9 +135,9 @@ export class AventusJSONLanguageService {
         build.outputFile = normalize(uriToPath(baseDir) + build.outputFile);
 
         // no namespace
-        if (build.noNamespacePath) {
+        if (build.outsideModulePath) {
             regexs = [];
-            for (let noNamespacePath of build.noNamespacePath) {
+            for (let noNamespacePath of build.outsideModulePath) {
                 let slash = "";
                 if (!noNamespacePath.startsWith("/")) {
                     slash = "/";
@@ -134,7 +158,7 @@ export class AventusJSONLanguageService {
             if (regexJoin == "") {
                 regexJoin = "(?!)";
             }
-            build.noNamespacePathRegex = new RegExp(regexJoin);
+            build.outsideModulePathRegex = new RegExp(regexJoin);
         }
     }
 

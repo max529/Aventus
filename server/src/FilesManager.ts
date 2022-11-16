@@ -329,7 +329,7 @@ export class InternalAventusFile implements AventusFile {
     get version() {
         return this._version;
     }
-    
+
     get content() {
         return this.document.getText();
     }
@@ -506,20 +506,26 @@ export class InternalAventusFile implements AventusFile {
 
     public async getCompletionResolve(item: CompletionItem): Promise<CompletionItem> {
         let result = item;
+        
         let proms: Promise<CompletionItem>[] = [];
         for (let uuid in this.onCompletionResolveCb) {
             proms.push(this.onCompletionResolveCb[uuid](this, item));
         }
         let promsResult = await Promise.all(proms);
+        // the object is edited inside the methods => maybe it ll not work with other languageservice than TS
 
-        for (let promResult of promsResult) {
-            if (promResult.additionalTextEdits) {
-                if (!result.additionalTextEdits) {
-                    result.additionalTextEdits = [];
-                }
-                result.additionalTextEdits = [...result.additionalTextEdits, ...promResult.additionalTextEdits];
-            }
-        }
+        // for (let promResult of promsResult) {
+        //     if (promResult.additionalTextEdits) {
+        //         if (!result.additionalTextEdits) {
+        //             result.additionalTextEdits = [];
+        //         }
+        //         for (let additionalTextEdit of promResult.additionalTextEdits) {
+        //             if (result.additionalTextEdits.indexOf(additionalTextEdit) != -1) {
+        //                 result.additionalTextEdits.push(additionalTextEdit);
+        //             }
+        //         }
+        //     }
+        // }
         return result;
     }
 

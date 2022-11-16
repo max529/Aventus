@@ -25,29 +25,34 @@ export class ClientConnection {
 	}
 
 	public isCLI(): boolean {
-		if (!process.env["AVENTUS_CLI"]) { 
+		if (!process.env["AVENTUS_CLI"]) {
 			return false;
 		}
 		return true;
 	}
-	public isDebug():boolean {
-		if (!process.env["DEBUG"]) { 
+	public isDebug(): boolean {
+		if (!process.env["DEBUG"]) {
 			return false;
 		}
 		return true;
 	}
 	public sendNotification(cmd: string, params: any) {
-		if(cmd == "aventus/compiled"){
-			console.log("done");
+		if (this._connection) {
+			this._connection.sendNotification(cmd, params);
 		}
-		this._connection?.sendNotification(cmd, params);
+		else {
+			if (cmd == "aventus/compiled") {
+				console.log("done");
+			}
+		}
+		
 	}
 	public showErrorMessage(msg) {
 		if (this._connection) {
 			this._connection.window.showErrorMessage(msg);
 		}
 		else {
-			console.error("Error : "+ msg);
+			console.error("Error : " + msg);
 		}
 
 	}
@@ -58,7 +63,7 @@ export class ClientConnection {
 		else {
 			let path = uriToPath(params.uri);
 			for (let diagnostic of params.diagnostics) {
-				console.log("Error : "+path + ":" + diagnostic.range.start.line + ":" + diagnostic.range.start.character + " : " + diagnostic.message)
+				console.log("Error : " + path + ":" + diagnostic.range.start.line + ":" + diagnostic.range.start.character + " : " + diagnostic.message)
 			}
 		}
 	}

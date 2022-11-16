@@ -56,7 +56,6 @@ export abstract class AventusTsFile extends AventusBaseFile {
                 firstPart = this._contentForLanguageService.substring(0, _namespace.body.end);
                 lastPart = this._contentForLanguageService.substring(_namespace.end, this._contentForLanguageService.length);
                 this._contentForLanguageService = firstPart + empty + lastPart;
-                console.log("in")
             }
         }
     }

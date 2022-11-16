@@ -1,6 +1,7 @@
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
 import { AventusFile } from "../../../FilesManager";
+import { Build } from '../../../project/Build';
 import { createErrorTsPos } from "../../../tools";
 import { genericTsCompile } from "../compiler";
 import { AventusTsFile } from "../File";
@@ -9,6 +10,10 @@ export class AventusLibFile extends AventusTsFile {
 
     protected get extension(): string {
         return AventusExtension.Lib;
+    }
+    constructor(file: AventusFile, build: Build){
+        super(file, build);
+        this.refreshFileParsed();
     }
     protected async onContentChange(): Promise<Diagnostic[]> {
         this.refreshFileParsed();

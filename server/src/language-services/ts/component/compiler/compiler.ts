@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension } from "../../../../definition";
 import { Build } from "../../../../project/Build";
 import { createErrorTs, createErrorTsPos, pathToUri } from "../../../../tools";
-import { BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType } from "../../../../ts-file-parser";
+import { AliasNode, BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType } from "../../../../ts-file-parser";
 import { getAlias } from "../../../../ts-file-parser/src/tsStructureParser";
 import { AventusHTMLFile } from "../../../html/File";
 import { AventusSCSSFile } from "../../../scss/File";
@@ -25,6 +25,7 @@ import { AventusTsFile } from '../../File';
 
 export class AventusWebcomponentCompiler {
     private file: AventusFile;
+    private logicalFile: AventusWebComponentLogicalFile;
     private jsTxt: string = "";
     private scssTxt: string = "";
     private htmlTxt: string = "";
@@ -40,6 +41,7 @@ export class AventusWebcomponentCompiler {
     private htmlDoc: HTMLDoc | undefined;
     private otherContent: string = "";
     private otherDoc: string = "";
+    private otherDebugTxt: string = "";
     //#region variable to use for preparation
     private dependances: string[] = [];
     private variablesIdInView: { [name: string]: string } = {};
@@ -64,6 +66,7 @@ export class AventusWebcomponentCompiler {
         result: {
             nameCompiled: [],
             nameDoc: [],
+            debug: '',
             src: '',
             doc: '',
             dependances: [],
@@ -74,6 +77,7 @@ export class AventusWebcomponentCompiler {
     //#endregion
 
     public constructor(logicalFile: AventusWebComponentLogicalFile, build: Build) {
+        this.logicalFile = logicalFile;
         let name = logicalFile.file.uri;
         let scssFile: AventusSCSSFile | undefined;
         let htmlFile: AventusHTMLFile | undefined;
@@ -123,6 +127,9 @@ export class AventusWebcomponentCompiler {
             finalDoc += this.prepareDocTs();
 
             this.result.writeCompiled = classInfo.debuggerOption.writeCompiled ? true : false;
+            if (this.result.writeCompiled) {
+                this.result.result.debug = this.otherDebugTxt + finalSrc;
+            }
             this.result.result.nameCompiled.push(classInfo.name);
             this.result.result.nameDoc.push(classInfo.name);
             this.result.result.src = finalSrc;
@@ -185,7 +192,7 @@ export class AventusWebcomponentCompiler {
                 }
             }
         }
-        
+
         if (classInfo.name == "") {
             this.result.diagnostics.push(createErrorTs(this.document, "Can't found a class to compile inside"))
             return null;
@@ -345,52 +352,36 @@ export class AventusWebcomponentCompiler {
     }
     private prepareOtherContent() {
         this.otherContent = "";
-        for (let i = 0; i < this.jsonStructure.classes.length; i++) {
-            if (this.jsonStructure.classes[i].isInterface) {
-                let _interface = this.jsonStructure.classes[i];
-                _interface.extends.forEach(extension => {
-                    if (this.dependances.indexOf(extension.typeName) == -1) {
-                        this.dependances.push(extension.typeName);
-                    }
-                })
-                let classContent = this.removeComments(this.removeDecoratorFromClassContent(_interface));
-                classContent = this.replaceFirstExport(classContent);
-                let result = AventusTsLanguageService.compileTs(classContent, _interface.namespace.name);
-                if (result.compiled.length > 0) {
-                    this.otherContent += result.compiled;
-                    this.result.result.nameCompiled.push(_interface.name);
+
+        let elementCompile = (cls: ClassModel | EnumDeclaration | AliasNode) => {
+            let result = AventusTsLanguageService.compileTs(cls, this.logicalFile);
+            this.otherContent += result.compiled;
+            this.otherDoc += result.doc;
+            this.otherDebugTxt += result.debugTxt;
+            if (result.classScript.length > 0) {
+                this.result.result.nameCompiled.push(result.classScript);
+            }
+            if (result.classDoc.length > 0) {
+                this.result.result.nameDoc.push(result.classDoc);
+            }
+            for (let dependance of result.dependances) {
+                if (this.dependances.indexOf(dependance) == -1) {
+                    this.dependances.push(dependance);
                 }
-                if (result.doc.length > 0) {
-                    this.otherDoc += result.doc;
-                    this.result.result.nameDoc.push(_interface.name);
-                }
+            }
+        }
+
+        for (let _class of this.jsonStructure.classes) {
+            if (_class.isInterface) {
+                elementCompile(_class);
             }
         }
         for (let enm of this.jsonStructure.enumDeclarations) {
-            let enumContent = this.removeComments(this.removeDecoratorFromClassContent(enm));
-            enumContent = this.replaceFirstExport(enumContent);
-            let result = AventusTsLanguageService.compileTs(enumContent, enm.namespace.name);
-            if (result.compiled.length > 0) {
-                this.otherContent += result.compiled;
-                this.result.result.nameCompiled.push(enm.name);
-            }
-            if (result.doc.length > 0) {
-                this.otherDoc += result.doc;
-                this.result.result.nameDoc.push(enm.name);
-            }
+            elementCompile(enm);
+
         }
         for (let alias of this.jsonStructure.aliases) {
-            let aliasContent = this.removeComments(alias.content);
-            aliasContent = this.replaceFirstExport(aliasContent);
-            let result = AventusTsLanguageService.compileTs(aliasContent, '');
-            if (result.compiled.length > 0) {
-                this.otherContent += result.compiled;
-                this.result.result.nameCompiled.push(alias.name);
-            }
-            if (result.doc.length > 0) {
-                this.otherDoc += result.doc;
-                this.result.result.nameDoc.push(alias.name);
-            }
+            elementCompile(alias);
         }
     }
     //#endregion
@@ -1967,7 +1958,6 @@ this.clearWatchHistory = () => {
             return grp1;
         })
         return txt;
-        return txt.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
     }
     private removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration) {
         let classContent = cls.content.trim();

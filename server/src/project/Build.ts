@@ -46,7 +46,6 @@ export class Build {
     }
 
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
-        console.log("creating build " + buildConfig.name);
         this.project = project;
         this.buildConfig = buildConfig;
         this.onNewFileUUID = FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
@@ -192,14 +191,13 @@ export class Build {
     private buildCode(compiledCode: string[], compiledCodeNoNamespace: string[], classesName: string[]) {
         let finalTxt = '';
         finalTxt += this.buildLoadInclude().join(EOL) + EOL;
-        let namespace = this.buildConfig.namespace;
-        finalTxt += "var " + namespace + ";(function (" + namespace + ") {\r\n var namespace = '" + namespace + "';\r\n"
+        let moduleName = this.buildConfig.module;
+        finalTxt += "var " + moduleName + ";(function (" + moduleName + ") {\r\n var namespace = '" + moduleName + "';\r\n"
 
         finalTxt += compiledCode.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;
         let subNamespace: string[] = [];
-        if (this.buildConfig.namespace) {
-            let namespace = this.buildConfig.namespace;
+        if (this.buildConfig.module.length > 0) {
             for (let className of classesName) {
                 if (className != "") {
                     let classNameSplitted = className.split(".");
@@ -213,14 +211,14 @@ export class Build {
                         }
                         if (subNamespace.indexOf(currentNamespace) == -1) {
                             subNamespace.push(currentNamespace);
-                            finalTxt += namespace + "." + subNamespace + "= {};" + EOL;
+                            finalTxt += moduleName + "." + currentNamespace + "={};" + EOL;
                         }
                     }
                     let finalName = classNameSplitted[classNameSplitted.length - 1];
-                    finalTxt += namespace + "." + className + "=" + finalName + ";" + EOL;
+                    finalTxt += moduleName + "." + className + "=" + finalName + ";" + EOL;
                 }
             }
-            finalTxt += "})(" + namespace + " || (" + namespace + " = {}));" + EOL;
+            finalTxt += "})(" + moduleName + " || (" + moduleName + " = {}));" + EOL;
         }
 
         finalTxt += compiledCodeNoNamespace.join(EOL) + EOL;
@@ -235,7 +233,7 @@ export class Build {
     private buildDocumentation(compiledCodeDoc: string[], compiledCodeDocNoNamespace: string[]) {
         let finaltxt = "";
         finaltxt += compiledCodeDoc.join(EOL) + EOL;
-        finaltxt = "declare namespace " + this.buildConfig.namespace + "{" + EOL + finaltxt.replace(/declare /g, '') + "}" + EOL;
+        finaltxt = "declare namespace " + this.buildConfig.module + "{" + EOL + finaltxt.replace(/declare /g, '') + "}" + EOL;
         finaltxt += compiledCodeDocNoNamespace.join(EOL) + EOL;
 
         finaltxt = "// version " + this.buildConfig.version + EOL + "// region js //" + EOL + finaltxt;
@@ -328,8 +326,8 @@ export class Build {
                 this.registerFile(file);
             }
         }
-        if (this.buildConfig.noNamespacePathRegex) {
-            if (file.path.match(this.buildConfig.noNamespacePathRegex)) {
+        if (this.buildConfig.outsideModulePathRegex) {
+            if (file.path.match(this.buildConfig.outsideModulePathRegex)) {
                 this.registerFile(file);
                 this.noNamespaceUri[file.uri] = true;
             }
@@ -347,8 +345,8 @@ export class Build {
                 this.registerFile(file);
             }
         }
-        if (this.buildConfig.noNamespacePathRegex) {
-            let files: AventusFile[] = FilesManager.getInstance().getFilesMatching(this.buildConfig.noNamespacePathRegex);
+        if (this.buildConfig.outsideModulePathRegex) {
+            let files: AventusFile[] = FilesManager.getInstance().getFilesMatching(this.buildConfig.outsideModulePathRegex);
             for (let file of files) {
                 this.registerFile(file);
                 this.noNamespaceUri[file.uri] = true;

@@ -25,7 +25,7 @@ import { AventusExtension } from "../../definition";
 import { uriToPath } from "../../tools";
 import { FilesManager } from '../../FilesManager';
 import { dirname, resolve } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, Mode, readFileSync } from 'fs';
 
 
 function parse(content: string) {
@@ -90,12 +90,8 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
     modules[mpth] = module;
     var currentModule: string = "";
     const getNamespace = (pos: number): NamespaceDeclaration => {
-        for (let _namespace of module.namespaces) {
-            if (pos > _namespace.start && pos < _namespace.end) {
-                return _namespace;
-            }
-        }
-        return {
+        let biggestStart = -1;
+        let result = {
             start: 0,
             end: 0,
             name: '',
@@ -104,6 +100,15 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 end: 0,
             }
         }
+        for (let _namespace of module.namespaces) {
+            if (pos > _namespace.start && pos < _namespace.end) {
+                if (_namespace.start > biggestStart) {
+                    biggestStart = _namespace.start;
+                    result = _namespace;
+                }
+            }
+        }
+        return result;
     }
 
     tsm.Matching.visit(mod, x => {
@@ -151,7 +156,6 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             var localNodeModule: boolean = false;
             var pth = require("path");
             tsm.Matching.visit(localMod, y => {
-                var _import = {};
                 if (y.kind === ts.SyntaxKind.NamedImports) {
                     var lit = impDec.importClause?.getText();
                     if (lit) {
@@ -246,10 +250,15 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             var cmod = <ts.ModuleDeclaration>x;
             currentModule = cmod.name.text;
             if (cmod.body) {
+                let parentNamespace = getNamespace(cmod.pos);
+                let _namespace = cmod.name.text;
+                if (parentNamespace.name != "") {
+                    _namespace = parentNamespace.name + '.' + _namespace;
+                }
                 module.namespaces.push({
                     start: cmod.pos,
                     end: cmod.end,
-                    name: cmod.name.text,
+                    name: _namespace,
                     body: {
                         start: cmod.body.getStart() + 1,
                         end: cmod.body.getEnd() - 1,
@@ -284,7 +293,14 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             if (u.name) {
                 var aliasName = u.name.text;
                 var type = buildType(u.type, mpth, module);
-                module.aliases.push({ name: aliasName, type: type, content: content.substring(x.pos, x.end) });
+                module.aliases.push({
+                    name: aliasName,
+                    type: type,
+                    content: content.substring(x.pos, x.end),
+                    namespace: getNamespace(x.pos),
+                    extends: [],
+                    decorators: []
+                });
             }
 
             //return;
@@ -323,7 +339,8 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     start: e.pos,
                     end: e.end,
                     documentation: [],
-                    namespace: getNamespace(e.pos)
+                    namespace: getNamespace(e.pos),
+                    extends: []
                 };
                 let jsDocTxt: string[] = [];
                 const decorators = ts.canHaveDecorators(e) ? ts.getDecorators(e) : undefined;
@@ -421,12 +438,18 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     x.types.forEach(y => {
                         if (x.token === ts.SyntaxKind.ExtendsKeyword) {
                             let temp = buildType(y, mpth, module);
+                            if (temp?.typeKind == TypeKind.BASIC) {
+                                updateImport(temp as BasicType, module);
+                            }
                             if (temp) {
                                 clazz.extends.push(temp);
                             }
                         } else {
                             if (x.token === ts.SyntaxKind.ImplementsKeyword) {
                                 let temp = buildType(y, mpth, module);
+                                if (temp?.typeKind == TypeKind.BASIC) {
+                                    updateImport(temp as BasicType, module);
+                                }
                                 if (temp) {
                                     clazz.implements.push(temp);
                                 }
@@ -853,4 +876,17 @@ function parseQualified(n: ts.EntityName): string | undefined {
         var q = <ts.QualifiedName>n;
         return parseQualified(q.left) + "." + parseQualified(q.right);
     }
+}
+function updateImport(type: BasicType, module: Module): void {
+    for (let _import of module._imports) {
+        if (!_import.isNodeModule) {
+            for (let clause of _import.clauses) {
+                if (clause == type.typeName) {
+                    type.modulePath = _import.absPathString;
+                    return;
+                }
+            }
+        }
+    }
+    type.modulePath = '';
 }

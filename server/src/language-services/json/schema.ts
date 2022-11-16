@@ -24,7 +24,7 @@ export const AventusConfigSchema = {
                         type: "array",
                         items: { type: "string" },
                     },
-                    "noNamespacePath": {
+                    "outsideModulePath": {
                         type: "array",
                         items: { type: "string" },
                     },
@@ -41,12 +41,14 @@ export const AventusConfigSchema = {
                                 "src": { type: "string" },
                                 "libraryName": { type: "string" }
                             },
-                            required: ["definition"]
+                            required: ["definition"],
+                            additionalProperties: false
                         },
                     },
-                    "namespace": { type: "string" }
+                    "module": { type: "string" }
                 },
-                required: ["name", "inputPath", "outputFile", "componentPrefix", "namespace"]
+                required: ["name", "inputPath", "outputFile", "componentPrefix", "module"],
+                additionalProperties: false
             },
             minItems: 1
         },
@@ -64,9 +66,10 @@ export const AventusConfigSchema = {
                         description: "Color to map when transpile svg"
                     }
                 },
-                required: ["name", "inputPath", "outputPath"]
+                required: ["name", "inputPath", "outputPath"],
+                additionalProperties: false
             }
-        }
+        },
     },
     "required": ["build"]
 };

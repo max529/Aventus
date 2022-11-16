@@ -12,6 +12,7 @@ export interface CompileComponentResult {
 		nameDoc: string[],
 		src: string,
 		doc: string,
+		debug: string,
 		dependances: string[],
 		htmlDoc: HTMLDoc,
 		scssDoc: SCSSDoc

@@ -18,6 +18,11 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     protected get extension(): string {
         return AventusExtension.ComponentLogic;
     }
+    
+    constructor(file: AventusFile, build: Build){
+        super(file, build);
+        this.refreshFileParsed();
+    }
 
     protected async onContentChange(): Promise<Diagnostic[]> {
         this.refreshFileParsed();
@@ -44,7 +49,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             this.setCompileResult(this.getDefaultCompileResult());
         }
         if (this.compilationResult?.writeCompiled) {
-            writeFileSync(this.file.folderPath + '/compiled.js', this.compilationResult.result.src);
+            writeFileSync(this.file.folderPath + '/compiled.js', this.compilationResult.result.debug);
         }
         else if (existsSync(this.file.folderPath + '/compiled.js')) {
             unlinkSync(this.file.folderPath + '/compiled.js')

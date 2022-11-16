@@ -1,3 +1,4 @@
+import { CompletionItem, CompletionList, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
 import { AventusFile } from "../FilesManager";
 import { AventusConfig } from "../language-services/json/definition";
 import { AventusJSONLanguageService } from '../language-services/json/LanguageService';
@@ -14,6 +15,10 @@ export class Project {
 
     private onContentChangeUUID: string;
     private onSaveUUID: string;
+    private onFormattingUUID: string;
+    private onCompletionUUID: string;
+    private onCompletionResolveUUID: string;
+    private onHoverUUID: string;
 
     public get isCoreBuild() {
         return this._isCoreBuild;
@@ -29,6 +34,10 @@ export class Project {
         this.configFile = configFile;
         this.onContentChangeUUID = this.configFile.onContentChange(this.onConfigChange.bind(this));
         this.onSaveUUID = this.configFile.onSave(this.onConfigSave.bind(this));
+        this.onFormattingUUID = this.configFile.onFormatting(this.onFormatting.bind(this));
+        this.onCompletionUUID = this.configFile.onCompletion(this.onCompletion.bind(this));
+        this.onCompletionResolveUUID = this.configFile.onCompletionResolve(this.onCompletionResolve.bind(this));
+        this.onHoverUUID = this.configFile.onHover(this.onHover.bind(this));
 
         if (configFile.folderUri.toLowerCase().endsWith("/aventus/base/src")) {
             // it's core project => remove all completions with generic def
@@ -42,8 +51,8 @@ export class Project {
     /**
      * Validate config and send error
      */
-    public onConfigChange() {
-        return AventusJSONLanguageService.getInstance().valideConfig(this.configFile);
+    public async onConfigChange() {
+        return await AventusJSONLanguageService.getInstance().valideConfig(this.configFile);
     }
     /**
      * Load the new config file and create build
@@ -84,6 +93,19 @@ export class Project {
         }
     }
 
+    public async onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
+        return await AventusJSONLanguageService.getInstance().format(document, range, options);
+    }
+    public async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
+        return await AventusJSONLanguageService.getInstance().doComplete(document, position);
+    }
+    public async onCompletionResolve(document: AventusFile, item: CompletionItem): Promise<CompletionItem> {
+        return await AventusJSONLanguageService.getInstance().doResolve(item);
+    }
+    public async onHover(document: AventusFile, position: Position): Promise<Hover | null> {
+        return await AventusJSONLanguageService.getInstance().doHover(document, position);
+    }
+
     public getBuild(name: string): Build | undefined {
         for (let build of this.builds) {
             if (build.name == name) {
@@ -105,6 +127,10 @@ export class Project {
     public destroy() {
         this.configFile.removeOnSave(this.onSaveUUID);
         this.configFile.removeOnContentChange(this.onContentChangeUUID);
+        this.configFile.removeOnFormatting(this.onFormattingUUID);
+        this.configFile.removeOnCompletion(this.onCompletionUUID);
+        this.configFile.removeOnCompletionResolve(this.onCompletionResolveUUID);
+        this.configFile.removeOnHover(this.onHoverUUID);
 
         for (let build of this.builds) {
             build.destroy();

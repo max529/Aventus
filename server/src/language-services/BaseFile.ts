@@ -5,15 +5,19 @@ import { Build } from "../project/Build";
 
 export abstract class AventusBaseFile {
     protected _file: AventusFile;
-    protected build: Build;
+    protected _build: Build;
 
     public get file() {
         return this._file;
     }
+    public get build() {
+        return this._build;
+
+    }
 
     public constructor(file: AventusFile, build: Build) {
         this._file = file;
-        this.build = build;
+        this._build = build;
         this.addEvents();
 
     }
@@ -58,7 +62,7 @@ export abstract class AventusBaseFile {
             await this.file.triggerContentChangeNoDelay(this.file.document);
         }
     }
-    public triggerSave():void {
+    public triggerSave(): void {
         if (this.file instanceof InternalAventusFile) {
             this.file.triggerSave(this.file.document);
         }

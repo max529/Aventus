@@ -64,16 +64,16 @@ export class Create {
 			let defaultConfig = `{
 	"build": [
 		{
-		"name": "${name}",
-		"namespace":"${name.replace(/ /g, "_")}",
-		"componentPrefix": "av",
-		"version": "0.0.1",
-		"inputPath": [
-			"./src/*"
-		],
-		"outputFile": "./dist/${nameFile}.js",
-		"generateDefinition": true,
-		"includeBase": true
+			"name": "${name}",
+			"namespace":"${name.replace(/ /g, "_")}",
+			"componentPrefix": "av",
+			"version": "0.0.1",
+			"inputPath": [
+				"./src/*"
+			],
+			"outputFile": "./dist/${nameFile}.js",
+			"generateDefinition": true,
+			"includeBase": true
 		}
 	]
 }`
