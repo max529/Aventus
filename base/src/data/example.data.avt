@@ -1,0 +1,11 @@
+import { ISocketData } from "../ram/SocketRAMManager.lib.avt";
+import { IData } from "./IData.data.avt";
+
+export class ExampleData implements IData {
+    public name2: string = "name";
+}
+
+export interface MyExampleDataAction extends IData {
+    sayHello(): void;
+}
+export interface MyExampleData extends ExampleData, MyExampleDataAction, ISocketData, IData {}

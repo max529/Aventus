@@ -3,7 +3,7 @@
         {
             "name": "base",
             "version": "1.0.0",
-            "namespace": "Aventus",
+            "module": "Aventus",
             "componentPrefix": "av",
             "inputPath": [
                 "./component/",
@@ -11,7 +11,7 @@
                 "./lib/",
                 "./ram/"
             ],
-            "noNamespacePath": [
+            "outsideModulePath": [
                 "./attributes/",
                 "./extension/"
             ],

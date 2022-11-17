@@ -1,0 +1,27 @@
+import { ExampleData, MyExampleData } from "../data/example.data.avt";
+import { IRAMManager } from "./RAMManager.lib.avt";
+import { Extension, GenericSocketRAMManager, SocketRAMManagerItem } from "./SocketRAMManager.lib.avt";
+
+export class ExampleManager extends GenericSocketRAMManager<ExampleData, MyExampleData> implements IRAMManager{
+    protected getObjectName(): string {
+        return "";
+    }
+    
+	protected getClassForItem(item: ExampleData): MyExampleData {
+		let v0 = ExampleData
+		let v1 = Extension.Basic(v0);
+		let v2 = Extension.SayHello(v1);
+		
+		let el = new v2();
+		
+		el.update
+
+		el.name = 'salut';
+
+		el.update<MyExampleData>({}).then((r) => {
+			r.name2
+		})
+		return el;
+    }
+}
+

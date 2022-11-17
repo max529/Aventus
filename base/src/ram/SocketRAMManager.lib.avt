@@ -1,16 +1,9 @@
+import { ExampleData, MyExampleDataAction } from "../data/example.data.avt";
 import { IData } from "../data/IData.data.avt";
 import { Socket } from "../lib/Socket.lib.avt";
 import { GenericRAMManager, RAMManager } from "./RAMManager.lib.avt";
 
 
-export interface SocketRAMManagerObject<U> {
-    update(newData: {}): Promise<U & SocketRAMManagerObject<U>>;
-    onUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void);
-    offUpdate(callback: (item: U & SocketRAMManagerObject<U>) => void);
-    delete(): Promise<void>;
-    onDelete(callback: (item: U & SocketRAMManagerObject<U>) => void);
-    offDelete(callback: (item: U & SocketRAMManagerObject<U>) => void);
-}
 
 export interface SocketRAMManagerRoutes {
     get: SocketRAMManagerRoute;
@@ -38,7 +31,19 @@ export interface SocketRAMManagerRouteNotPlanned<U extends IData> {
     callback: (response: { data?: U[]; }) => void;
 }
 
-export abstract class GenericSocketRAMManager<U extends IData, R extends U & SocketRAMManagerObject<U>> extends GenericRAMManager<U, R> {
+export interface ISocketAction {
+    update(newData: {}): Promise<this>;
+    onUpdate(callback: (item: this) => void);
+    offUpdate(callback: (item: this) => void);
+    delete(): Promise<void>;
+    onDelete(callback: (item: this) => void);
+    offDelete(callback: (item: this) => void);
+}
+export interface ISocketData extends IData, ISocketAction {
+
+}
+type ISocketData2<U> = U & ISocketData;
+export abstract class GenericSocketRAMManager<U extends IData, R extends ISocketData2<U>> extends GenericRAMManager<U, R> {
     private socketActions: {
         get: string;
         getAll: string;
@@ -170,6 +175,7 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
         Socket.getInstance(this._getSocketName()).addRoute(deletedRoute);
     }
 
+
     //#region create
     public override async create(item: U, cbError?: (response: any) => void): Promise<R> {
         try {
@@ -255,7 +261,7 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
         });
     }
 
-    private async internalUpdate(id: number, newData: {}): Promise<R> {
+    public async internalUpdate(id: number, newData: {}): Promise<R> {
         let oldData = this.records[id];
         if(oldData) {
             let mergedData = {
@@ -389,10 +395,80 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
     }
     //#endregion
 
+    public Extends<TBase extends new (...args: any[]) => U>(Base: TBase) {
+        let that = this;
+       
+        return class SocketRAMManagerAction extends Base implements ISocketData2<U> {
+            
+            // public async update(newData: {} = {}) {
+            //     let id = that.getId(this as U)
+            //     let oldData = that.records[id];
+            //     if(oldData) {
+            //         let mergedData = {
+            //             ...oldData,
+            //             ...newData
+            //         };
+            //         let result = await this.update(mergedData);
+            //         return result;
+            //     }
+            //     return await that.internalUpdate(id, newData);
+            // }
+            // public onUpdate(callback) {
+            //     that.getId<SocketRAMManagerAction>(this);
+            //     if(!that.recordsSubscribers.hasOwnProperty(id)) {
+            //         that.recordsSubscribers[id] = {
+            //             created: [],
+            //             updated: [],
+            //             deleted: []
+            //         };
+            //     }
+            //     this.recordsSubscribers[id].updated.push(callback);
+            // }
+            // public offUpdate(callback) {
+            //     if(this.recordsSubscribers[id]) {
+            //         let index = this.recordsSubscribers[id].updated.indexOf(callback);
+            //         if(index != -1) {
+            //             this.recordsSubscribers[id].updated.splice(index, 1);
+            //         }
+            //     }
+            // }
+            // public async delete() {
+            //     return await this.deleteById(id);
+            // }
+            // public onDelete(callback) {
+            //     if(!this.recordsSubscribers.hasOwnProperty(id)) {
+            //         this.recordsSubscribers[id] = {
+            //             created: [],
+            //             updated: [],
+            //             deleted: []
+            //         };
+            //     }
+            //     this.recordsSubscribers[id].deleted.push(callback);
+            // }
+            // public offDelete(callback) {
+            //     if(this.recordsSubscribers[id]) {
+            //         let index = this.recordsSubscribers[id].deleted.indexOf(callback);
+            //         if(index != -1) {
+            //             this.recordsSubscribers[id].deleted.splice(index, 1);
+            //         }
+            //     }
+            // }
+        };
+    }
 
+    protected getClassForItem(item: U): R {
+        let internalExtend = 
+    }
 
     protected override transformElementInStorable(item: U): R {
         let id = this.getId(item);
+
+        let type = Extension.Basic(ExampleData);
+        let example = new type();
+        example.update({ name: "" }).then((r) => {
+            r.name;
+        });
+
         let addedType: SocketRAMManagerObject<U> = {
             update: async (newData: {} = {}) => {
                 return await this.internalUpdate(id, newData);
@@ -437,13 +513,13 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
                 }
             },
         };
-        let socketObj: U & SocketRAMManagerObject<U> = {
+        let socketObj: SocketRAMManagerItem<U> = {
             ...item,
             ...addedType
         };
         return this.addCustomFunctions(socketObj);
     }
-    protected abstract addCustomFunctions(item: U & SocketRAMManagerObject<U>): R;
+    protected abstract addCustomFunctions(item: SocketRAMManagerItem<U>): R;
 
 
     private publish(type: string, data: R) {
@@ -457,9 +533,68 @@ export abstract class GenericSocketRAMManager<U extends IData, R extends U & Soc
 
 }
 
+
+export class Extension {
+    public static Basic<TBase extends new (...args: any[]) => IData>(Base: TBase) {
+        return class SocketRAMManagerAction extends Base implements ISocketData {
+            public async update(newData: {} = {}) {
+                return await this.internalUpdate(id, newData);
+            }
+            public onUpdate(callback) {
+                if(!this.recordsSubscribers.hasOwnProperty(id)) {
+                    this.recordsSubscribers[id] = {
+                        created: [],
+                        updated: [],
+                        deleted: []
+                    };
+                }
+                this.recordsSubscribers[id].updated.push(callback);
+            }
+            public offUpdate(callback) {
+                if(this.recordsSubscribers[id]) {
+                    let index = this.recordsSubscribers[id].updated.indexOf(callback);
+                    if(index != -1) {
+                        this.recordsSubscribers[id].updated.splice(index, 1);
+                    }
+                }
+            }
+            public async delete() {
+                return await this.deleteById(id);
+            }
+            public onDelete(callback) {
+                if(!this.recordsSubscribers.hasOwnProperty(id)) {
+                    this.recordsSubscribers[id] = {
+                        created: [],
+                        updated: [],
+                        deleted: []
+                    };
+                }
+                this.recordsSubscribers[id].deleted.push(callback);
+            }
+            public offDelete(callback) {
+                if(this.recordsSubscribers[id]) {
+                    let index = this.recordsSubscribers[id].deleted.indexOf(callback);
+                    if(index != -1) {
+                        this.recordsSubscribers[id].deleted.splice(index, 1);
+                    }
+                }
+            }
+        };
+    }
+
+    public static SayHello<TBase extends new (...args: any[]) => IData>(Base: TBase) {
+        return class SayHello extends Base implements MyExampleDataAction {
+            sayHello(): void {
+
+            }
+        };
+    }
+}
+
 export type SocketRAMManagerItem<U extends IData> = U & SocketRAMManagerObject<U>;
 export abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, SocketRAMManagerItem<U>> {
     protected addCustomFunctions(item: SocketRAMManagerItem<U>): SocketRAMManagerItem<U> {
         return item;
     }
 }
+

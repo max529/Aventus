@@ -17,13 +17,14 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
 
     public abstract getPrimaryKey(): string;
 
-    protected getId(item: U): number | undefined {
+    public getId<X extends U>(item: X): number | undefined {
         if(item[this.getPrimaryKey()] !== undefined) {
             return item[this.getPrimaryKey()];
         }
         console.error("can't found key " + this.getPrimaryKey() + " inside ", item);
         return undefined;
     }
+    
     protected constructor() {
         if(this.constructor == GenericRAMManager) {
             throw "can't instanciate an abstract class";
@@ -31,7 +32,7 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
         this.records = {};
     }
 
-    protected abstract transformElementInStorable(item: U): R;
+    protected abstract getClassForItem(item: U): R;
     //#region create
     async createList(list: U[]): Promise<R[]> {
         let result: R[] = [];
@@ -52,7 +53,9 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
         let key = this.getId(item);
         if(key) {
             item = await this.beforeCreateItem(item, fromList);
-            let createdItem = this.transformElementInStorable(item);
+            let newItem = this.getClassForItem(item);
+            let createdItem = newItem;
+            // TODO merge
             this.records[key] = createdItem;
             this.records[key] = await this.afterCreateItem(createdItem, fromList);
             return this.records[key];
