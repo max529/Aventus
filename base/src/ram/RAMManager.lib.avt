@@ -1,8 +1,8 @@
-import { IData } from "../data/IData.data.avt";
+import { IData, IDataConstraint } from "../data/IData.data.avt";
 
 export interface IRAMManager { }
 
-export abstract class GenericRAMManager<U extends IData, R extends U> implements IRAMManager {
+export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends U> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -12,19 +12,19 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
         }
         return this.allRams[this.name] as T;
     }
-    
+
     protected records: { [key: number]: R; };
 
     public abstract getPrimaryKey(): string;
 
-    public getId<X extends U>(item: X): number | undefined {
+    public getId(item: IDataConstraint<U>): number | undefined {
         if(item[this.getPrimaryKey()] !== undefined) {
             return item[this.getPrimaryKey()];
         }
         console.error("can't found key " + this.getPrimaryKey() + " inside ", item);
         return undefined;
     }
-    
+
     protected constructor() {
         if(this.constructor == GenericRAMManager) {
             throw "can't instanciate an abstract class";
@@ -32,7 +32,7 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
         this.records = {};
     }
 
-    protected abstract getClassForItem(item: U): R;
+    protected abstract addFunctionForItem(item: U): R;
     //#region create
     async createList(list: U[]): Promise<R[]> {
         let result: R[] = [];
@@ -53,9 +53,7 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
         let key = this.getId(item);
         if(key) {
             item = await this.beforeCreateItem(item, fromList);
-            let newItem = this.getClassForItem(item);
-            let createdItem = newItem;
-            // TODO merge
+            let createdItem = this.addFunctionForItem(item);
             this.records[key] = createdItem;
             this.records[key] = await this.afterCreateItem(createdItem, fromList);
             return this.records[key];
@@ -215,8 +213,8 @@ export abstract class GenericRAMManager<U extends IData, R extends U> implements
     //#endregion
 }
 
-export abstract class RAMManager<U extends IData> extends GenericRAMManager<U, U>{
-    protected transformElementInStorable(item: U): U {
+export abstract class RAMManager<U extends new () => IData> extends GenericRAMManager<U, U>{
+    protected addFunctionForItem(item: U): U {
         return item;
     }
 

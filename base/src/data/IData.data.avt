@@ -1,6 +1,9 @@
 export interface IData {
 
 }
-export interface CSharpData extends IData {
+export interface IDataConstraint<U> extends IData{
+
+}
+export interface CSharpData<U> extends IData {
     $type: string;
 }
