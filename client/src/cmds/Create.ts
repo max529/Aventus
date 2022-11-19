@@ -28,13 +28,17 @@ export class Create {
                         dataToLink.push(new BuildQuickPick(name, uri));
                     }
                 }
-                const resultData = await window.showQuickPick(dataToLink, {
-                    placeHolder: 'Data for the RAM',
-                    canPickMany: false,
+                const name = await window.showInputBox({
+                    title: "Provide a data name for your " + result.label,
                 });
-                if (resultData) {
-                    args.push(resultData);
-                }
+                args.push(name);
+                // const resultData = await window.showQuickPick(dataToLink, {
+                //     placeHolder: 'Data for the RAM',
+                //     canPickMany: false,
+                // });
+                // if (resultData) {
+                //     args.push(resultData);
+                // }
             }
             else if (result.label == "Component") {
                 const name = await window.showInputBox({

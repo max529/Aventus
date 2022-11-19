@@ -1,4 +1,4 @@
-declare interface ObjectConstructor {
+interface ObjectConstructor {
     transformIntoWatcher: (obj, onDataChanged) => any;
     prepareByPath:(obj, path, currentPath?) => {canApply:boolean, objToApply:any};
     isPathMatching:(p1:string, p2:string) => void;

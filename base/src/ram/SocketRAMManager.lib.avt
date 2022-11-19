@@ -1,7 +1,6 @@
-import { ExampleData, MyExampleDataAction } from "../data/example.data.avt";
 import { IData, IDataConstraint } from "../data/IData.data.avt";
 import { Socket } from "../lib/Socket.lib.avt";
-import { GenericRAMManager, RAMManager } from "./RAMManager.lib.avt";
+import { RAMManager } from "./RAMManager.lib.avt";
 
 
 
@@ -26,25 +25,26 @@ export interface SocketRAMManagerSubscribers<U, R extends U> {
     updated: ((item: R) => void)[];
     deleted: ((item: R) => void)[];
 }
-export interface SocketRAMManagerRouteNotPlanned {
+export interface SocketRAMManagerRouteNotPlanned<U> {
     channel: string,
-    callback: (response: { data?: {}[]; }) => void;
+    callback: (response: { data?: KeysObject<U>[]; }) => void;
 }
 
-export interface ISocketAction {
-    update(newData: {}): Promise<this>;
+export interface ISocketAction<U> {
+    update(newData: KeysObject<U>): Promise<this>;
     onUpdate(callback: (item: this) => void);
     offUpdate(callback: (item: this) => void);
     delete(): Promise<void>;
     onDelete(callback: (item: this) => void);
     offDelete(callback: (item: this) => void);
 }
-export interface ISocketData extends IData, ISocketAction {
+export interface ISocketData<U> extends IData, ISocketAction<U> {
 
 }
-export type SocketRAMManagerItem<U extends IData> = U & ISocketData;
+export type SocketRAMManagerItem<U extends IData> = U & ISocketData<U>;
+export type KeysObject<U> = { [Key in keyof U]?: any; };
 
-export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R extends U & ISocketData> extends GenericRAMManager<U, R> {
+export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends SocketRAMManagerItem<U>> extends RAMManager<R> {
     private socketActions: {
         get: string;
         getAll: string;
@@ -65,7 +65,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
 
     protected constructor() {
         super();
-        if(this.constructor == GenericSocketRAMManager) {
+        if(this.constructor == SocketRAMManager) {
             throw "can't instanciate an abstract class";
         }
 
@@ -78,7 +78,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         return Socket.getInstance(this._getSocketName());
     }
     protected _getSocketName(): string | undefined {
-        return GenericSocketRAMManager.defaultSocketName;
+        return SocketRAMManager.defaultSocketName;
     }
     protected abstract getObjectName(): string;
 
@@ -124,7 +124,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                         let obj = response.data[key];
                         let id = this.getId(obj);
                         if(id !== undefined) {
-                            this.records[id] = this.addFunctionForItem(obj);
+                            this.records[id] = this.getObjectForRAM(obj);
                             this.publish(this.socketActions.created, this.records[id]);
                         }
 
@@ -147,7 +147,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                                 this.publish(this.socketActions.updated, this.records[id]);
                             }
                             else {
-                                this.records[id] = this.addFunctionForItem(newData);
+                                this.records[id] = this.getObjectForRAM(newData);
                                 this.publish(this.socketActions.created, this.records[id]);
                             }
                         }
@@ -178,9 +178,9 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
 
 
     //#region create
-    public override async create(item: U, cbError?: (response: any) => void): Promise<R> {
+    public override async create(item: U | R, cbError?: (response: any) => void): Promise<R> {
         try {
-            return await super.create(item);
+            return await super.create(item as R);
         } catch(e) {
             if(cbError) {
                 cbError(e);
@@ -188,13 +188,13 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         }
         return undefined;
     }
-    protected override beforeCreateItem(item: U, fromList: boolean): Promise<U> {
-        return new Promise<U>((resolve, reject) => {
+    protected override beforeCreateItem(item: R, fromList: boolean): Promise<R> {
+        return new Promise<R>((resolve, reject) => {
             if(!fromList) {
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.create.request, item, {
-                    [this.socketRoutes.create.success]: response => {
+                    [this.socketRoutes.create.success]: (response: { created: KeysObject<U>[]; }) => {
                         let element = response.created[0];
-                        resolve(element);
+                        resolve(this.getObjectForRAM(element));
                     },
                     [this.socketRoutes.create.error]: response => {
                         reject(response);
@@ -207,11 +207,15 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         });
 
     }
-    protected override beforeCreateList(list: U[]): Promise<U[]> {
-        return new Promise<U[]>((resolve, reject) => {
+    protected override beforeCreateList(list: R[]): Promise<R[]> {
+        return new Promise<R[]>((resolve, reject) => {
             Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.create.multiple, list, {
-                [this.socketRoutes.create.success]: response => {
-                    resolve(response.created);
+                [this.socketRoutes.create.success]: (response: { created: KeysObject<U>[]; }) => {
+                    let result: R[] = [];
+                    for(let element of response.created) {
+                        result.push(this.getObjectForRAM(element));
+                    }
+                    resolve(result);
                 },
                 [this.socketRoutes.create.error]: response => {
                     reject(response);
@@ -221,9 +225,9 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
     }
     //#endregion
     //#region update
-    public override async update(item: U, cbError?: (response: any) => void): Promise<R> {
+    public override async update(item: U | R, cbError?: (response: any) => void): Promise<R> {
         try {
-            return await super.update(item);
+            return await super.update(item as R);
         } catch(e) {
             if(cbError) {
                 cbError(e);
@@ -231,13 +235,13 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         }
         return undefined;
     }
-    protected override beforeUpdateItem(item: U, fromList: boolean): Promise<U> {
-        return new Promise<U>((resolve, reject) => {
+    protected override beforeUpdateItem(item: R, fromList: boolean): Promise<R> {
+        return new Promise<R>((resolve, reject) => {
             if(!fromList) {
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.update.request, item, {
-                    [this.socketRoutes.update.success]: response => {
+                    [this.socketRoutes.update.success]: (response: { updated: KeysObject<U>[]; }) => {
                         let element = response.updated[0];
-                        resolve(element);
+                        resolve(this.getObjectForRAM(element));
                     },
                     [this.socketRoutes.update.error]: response => {
                         reject(response);
@@ -249,11 +253,15 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
             }
         });
     }
-    protected override beforeUpdateList(list: U[]): Promise<U[]> {
-        return new Promise<U[]>((resolve, reject) => {
+    protected override beforeUpdateList(list: R[]): Promise<R[]> {
+        return new Promise<R[]>((resolve, reject) => {
             Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.update.multiple, list, {
-                [this.socketRoutes.update.success]: response => {
-                    resolve(response.updated);
+                [this.socketRoutes.update.success]: (response: { updated: KeysObject<U>[]; }) => {
+                    let result: R[] = [];
+                    for(let element of response.updated) {
+                        result.push(this.getObjectForRAM(element));
+                    }
+                    resolve(result);;
                 },
                 [this.socketRoutes.update.error]: response => {
                     reject(response);
@@ -261,12 +269,12 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
             });
         });
     }
-   
+
     //#endregion
     //#region delete
-    public override async delete(item: U, cbError?: (response: any) => void): Promise<void> {
+    public override async delete(item: U | R, cbError?: (response: any) => void): Promise<void> {
         try {
-            await super.delete(item);
+            await super.delete(item as R);
         } catch(e) {
             if(cbError) {
                 cbError(e);
@@ -278,7 +286,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         return new Promise<void>((resolve, reject) => {
             if(!fromList) {
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.delete.request, item, {
-                    [this.socketRoutes.delete.success]: response => {
+                    [this.socketRoutes.delete.success]: (response: { deleted: KeysObject<U>[]; }) => {
                         resolve();
                     },
                     [this.socketRoutes.delete.error]: response => {
@@ -294,7 +302,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
     protected override beforeDeleteList(list: U[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.delete.multiple, list, {
-                [this.socketRoutes.delete.success]: response => {
+                [this.socketRoutes.delete.success]: (response: { deleted: KeysObject<U>[]; }) => {
                     resolve();
                 },
                 [this.socketRoutes.delete.error]: response => {
@@ -315,9 +323,9 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.request, {
                     [this.getPrimaryKey()]: id
                 }, {
-                    [this.socketRoutes.get.success]: response => {
+                    [this.socketRoutes.get.success]: (response: { data: KeysObject<U>; }) => {
                         if(response.data) {
-                            this.records[id] = this.addFunctionForItem(response.data);
+                            this.records[id] = this.getObjectForRAM(response.data);
                         }
                         resolve();
                     },
@@ -341,10 +349,10 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.get.multiple, {
                     [this.getPrimaryKey()]: ids
                 }, {
-                    [this.socketRoutes.get.success]: response => {
+                    [this.socketRoutes.get.success]: (response: { data: KeysObject<U>[]; }) => {
                         if(response.data) {
                             for(let item of Object.values(response.data)) {
-                                this.records[this.getId(item as U)] = this.addFunctionForItem(item as U);
+                                this.records[this.getId(item as U)] = this.getObjectForRAM(item);
                             }
                         }
                         resolve();
@@ -365,12 +373,11 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                 resolve();
             } else {
                 Socket.getInstance(this._getSocketName()).sendMessageAndWait(this.socketRoutes.getAll.request, {}, {
-                    [this.socketRoutes.getAll.success]: response => {
+                    [this.socketRoutes.getAll.success]: (response: { data: KeysObject<U>[]; }) => {
                         if(response.data) {
                             this.gotAllRecords = true;
                             for(let item of Object.values(response.data)) {
-
-                                this.records[this.getId(item as U)] = this.addFunctionForItem(item as U);
+                                this.records[this.getId(item as U)] = this.getObjectForRAM(item);
                             }
                         }
                         resolve();
@@ -385,10 +392,10 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
     }
     //#endregion
 
-    protected extend<B extends new (...args: any[]) => IDataConstraint<U>>(Base: B) {
+    protected addSocketFunction<B extends new (...args: any[]) => IDataConstraint<U>>(Base: B) {
         let that = this;
-        return class ActionClass extends Base implements ISocketData {
-            public async update(newData: {} = {}) {
+        return class ActionClass extends Base implements ISocketData<U> {
+            public async update(newData: KeysObject<U> = {}) {
                 let id = that.getId(this);
                 let oldData = that.records[id];
                 if(oldData) {
@@ -418,9 +425,9 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
                     }
                 }
             }
-            public async delete() {
+            public async delete() : Promise<void> {
                 let id = that.getId(this);
-                return await that.deleteById(id);
+                await that.deleteById(id);
             }
             public onDelete(callback) {
                 let id = that.getId(this);
@@ -445,12 +452,7 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         };
     }
 
-    protected override addFunctionForItem(item:U){
-
-    }
-    protected abstract getNewRealObject() {
-
-    }
+    protected abstract getObjectForRAM(objFromSocket: KeysObject<U> | U): R;
 
     private publish(type: string, data: R) {
         [...this.subscribers[type]].forEach(callback => callback(data));
@@ -461,12 +463,9 @@ export abstract class GenericSocketRAMManager<U extends IDataConstraint<U>, R ex
         console.error(data, action);
     }
 
-}
 
 
-export abstract class SocketRAMManager<U extends IData> extends GenericSocketRAMManager<U, SocketRAMManagerItem<U>> {
-    protected addCustomFunctions(item: SocketRAMManagerItem<U>): SocketRAMManagerItem<U> {
-        return item;
-    }
 }
+
+export interface RAMExtension{}
 

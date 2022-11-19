@@ -1,4 +1,4 @@
-declare interface Event {
+interface Event {
     normalize: () => void;
     /**
      * Cancel event and create a clone trigger on body : used for popup etc

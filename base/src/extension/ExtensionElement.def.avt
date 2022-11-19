@@ -1,4 +1,4 @@
-declare interface Element {
+interface Element {
     findParentByTag:<T>(tagname:string|string[], untilNode?:Element) => T | null;
     findParentByType:<T>(type: new()=>T) => T | null;
     findParents:<T>(tagname:string|string[], untilNode?:Element) => T[];

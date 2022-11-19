@@ -2,7 +2,7 @@ import { IData, IDataConstraint } from "../data/IData.data.avt";
 
 export interface IRAMManager { }
 
-export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends U> implements IRAMManager {
+export abstract class RAMManager<U extends IDataConstraint<U>> implements IRAMManager {
     private static allRams: { [key: string]: IRAMManager; } = {};
 
     protected static _getInstance<T extends IRAMManager>(): T {
@@ -13,7 +13,7 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
         return this.allRams[this.name] as T;
     }
 
-    protected records: { [key: number]: R; };
+    protected records: { [key: number]: U; };
 
     public abstract getPrimaryKey(): string;
 
@@ -26,37 +26,43 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
     }
 
     protected constructor() {
-        if(this.constructor == GenericRAMManager) {
+        if(this.constructor == RAMManager) {
             throw "can't instanciate an abstract class";
         }
         this.records = {};
     }
 
-    protected abstract addFunctionForItem(item: U): R;
     //#region create
-    async createList(list: U[]): Promise<R[]> {
-        let result: R[] = [];
-        list = await this.beforeCreateList(list);
-        for(let item of list) {
-            let resultItem = await this._create(item, true);
-            if(resultItem) {
-                result.push(resultItem);
+    async createList(list: U[]): Promise<U[]> {
+        let result: U[] = [];
+        try {
+            list = await this.beforeCreateList(list);
+            for(let item of list) {
+                let resultItem = await this._create(item, true);
+                if(resultItem) {
+                    result.push(resultItem);
+                }
             }
+            result = await this.afterCreateList(result);
+        } catch(e) {
+            console.error(e);
         }
-        result = await this.afterCreateList(result);
         return result;
     }
-    async create(item: U, ...args: any[]): Promise<R | undefined> {
+    async create(item: U, ...args: any[]): Promise<U | undefined> {
         return await this._create(item, false);
     }
-    private async _create(item: U, fromList: boolean): Promise<R | undefined> {
+    private async _create(item: U, fromList: boolean): Promise<U | undefined> {
         let key = this.getId(item);
-        if(key) {
-            item = await this.beforeCreateItem(item, fromList);
-            let createdItem = this.addFunctionForItem(item);
-            this.records[key] = createdItem;
-            this.records[key] = await this.afterCreateItem(createdItem, fromList);
-            return this.records[key];
+        try {
+            if(key) {
+                item = await this.beforeCreateItem(item, fromList);
+                this.records[key] = item;
+                this.records[key] = await this.afterCreateItem(item, fromList);
+                return this.records[key];
+            }
+        } catch(e) {
+            console.error(e);
         }
         return undefined;
     }
@@ -66,42 +72,50 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
     protected async beforeCreateItem(item: U, fromList: boolean): Promise<U> {
         return item;
     }
-    protected async afterCreateItem(item: R, fromList: boolean): Promise<R> {
+    protected async afterCreateItem(item: U, fromList: boolean): Promise<U> {
         return item;
     }
-    protected async afterCreateList(list: R[]): Promise<R[]> {
+    protected async afterCreateList(list: U[]): Promise<U[]> {
         return list;
     }
     //#endregion
 
     //#region update
-    async updateList(list: U[]): Promise<R[]> {
-        let result: R[] = [];
-        list = await this.beforeUpdateList(list);
-        for(let item of list) {
-            let resultItem = await this._update(item, true);
-            if(resultItem) {
-                result.push(resultItem);
+    async updateList(list: U[]): Promise<U[]> {
+        let result: U[] = [];
+        try {
+            list = await this.beforeUpdateList(list);
+            for(let item of list) {
+                let resultItem = await this._update(item, true);
+                if(resultItem) {
+                    result.push(resultItem);
+                }
             }
+        } catch(e) {
+            console.error(e);
         }
         result = await this.afterUpdateList(result);
         return result;
     }
-    async update(item: U, ...args: any[]): Promise<R | undefined> {
+    async update(item: U, ...args: any[]): Promise<U | undefined> {
         return await this._update(item, false);
     }
-    private async _update(item: U, fromList: boolean): Promise<R | undefined> {
-        let key = await this.getId(item);
-        if(key) {
-            if(this.records[key]) {
-                item = await this.beforeUpdateItem(item, fromList);
-                this.updateDataInRAM(item);
-                this.records[key] = await this.afterUpdateItem(this.records[key], fromList);
-                return this.records[key];
+    private async _update(item: U, fromList: boolean): Promise<U | undefined> {
+        try {
+            let key = await this.getId(item);
+            if(key) {
+                if(this.records[key]) {
+                    item = await this.beforeUpdateItem(item, fromList);
+                    this.updateDataInRAM(item);
+                    this.records[key] = await this.afterUpdateItem(this.records[key], fromList);
+                    return this.records[key];
+                }
+                else {
+                    console.error("can't update the item " + key + " because it wasn't found inside ram");
+                }
             }
-            else {
-                console.error("can't update the item " + key + " because it wasn't found inside ram");
-            }
+        } catch(e) {
+            console.error(e);
         }
         return undefined;
     }
@@ -111,14 +125,14 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
     protected async beforeUpdateItem(item: U, fromList: boolean): Promise<U> {
         return item;
     }
-    protected async afterUpdateItem(item: R, fromList: boolean): Promise<R> {
+    protected async afterUpdateItem(item: U, fromList: boolean): Promise<U> {
         return item;
     }
-    protected async afterUpdateList(list: R[]): Promise<R[]> {
+    protected async afterUpdateList(list: U[]): Promise<U[]> {
         return list;
     }
 
-    protected updateDataInRAM(newData: U) {
+    protected updateDataInRAM(newData: U | {}) {
         let dataInRAM = this.records[this.getId(newData)];
         let oldKeys: { [key: string]: string; } = {};
         for(let key in dataInRAM) {
@@ -138,11 +152,15 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
 
     //#region delete
     async deleteList(list: U[]): Promise<void> {
-        await this.beforeDeleteList(list);
-        for(let item of list) {
-            await this._delete(item, true);
+        try {
+            await this.beforeDeleteList(list);
+            for(let item of list) {
+                await this._delete(item, true);
+            }
+            await this.afterDeleteList(list);
+        } catch(e) {
+            console.error(e);
         }
-        await this.afterDeleteList(list);
     }
     async delete(item: U, ...args: any[]): Promise<void> {
         return await this._delete(item, false);
@@ -150,16 +168,20 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
     async deleteById(id: number): Promise<void> {
         let item = this.records[id];
         if(item) {
-            return await this._delete(item, false);
+            await this._delete(item, false);
         }
     }
     private async _delete(item: U, fromList: boolean): Promise<void> {
-        let key = await this.getId(item);
-        if(key && this.records[key]) {
-            let oldItem = this.records[key];
-            await this.beforeDeleteItem(oldItem, fromList);
-            delete this.records[key];
-            await this.afterDeleteItem(oldItem, fromList);
+        try {
+            let key = await this.getId(item);
+            if(key && this.records[key]) {
+                let oldItem = this.records[key];
+                await this.beforeDeleteItem(oldItem, fromList);
+                delete this.records[key];
+                await this.afterDeleteItem(oldItem, fromList);
+            }
+        } catch(e) {
+            console.error(e);
         }
     }
     protected async beforeDeleteList(list: U[]): Promise<void> { }
@@ -169,53 +191,58 @@ export abstract class GenericRAMManager<U extends IDataConstraint<U>, R extends 
     //#endregion
 
     //#region get
-    async get(id: number): Promise<R> {
+    async get(id: number): Promise<U> {
         return await this.getById(id);
     }
-    async getById(id: number): Promise<R> {
-        await this.beforeGetById(id);
-        if(this.records[id]) {
-            let result = this.records[id];
-            await this.afterGetById(result);
-            return result;
+    async getById(id: number): Promise<U | undefined> {
+        try {
+            await this.beforeGetById(id);
+            if(this.records[id]) {
+                let result = this.records[id];
+                await this.afterGetById(result);
+                return result;
+            }
+        } catch(e) {
+            console.error(e);
         }
         return undefined;
     }
     protected async beforeGetById(id: number): Promise<void> { }
-    protected async afterGetById(item: R): Promise<void> { }
+    protected async afterGetById(item: U): Promise<void> { }
 
-    async getByIds(ids: number[]): Promise<R[]> {
-        let result: R[] = [];
-        await this.beforeGetByIds(ids);
-        for(let id of ids) {
-            if(this.records[id]) {
-                result.push(this.records[id]);
+    async getByIds(ids: number[]): Promise<U[]> {
+        let result: U[] = [];
+        try {
+            await this.beforeGetByIds(ids);
+            for(let id of ids) {
+                if(this.records[id]) {
+                    result.push(this.records[id]);
+                }
             }
+            await this.afterGetByIds(result);
+        } catch(e) {
+            console.error(e);
         }
-        await this.afterGetByIds(result);
         return result;
     }
     protected async beforeGetByIds(ids: number[]): Promise<void> { }
-    protected async afterGetByIds(items: R[]): Promise<void> { }
+    protected async afterGetByIds(items: U[]): Promise<void> { }
 
-    async getAll(): Promise<{ [key: number]: R; }> {
-        await this.beforeGetAll();
-        await this.afterGetAll(this.records);
+    async getAll(): Promise<{ [key: number]: U; }> {
+        try {
+            await this.beforeGetAll();
+            await this.afterGetAll(this.records);
+        } catch(e) {
+            console.error(e);
+        }
         return this.records;
     }
     protected async beforeGetAll(): Promise<void> { }
-    protected async afterGetAll(result: { [key: number]: R; }): Promise<void> { }
+    protected async afterGetAll(result: { [key: number]: U; }): Promise<void> { }
 
     async getList(): Promise<U[]> {
         let data = await this.getAll();
         return Object.values(data);
     }
     //#endregion
-}
-
-export abstract class RAMManager<U extends new () => IData> extends GenericRAMManager<U, U>{
-    protected addFunctionForItem(item: U): U {
-        return item;
-    }
-
 }

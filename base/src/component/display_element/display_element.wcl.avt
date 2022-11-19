@@ -1,6 +1,6 @@
 import { IData } from "../../data/IData.data.avt";
 import { WebComponent, DefaultComponent } from "../../lib/WebComponent.lib.avt";
-import { SocketRAMManagerObject } from "../../ram/SocketRAMManager.lib.avt";
+import { SocketRAMManagerItem } from "../../ram/SocketRAMManager.lib.avt";
 
 /**
  * Use this object to display an element from the DB
@@ -8,14 +8,14 @@ import { SocketRAMManagerObject } from "../../ram/SocketRAMManager.lib.avt";
  */
 export abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
 	//#region variables
-	currentInstance: T & SocketRAMManagerObject<T>;
+	currentInstance: SocketRAMManagerItem<T>;
 	eventsFunctions: { "onUpdate": (data:T) => void, "onDelete": (data:T) => void } = {
-		"onUpdate": (data:T & SocketRAMManagerObject<T>) => {
+		"onUpdate": (data:SocketRAMManagerItem<T>) => {
 			this.currentInstance = data;
 			this.displayInfos(data);
 			this.onUpdateFunction(data);
 		},
-		"onDelete": (data:T & SocketRAMManagerObject<T>) => {
+		"onDelete": (data:SocketRAMManagerItem<T>) => {
 			this.onDeleteFunction(data);
 			this.destroy();
 		}
@@ -23,12 +23,12 @@ export abstract class DisplayElement<T extends IData> extends WebComponent imple
 	//#endregion
 	
 	//#region methods
-	protected abstract displayInfos(newData: T & SocketRAMManagerObject<T>);
+	protected abstract displayInfos(newData: SocketRAMManagerItem<T>);
 
-	protected onDeleteFunction(data: T & SocketRAMManagerObject<T>) {
+	protected onDeleteFunction(data: SocketRAMManagerItem<T>) {
 
 	}
-	protected onUpdateFunction(data: T & SocketRAMManagerObject<T>) {
+	protected onUpdateFunction(data: SocketRAMManagerItem<T>) {
 		
 	}
 
@@ -50,9 +50,9 @@ export abstract class DisplayElement<T extends IData> extends WebComponent imple
 
 	/**
 	 * Assign a new instance to the component
-	 * @param {T & SocketRAMManagerObject} newInstance - The new instance to display
+	 * @param {SocketRAMManagerItem<T>} newInstance - The new instance to display
 	 */
-	protected switchInstance(newInstance: T & SocketRAMManagerObject<T>) {
+	protected switchInstance(newInstance: SocketRAMManagerItem<T>) {
 		if (this.currentInstance) {
 			this.unsubscribeFromInstance();
 		}

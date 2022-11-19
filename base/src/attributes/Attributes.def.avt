@@ -1,36 +1,36 @@
 /**
  * Add an attribute inside on your component
  */
-declare function Attribute();
+function Attribute();
 /**
  * Add an attribute inside on your component with changes analyze
  */
-declare function Property();
+function Property();
 /**
  * Add an attribute inside on your component with changes analyze
  */
-declare function Property<T>(onChange: (component: T) => void);
+function Property<T>(onChange: (component: T) => void);
 /**
  * Add a property inside a watcher to be notify of changing
  */
-declare function Watch();
+function Watch();
 /**
  * Add a property inside a watcher to be notify of changing
  */
-declare function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
+function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
 /**
  * Signal that this variable is a link to your shadowroot
  */
-declare function ViewElement(config?:ViewElementConfig);
+function ViewElement(config?:ViewElementConfig);
 /**
  * Clear parent view and use yours 
  */
-declare function OverrideView();
+function OverrideView();
 /**
  * Declare namespace
  */
-declare function Namespace(name:string);
+function Namespace(name:string);
 /**
  * Add debbuger action function for your component
  */
-declare function Debugger(config: DebuggerConfig);
+function Debugger(config: DebuggerConfig);
