@@ -1,9 +1,9 @@
 import { EOL } from 'os';
 import { normalize, sep } from 'path';
-import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleResolutionKind, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
+import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
 import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, DiagnosticSeverity, FormattingOptions, Hover, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
 import { AventusExtension, AventusLanguageId } from '../../definition';
-import { AventusFile } from '../../FilesManager';
+import { AventusFile } from '../../files/AventusFile';
 import { Build } from '../../project/Build';
 import { convertRange, pathToUri } from '../../tools';
 import { AliasNode, ClassModel, EnumDeclaration } from '../../ts-file-parser';
@@ -27,7 +27,7 @@ export class AventusTsLanguageService {
 
     private createHostNamespace(): LanguageServiceHost {
         const host: LanguageServiceHost = {
-            getCompilationSettings: () => compilerOptions,
+            getCompilationSettings: () => compilerOptionsRead,
             getScriptFileNames: () => {
                 return this.filesNeeded
             },
@@ -83,7 +83,7 @@ export class AventusTsLanguageService {
             resolveModuleNames(moduleNames, containingFile, reusedNames, redirectedReference, options, containingSourceFile?) {
                 const resolvedModules: ResolvedModule[] = [];
                 for (const moduleName of moduleNames) {
-                    let result = resolveModuleName(moduleName, containingFile, compilerOptions, this)
+                    let result = resolveModuleName(moduleName, containingFile, compilerOptionsRead, this)
                     if (result.resolvedModule) {
                         if (result.resolvedModule.resolvedFileName.endsWith(".avt.ts")) {
                             result.resolvedModule.resolvedFileName = result.resolvedModule.resolvedFileName.replace(".avt.ts", ".avt");
@@ -105,7 +105,7 @@ export class AventusTsLanguageService {
     }
     private createHost(): LanguageServiceHost {
         const host: LanguageServiceHost = {
-            getCompilationSettings: () => compilerOptions,
+            getCompilationSettings: () => compilerOptionsRead,
             getScriptFileNames: () => {
                 return this.filesNeeded
             },
@@ -161,7 +161,7 @@ export class AventusTsLanguageService {
             resolveModuleNames(moduleNames, containingFile, reusedNames, redirectedReference, options, containingSourceFile?) {
                 const resolvedModules: ResolvedModule[] = [];
                 for (const moduleName of moduleNames) {
-                    let result = resolveModuleName(moduleName, containingFile, compilerOptions, this)
+                    let result = resolveModuleName(moduleName, containingFile, compilerOptionsRead, this)
                     if (result.resolvedModule) {
                         if (result.resolvedModule.resolvedFileName.endsWith(".avt.ts")) {
                             result.resolvedModule.resolvedFileName = result.resolvedModule.resolvedFileName.replace(".avt.ts", ".avt");
@@ -499,12 +499,12 @@ export class AventusTsLanguageService {
         let txt = this.removeComments(this.removeDecoratorFromClassContent(element));
         txt = this.replaceFirstExport(txt);
 
-        result.compiled = transpile(txt, compilerOptions);
+
+        result.compiled = transpile(txt, compilerOptionsCompile);
         let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname);
 
         let namespaceTxt = element.namespace.name;
-        if (namespaceTxt.length > 0) {
-            namespaceTxt += ".";
+        if (namespaceTxt.length > 0 && element.isExported) {
             if (doc.length > 0) {
                 result.doc = "namespace " + namespaceTxt + " {\r\n" + doc + "}\r\n";
             }
@@ -514,7 +514,12 @@ export class AventusTsLanguageService {
         }
 
         if (result.compiled.length > 0) {
-            result.classScript = namespaceTxt + element.name
+            if (namespaceTxt.length > 0) {
+                result.classScript = namespaceTxt + '.' + element.name
+            }
+            else {
+                result.classScript = element.name;
+            }
         }
         if (result.doc.length > 0) {
             result.classDoc = namespaceTxt + element.name
@@ -578,10 +583,10 @@ export class AventusTsLanguageService {
 
         };
         let ls: LanguageService = createLanguageService(host);
-        return ls.getEmitOutput("temp.js", true, true).outputFiles[0].text;
+        return ls.getEmitOutput("temp.js", true, true).outputFiles[0].text.replace(/^declare /g, '');
     }
-    public static getCompilerOptions(): CompilerOptions {
-        return compilerOptions;
+    public static getCompilerOptionsCompile(): CompilerOptions {
+        return compilerOptionsCompile;
     }
 }
 //#region definition const + tools function
@@ -589,7 +594,7 @@ type CompileTsResult = { compiled: string, doc: string, dependances: string[], c
 
 const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g;
 
-const compilerOptions: CompilerOptions = {
+const compilerOptionsRead: CompilerOptions = {
     allowNonTsExtensions: true,
     jsx: JsxEmit.None,
     importHelpers: false,
@@ -597,6 +602,22 @@ const compilerOptions: CompilerOptions = {
     checkJs: false,
     lib: ['lib.es2022.full.d.ts'],
     target: ScriptTarget.ES2022,
+    moduleDetection: ModuleDetectionKind.Force,
+    moduleResolution: ModuleResolutionKind.Classic,
+    experimentalDecorators: true,
+    noImplicitOverride: true,
+    strictPropertyInitialization: true,
+    noImplicitReturns: true,
+};
+const compilerOptionsCompile: CompilerOptions = {
+    allowNonTsExtensions: true,
+    jsx: JsxEmit.None,
+    importHelpers: false,
+    allowJs: true,
+    checkJs: false,
+    lib: ['lib.es2022.full.d.ts'],
+    target: ScriptTarget.ES2022,
+    moduleDetection: ModuleDetectionKind.Auto,
     moduleResolution: ModuleResolutionKind.Classic,
     experimentalDecorators: true,
     noImplicitOverride: true,

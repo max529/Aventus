@@ -1,6 +1,7 @@
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { AventusExtension } from '../../definition';
-import { AventusFile, FilesManager, InternalAventusFile } from "../../FilesManager";
+import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
+import { FilesManager } from '../../files/FilesManager';
 import { AventusBaseFile } from "../BaseFile";
 
 export class AventusHTMLFile extends AventusBaseFile {
@@ -12,10 +13,13 @@ export class AventusHTMLFile extends AventusBaseFile {
         return this.compiledTxt;
     }
 
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         let diagnostics = await this.build.htmlLanguageService.doValidation(this.file);
         this.compile();
         return diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+        
     }
     protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic))

@@ -1,7 +1,8 @@
 import { normalize, sep } from "path";
 import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
 import { AventusExtension } from "../../definition";
-import { AventusFile, FilesManager, InternalAventusFile } from "../../FilesManager";
+import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
+import { FilesManager } from '../../files/FilesManager';
 import { Build } from "../../project/Build";
 import { createErrorScssPos, getFolder, uriToPath } from "../../tools";
 import { AventusBaseFile } from "../BaseFile";
@@ -23,12 +24,14 @@ export class AventusSCSSFile extends AventusBaseFile {
         this.loadDependances();
     }
 
-
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async  onValidate(): Promise<Diagnostic[]> {
         this.loadDependances();
         this.diagnostics = await this.build.scssLanguageService.doValidation(this.file);
         this.compileRoot();
         return this.diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+        
     }
     protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic))

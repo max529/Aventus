@@ -14,13 +14,13 @@ import * as cheerio from 'cheerio';
 import { ElementType } from "htmlparser2";
 import { transpile } from "typescript";
 import { AventusTsLanguageService } from "../../LanguageService";
-import { AventusFile } from "../../../../FilesManager";
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { EOL } from "os";
 import { HTMLDoc } from "../../../html/helper/definition";
 import { SCSSDoc } from "../../../scss/helper/CSSNode";
 import { AventusSCSSLanguageService } from "../../../scss/LanguageService";
 import { AventusTsFile } from '../../File';
+import { AventusFile } from '../../../../files/AventusFile';
 
 
 export class AventusWebcomponentCompiler {
@@ -40,7 +40,8 @@ export class AventusWebcomponentCompiler {
     private jQuery: cheerio.CheerioAPI;
     private htmlDoc: HTMLDoc | undefined;
     private otherContent: string = "";
-    private otherDoc: string = "";
+    private otherDocVisible: string = "";
+    private otherDocInvisible: string = "";
     private otherDebugTxt: string = "";
     //#region variable to use for preparation
     private dependances: string[] = [];
@@ -68,7 +69,8 @@ export class AventusWebcomponentCompiler {
             nameDoc: [],
             debug: '',
             src: '',
-            doc: '',
+            docVisible: '',
+            docInvisible: '',
             dependances: [],
             htmlDoc: {},
             scssDoc: {}
@@ -120,11 +122,20 @@ export class AventusWebcomponentCompiler {
             }
             finalSrc += this.template;
 
-            let finalDoc = this.otherDoc;
-            if (finalDoc.length > 0 && !finalDoc.endsWith("\n")) {
-                finalDoc += EOL;
+            let finalDocVisible = this.otherDocVisible;
+            let finalDocInvisible = this.otherDocInvisible;
+            if (finalDocVisible.length > 0 && !finalDocVisible.endsWith("\n")) {
+                finalDocVisible += EOL;
             }
-            finalDoc += this.prepareDocTs();
+            if (finalDocInvisible.length > 0 && !finalDocInvisible.endsWith("\n")) {
+                finalDocInvisible += EOL;
+            }
+            if (classInfo.isExported) {
+                finalDocVisible += this.prepareDocTs();
+            }
+            else {
+                finalDocInvisible += this.prepareDocTs();
+            }
 
             this.result.writeCompiled = classInfo.debuggerOption.writeCompiled ? true : false;
             if (this.result.writeCompiled) {
@@ -133,7 +144,8 @@ export class AventusWebcomponentCompiler {
             this.result.result.nameCompiled.push(classInfo.name);
             this.result.result.nameDoc.push(classInfo.name);
             this.result.result.src = finalSrc;
-            this.result.result.doc = finalDoc;
+            this.result.result.docVisible = finalDocVisible;
+            this.result.result.docInvisible = finalDocInvisible;
             this.result.result.dependances = this.dependances;
             this.result.result.htmlDoc = this.htmlDoc ? this.htmlDoc : {};
             this.result.result.scssDoc = this.prepareDocSCSS();
@@ -161,7 +173,6 @@ export class AventusWebcomponentCompiler {
             ...customClassInfo
         };
 
-        let nbClasses = 0;
         for (let i = 0; i < this.jsonStructure.functions.length; i++) {
             let fct = this.jsonStructure.functions[i];
             this.result.diagnostics.push(createErrorTsPos(this.document, "You can't write function outside of your class", fct.start, fct.end))
@@ -194,7 +205,7 @@ export class AventusWebcomponentCompiler {
         }
 
         if (classInfo.name == "") {
-            this.result.diagnostics.push(createErrorTs(this.document, "Can't found a class to compile inside"))
+            this.result.diagnostics.push(createErrorTs(this.document, "Can't found a web component class to compile inside"))
             return null;
         }
         for (let decorator of classInfo.decorators) {
@@ -356,7 +367,12 @@ export class AventusWebcomponentCompiler {
         let elementCompile = (cls: ClassModel | EnumDeclaration | AliasNode) => {
             let result = AventusTsLanguageService.compileTs(cls, this.logicalFile);
             this.otherContent += result.compiled;
-            this.otherDoc += result.doc;
+            if(cls.isExported){
+                this.otherDocVisible += result.doc;
+            }
+            else {
+                this.otherDocInvisible += result.doc;
+            }
             this.otherDebugTxt += result.debugTxt;
             if (result.classScript.length > 0) {
                 this.result.result.nameCompiled.push(result.classScript);
@@ -1570,7 +1586,7 @@ this.clearWatchHistory = () => {
                     let regexMethod = /\).*?{((\s|\S)*)}/g;
                     let match = regexMethod.exec(method.text)
                     if (match) {
-                        let methodTxt = transpile(match[1], AventusTsLanguageService.getCompilerOptions()).trim();
+                        let methodTxt = transpile(match[1], AventusTsLanguageService.getCompilerOptionsCompile()).trim();
                         // methodTxt = minify(methodTxt, { mangle: false }).code;
 
                         let methodFinal = "";
@@ -1866,7 +1882,7 @@ this.clearWatchHistory = () => {
     }
     private transpileMethod(methodTxt, paramsName: any[] = []) {
         methodTxt = this.prepareMethodToTranspile(methodTxt);
-        let method = transpile(methodTxt, AventusTsLanguageService.getCompilerOptions()).trim();
+        let method = transpile(methodTxt, AventusTsLanguageService.getCompilerOptionsCompile()).trim();
         method = method.substring(0, method.length - 1);
         method = "(" + method + ")(" + paramsName.join(",") + ")";
         // method = minify(method, { mangle: false }).code;
@@ -1874,7 +1890,7 @@ this.clearWatchHistory = () => {
     }
     private transpileMethodNoRun(methodTxt) {
         methodTxt = this.prepareMethodToTranspile(methodTxt);
-        let method = transpile(methodTxt, AventusTsLanguageService.getCompilerOptions()).trim();
+        let method = transpile(methodTxt, AventusTsLanguageService.getCompilerOptionsCompile()).trim();
         method = method.substring(0, method.length - 1);
         method = "(" + method + ")";
         // method = minify(method, { mangle: false }).code;

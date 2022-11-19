@@ -1,5 +1,6 @@
 import { AventusExtension } from "../definition";
-import { AventusFile, FilesManager } from "../FilesManager";
+import { AventusFile } from '../files/AventusFile';
+import { FilesManager } from '../files/FilesManager';
 import { Project } from "./Project";
 
 export class ProjectManager {

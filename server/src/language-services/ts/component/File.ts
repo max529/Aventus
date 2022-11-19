@@ -1,10 +1,9 @@
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { EOL } from 'os';
-import { Diagnostic } from "vscode-json-languageservice";
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension, AventusLanguageId } from "../../../definition";
-import { AventusFile, InternalAventusFile } from "../../../FilesManager";
+import { AventusFile, InternalAventusFile } from '../../../files/AventusFile';
 import { Build } from "../../../project/Build";
 import { AventusBaseFile } from "../../BaseFile";
 import { AventusHTMLFile } from "../../html/File";
@@ -24,12 +23,14 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         this.refreshFileParsed();
     }
 
-    protected async onContentChange(): Promise<Diagnostic[]> {
-        this.refreshFileParsed();
+    protected async onValidate(): Promise<Diagnostic[]> {
         this.compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
         this.build.scssLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.scssDoc);
         this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.htmlDoc);
         return this.compilationResult.diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+        this.refreshFileParsed();
     }
     protected async onSave() {
         if (!this.compilationResult) {
@@ -38,7 +39,8 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         if (this.compilationResult && this.compilationResult.diagnostics.length == 0) {
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
-                doc: this.compilationResult.result.doc,
+                docVisible: this.compilationResult.result.docVisible,
+                docInvisible: this.compilationResult.result.docVisible,
                 nameCompiled: this.compilationResult.result.nameCompiled,
                 nameDoc: this.compilationResult.result.nameDoc,
                 src: this.compilationResult.result.src
@@ -143,8 +145,7 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
         this.regionStyle.file = result.scss;
         this.regionView.file = result.html;
     }
-
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         let result = this.splitDocument();
         let diagnostics: Diagnostic[] = [];
         let convertedRanges: Range[] = [];
@@ -153,7 +154,7 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
             let newDocument = TextDocument.create(this.file.uri, languageId, this.file.version, newText);
             if (region.file) {
                 region.file.file.document = newDocument;
-                let errors = await (region.file.file as InternalAventusFile).manualTriggerContentChange(region.file.file.document);
+                let errors = await (region.file.file as InternalAventusFile).validate();
                 for (let error of errors) {
                     error.source = AventusLanguageId.WebComponent;
                     if (convertedRanges.indexOf(error.range) == -1) {
@@ -172,6 +173,9 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
 
 
         return diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+       
     }
     protected async onSave() {
         this.build.disableBuild();

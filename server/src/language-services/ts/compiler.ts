@@ -9,26 +9,33 @@ export interface TsCompileResult {
     nameCompiled: string[],
     nameDoc: string[],
     src: string,
-    doc: string,
+    docVisible: string,
+    docInvisible: string,
     dependances: string[]
 }
 
 export function genericTsCompile(file: AventusTsFile): TsCompileResult {
     const struct = file.fileParsed;
     let scriptTxt = "";
-    let docTxt = "";
+    let docVisibleTxt = "";
+    let docInvisibleTxt = "";
     let classesNameSript: string[] = [];
     let classesNameDoc: string[] = [];
     let debugTxt = "";
     let dependances: string[] = [];
 
     let sectionCompile = (section: ClassModel[] | EnumDeclaration[] | AliasNode[]) => {
-        section.forEach(cls => {
+        section.forEach((cls: ClassModel | EnumDeclaration | AliasNode) => {
             let result = AventusTsLanguageService.compileTs(cls, file);
             scriptTxt += result.compiled;
-            docTxt += result.doc;
+            if (cls.isExported) {
+                docVisibleTxt += result.doc;
+            }
+            else {
+                docInvisibleTxt += result.doc;
+            }
             debugTxt += result.debugTxt;
-            if (result.classScript.length > 0) {
+            if (result.classScript.length > 0 && cls.isExported) {
                 classesNameSript.push(result.classScript);
             }
             if (result.classDoc.length > 0) {
@@ -58,7 +65,8 @@ export function genericTsCompile(file: AventusTsFile): TsCompileResult {
         nameCompiled: classesNameSript,
         nameDoc: classesNameDoc,
         src: removeWhiteSpaceLines(scriptTxt),
-        doc: removeWhiteSpaceLines(docTxt),
+        docInvisible: removeWhiteSpaceLines(docInvisibleTxt),
+        docVisible: removeWhiteSpaceLines(docVisibleTxt),
         dependances: dependances
     };
 }

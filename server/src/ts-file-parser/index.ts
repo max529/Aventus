@@ -51,6 +51,9 @@ export interface AliasNode {
     decorators: Decorator[];
     name: string;
     type: TypeModel | undefined;
+    start: number;
+    end: number;
+    isExported: boolean;
     content: string;
 }
 

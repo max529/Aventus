@@ -3,11 +3,11 @@ import * as postcssSorting from 'postcss-sorting';
 import * as postcssScss from 'postcss-scss';
 import { CSSFormatConfiguration, getSCSSLanguageService, LanguageService } from "vscode-css-languageservice";
 import { CodeAction, CodeActionContext, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
-import { AventusFile } from "../../FilesManager";
 import { Build } from '../../project/Build';
 import { getNodePath, SCSSDoc, Node, NodeType, CustomCssProperty } from './helper/CSSNode';
 import { AventusDefinitionSCSSFile } from '../ts/definition/File';
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { AventusFile } from '../../files/AventusFile';
 
 
 

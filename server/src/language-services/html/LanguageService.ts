@@ -1,7 +1,7 @@
 import { getLanguageService, IAttributeData, ITagData, IValueData, LanguageService } from "vscode-html-languageservice";
 import { CompletionItemKind, CompletionList, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
 import { AventusLanguageId } from "../../definition";
-import { AventusFile } from "../../FilesManager";
+import { AventusFile } from '../../files/AventusFile';
 import { Build } from "../../project/Build";
 import { CustomTypeAttribute } from "../ts/component/compiler/def";
 import { AventusDefinitionHTMLFile } from "../ts/definition/File";

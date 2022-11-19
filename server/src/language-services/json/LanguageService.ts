@@ -1,8 +1,8 @@
 import { normalize } from "path";
 import { Diagnostic, getLanguageService, LanguageService } from "vscode-json-languageservice";
-import { CompletionItem, CompletionList, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CompletionItem, CompletionList, DiagnosticSeverity, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
 import { AventusExtension } from "../../definition";
-import { AventusFile } from "../../FilesManager";
+import { AventusFile } from '../../files/AventusFile';
 import { createErrorTs, getFolder, uriToPath } from "../../tools";
 import { AventusConfig, AventusConfigBuild, AventusConfigStatic } from "./definition";
 import { AventusConfigSchema } from "./schema";
@@ -40,6 +40,9 @@ export class AventusJSONLanguageService {
             catch (e) {
                 errors.push(createErrorTs(document, "Can't parse the json"))
             }
+        }
+        for(let error of errors){
+            error.severity = DiagnosticSeverity.Error;
         }
         return errors;
     }

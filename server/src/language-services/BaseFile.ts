@@ -1,5 +1,5 @@
 import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
-import { AventusFile, InternalAventusFile } from "../FilesManager";
+import { AventusFile, InternalAventusFile } from '../files/AventusFile';
 import { Build } from "../project/Build";
 
 
@@ -25,6 +25,7 @@ export abstract class AventusBaseFile {
 
     private uuidEvents = {
         onContentChange: '',
+        onValidate: '',
         onSave: '',
         onDelete: '',
         onCompletion: '',
@@ -36,6 +37,7 @@ export abstract class AventusBaseFile {
     }
     private addEvents(): void {
         this.uuidEvents.onContentChange = this.file.onContentChange(this.onContentChange.bind(this));
+        this.uuidEvents.onValidate = this.file.onValidate(this.onValidate.bind(this));
         this.uuidEvents.onSave = this.file.onSave(this.onSave.bind(this));
         this.uuidEvents.onDelete = this.file.onDelete(this._onDelete.bind(this));
         this.uuidEvents.onCompletion = this.file.onCompletion(this.onCompletion.bind(this));
@@ -47,6 +49,7 @@ export abstract class AventusBaseFile {
     }
     public removeEvents(): void {
         this.file.removeOnContentChange(this.uuidEvents.onContentChange);
+        this.file.removeOnValidate(this.uuidEvents.onValidate);
         this.file.removeOnSave(this.uuidEvents.onSave);
         this.file.removeOnDelete(this.uuidEvents.onDelete);
         this.file.removeOnCompletion(this.uuidEvents.onCompletion);
@@ -57,9 +60,9 @@ export abstract class AventusBaseFile {
         this.file.removeOnCodeAction(this.uuidEvents.onCodeAction);
     }
 
-    public async triggerChange() {
+    public async validate() {
         if (this.file instanceof InternalAventusFile) {
-            await this.file.triggerContentChangeNoDelay(this.file.document);
+            await this.file.validate();
         }
     }
     public triggerSave(): void {
@@ -67,7 +70,8 @@ export abstract class AventusBaseFile {
             this.file.triggerSave(this.file.document);
         }
     }
-    protected abstract onContentChange(): Promise<Diagnostic[]>;
+    protected abstract onContentChange(): Promise<void>;
+    protected abstract onValidate(): Promise<Diagnostic[]>;
     protected abstract onSave(): Promise<void>;
     protected abstract onDelete(): Promise<void>;
     private async _onDelete(): Promise<void> {

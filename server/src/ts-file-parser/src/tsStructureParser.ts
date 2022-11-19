@@ -23,9 +23,9 @@ import { JSONTransformer } from "./jsonTransformer";
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { AventusExtension } from "../../definition";
 import { uriToPath } from "../../tools";
-import { FilesManager } from '../../FilesManager';
 import { dirname, resolve } from 'path';
 import { existsSync, Mode, readFileSync } from 'fs';
+import { FilesManager } from '../../files/FilesManager';
 
 
 function parse(content: string) {
@@ -132,16 +132,16 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                         isAsync,
                         name,
                         params,
-                        start: (x as ts.FunctionDeclaration).pos,
-                        end: (x as ts.FunctionDeclaration).end,
-                        namespace: getNamespace((x as ts.FunctionDeclaration).pos)
+                        start: (x as ts.FunctionDeclaration).getStart(),
+                        end: (x as ts.FunctionDeclaration).getEnd(),
+                        namespace: getNamespace((x as ts.FunctionDeclaration).getStart())
                     });
                 }
                 else if (c.kind == ts.SyntaxKind.Identifier) {
                     module.variables.push({
                         name: (c as ts.Identifier).escapedText + "",
-                        start: (c as ts.Identifier).pos,
-                        end: (c as ts.Identifier).end
+                        start: (c as ts.Identifier).getStart(),
+                        end: (c as ts.Identifier).getEnd(),
                     });
                 }
             });
@@ -238,9 +238,9 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     isAsync,
                     name,
                     params,
-                    start: functionDeclaration.pos,
-                    end: functionDeclaration.end,
-                    namespace: getNamespace(functionDeclaration.pos)
+                    start: functionDeclaration.getStart(),
+                    end: functionDeclaration.getEnd(),
+                    namespace: getNamespace(functionDeclaration.getStart())
                 });
             }
         }
@@ -250,14 +250,14 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             var cmod = <ts.ModuleDeclaration>x;
             currentModule = cmod.name.text;
             if (cmod.body) {
-                let parentNamespace = getNamespace(cmod.pos);
+                let parentNamespace = getNamespace(cmod.getStart());
                 let _namespace = cmod.name.text;
                 if (parentNamespace.name != "") {
                     _namespace = parentNamespace.name + '.' + _namespace;
                 }
                 module.namespaces.push({
-                    start: cmod.pos,
-                    end: cmod.end,
+                    start: cmod.getStart(),
+                    end: cmod.getEnd(),
                     name: _namespace,
                     body: {
                         start: cmod.body.getStart() + 1,
@@ -293,14 +293,31 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             if (u.name) {
                 var aliasName = u.name.text;
                 var type = buildType(u.type, mpth, module);
-                module.aliases.push({
+                let aliasInstance = {
                     name: aliasName,
                     type: type,
-                    content: content.substring(x.pos, x.end),
-                    namespace: getNamespace(x.pos),
+                    content: content.substring(x.getStart(), x.getEnd()),
+                    namespace: getNamespace(x.getStart()),
                     extends: [],
-                    decorators: []
-                });
+                    decorators: [],
+                    isExported: false,
+                    start: x.getStart(),
+                    end: x.getEnd()
+                }
+                if (u.modifiers) {
+                    u.modifiers.forEach(x => {
+                        if (x.kind === ts.SyntaxKind.ExportKeyword) {
+                            aliasInstance.isExported = true;
+                        }
+                        else if (x.kind === ts.SyntaxKind.AbstractKeyword) { }
+                        else if (x.kind === ts.SyntaxKind.PrivateKeyword) { }
+                        else if (x.kind == ts.SyntaxKind.DeclareKeyword) { }
+                        else {
+                            throw new Error("Unknown token type alias modifiers " + x.kind);
+                        }
+                    });
+                }
+                module.aliases.push(aliasInstance);
             }
 
             //return;
@@ -334,12 +351,12 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     name: e.name.text,
                     members: members,
                     decorators: [],
-                    content: content.substring(e.pos, e.end),
+                    content: content.substring(e.getStart(), e.getEnd()),
                     isExported: false,
-                    start: e.pos,
-                    end: e.end,
+                    start: e.getStart(),
+                    end: e.getEnd(),
                     documentation: [],
-                    namespace: getNamespace(e.pos),
+                    namespace: getNamespace(e.getStart()),
                     extends: []
                 };
                 let jsDocTxt: string[] = [];
@@ -355,10 +372,11 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 enumInstance.documentation = jsDocTxt;
                 if (e.modifiers) {
                     e.modifiers.forEach(x => {
-                        if (x.kind === ts.SyntaxKind.ExportKeyword) {
+                        if (x.kind === ts.SyntaxKind.AbstractKeyword) {
+                        } else if (x.kind === ts.SyntaxKind.ExportKeyword) {
                             enumInstance.isExported = true;
                         }
-                        else if (x.kind === ts.SyntaxKind.AbstractKeyword) { }
+                        else if (x.kind === ts.SyntaxKind.PrivateKeyword) { }
                         else if (x.kind == ts.SyntaxKind.DeclareKeyword) { }
                         else {
                             throw new Error("Unknown token enum modifiers " + x.kind);
@@ -378,16 +396,16 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
         if (c) {
             var fields: { [n: string]: FieldModel } = {};
             var clazz = classDecl(c.name?.text || '', isInterface);
-            clazz.start = c.pos;
-            clazz.end = c.end;
-            clazz.content = content.substring(c.pos, c.end);
+            clazz.start = c.getStart();
+            clazz.end = c.getEnd();
+            clazz.content = content.substring(c.getStart(), c.getEnd());
             const decorators = ts.canHaveDecorators(c) ? ts.getDecorators(c) : undefined;
             if (decorators) {
                 clazz.decorators = decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
             }
 
             clazz.moduleName = currentModule;
-            clazz.namespace = getNamespace(c.pos);
+            clazz.namespace = getNamespace(c.getStart());
             let jsDocTxt: string[] = [];
             if (c["jsDoc"]) {
                 for (let jsDoc of c["jsDoc"]) {
@@ -399,7 +417,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             c.members.forEach(x => {
                 if (x.kind === ts.SyntaxKind.Constructor) {
                     var ct = <ts.ConstructorDeclaration>x;
-                    let regexMatch = /{((\s|\S)*)}/g.exec(content.substring(ct.body?.pos || 0, ct.body?.end));
+                    let regexMatch = /{((\s|\S)*)}/g.exec(content.substring(ct.body?.getStart() || 0, ct.body?.getEnd()));
                     if (regexMatch) {
                         clazz.constructorBody = regexMatch[1];
                     }
@@ -467,9 +485,9 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     } else if (x.kind === ts.SyntaxKind.ExportKeyword) {
                         clazz.isExported = true;
                     }
-                    else if (x.kind == ts.SyntaxKind.DeclareKeyword) {
-
-                    } else if (x.kind == ts.SyntaxKind.Decorator) {
+                    else if (x.kind === ts.SyntaxKind.PrivateKeyword) { }
+                    else if (x.kind == ts.SyntaxKind.DeclareKeyword) { }
+                    else if (x.kind == ts.SyntaxKind.Decorator) {
                     } else {
                         throw new Error("Unknown token class modifiers " + x.kind);
                     }
@@ -497,8 +515,8 @@ function buildField(f: ts.PropertyDeclaration, path: string, module: Module): Fi
         valueConstraint: buildConstraint(f.initializer),
         optional: f.questionToken != null,
         decorators: (decorators) ? decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
-        start: f.pos,
-        end: f.end,
+        start: f.getStart(),
+        end: f.getEnd(),
         isPrivate: false,
         isStatic: false
     };
@@ -526,22 +544,11 @@ function buildField(f: ts.PropertyDeclaration, path: string, module: Module): Fi
         });
     }
     return field;
-    // return {
-    //     name: f.name["text"],
-    //     type: buildType(f.type, path),
-    //     annotations: f.name["text"].charAt(0) === "$" ? buildInitializer(f.initializer) : [],
-    //     documentation: jsDocTxt,
-    //     valueConstraint: f.name["text"].charAt(0) !== "$" ? buildConstraint(f.initializer) : undefined,
-    //     optional: f.questionToken != null,
-    //     decorators: (f.decorators && f.decorators.length) ? f.decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
-    //     start: f.pos,
-    //     end: f.end
-    // };
 }
 
 function buildMethod(md: ts.MethodDeclaration, content: any, path: string, module: Module): MethodModel {
     var aliasName = (<ts.Identifier>md.name).text;
-    var text = content.substring(md.pos, md.end);
+    var text = content.substring(md.getStart(), md.getEnd());
     var params: ParameterModel[] = [];
     md.parameters.forEach(x => {
         params.push(buildParameter(x, content, path, module));
@@ -550,8 +557,8 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
     var method: MethodModel = {
         returnType: buildType(md.type, path, module),
         name: aliasName,
-        start: md.pos,
-        end: md.end,
+        start: md.getStart(),
+        end: md.getEnd(),
         text: text,
         arguments: params,
         isAbstract: false,
@@ -588,11 +595,11 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
 
 function buildParameter(f: ts.ParameterDeclaration, content: any, path: string, module: Module): ParameterModel {
 
-    var text = content.substring(f.pos, f.end);
+    var text = content.substring(f.getStart(), f.getEnd());
     return {
         name: f.name["text"],
-        start: f.pos,
-        end: f.end,
+        start: f.getStart(),
+        end: f.getEnd(),
         text: text,
         type: buildType(<ts.TypeNode>f.type, path, module)
     };

@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "fs";
 import { EOL } from "os";
 import { normalize } from "path";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { ClientConnection } from '../Connection';
 import { AventusExtension, AventusLanguageId } from "../definition";
-import { AventusFile, FilesManager, FilesWatcher, InternalAventusFile } from "../FilesManager";
+import { AventusFile } from '../files/AventusFile';
+import { FilesManager } from '../files/FilesManager';
+import { FilesWatcher } from '../files/FilesWatcher';
 import { AventusHTMLFile } from "../language-services/html/File";
 import { AventusHTMLLanguageService } from "../language-services/html/LanguageService";
 import { AventusConfigBuild } from "../language-services/json/definition";
@@ -43,6 +44,9 @@ export class Build {
 
     public get name() {
         return this.buildConfig.name;
+    }
+    public get isCoreBuild() {
+        return this.project.isCoreBuild;
     }
 
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
@@ -84,8 +88,8 @@ export class Build {
         await this.loadFiles();
     }
 
-    public getOutputPath() {
-        return this.buildConfig.outputFile;
+    public getOutputUri() {
+        return pathToUri(this.buildConfig.outputFile);
     }
     public getComponentPrefix() {
         return this.buildConfig.componentPrefix;
@@ -103,16 +107,16 @@ export class Build {
         this.allowBuild = false;
         // validate
         for (let uri in this.scssFiles) {
-            await this.scssFiles[uri].triggerChange();
+            await this.scssFiles[uri].validate();
         }
         for (let uri in this.htmlFiles) {
-            await this.htmlFiles[uri].triggerChange();
+            await this.htmlFiles[uri].validate();
         }
         for (let uri in this.tsFiles) {
-            await this.tsFiles[uri].triggerChange();
+            await this.tsFiles[uri].validate();
         }
         for (let uri in this.wcFiles) {
-            await this.wcFiles[uri].triggerChange();
+            await this.wcFiles[uri].validate();
         }
 
         for (let uri in this.scssFiles) {
@@ -152,46 +156,62 @@ export class Build {
         }
         let compiledCode: string[] = [];
         let compiledCodeDoc: string[] = [];
-        let compiledCodeNoNamespace: string[] = [];
+        let compiledCodeDocInvisible: string[] = [];
+        let compiledCodeNoNamespaceBefore: string[] = [];
+        let compiledCodeNoNamespaceAfter: string[] = [];
         let compiledCodeDocNoNamespace: string[] = [];
         let classesName: string[] = [];
         let documents = this.buildOrderFiles();
         let uris: string[] = [];
+        let moduleCodeStarted = false;
         for (let doc of documents) {
             uris.push(doc.file.uri);
-            for (let className of doc.compileResult.nameCompiled) {
-                classesName.push(className);
-            }
             if (this.noNamespaceUri[doc.file.uri]) {
                 if (doc.compileResult.src != "") {
-                    compiledCodeNoNamespace.push(doc.compileResult.src)
+                    if (moduleCodeStarted) {
+                        compiledCodeNoNamespaceAfter.push(doc.compileResult.src)
+                    }
+                    else {
+                        compiledCodeNoNamespaceBefore.push(doc.compileResult.src)
+                    }
                 }
-                if (doc.compileResult.doc != "") {
-                    compiledCodeDocNoNamespace.push(doc.compileResult.doc);
+                if (doc.compileResult.docVisible != "") {
+                    compiledCodeDocNoNamespace.push(doc.compileResult.docVisible);
+                }
+                if (doc.compileResult.docInvisible != "") {
+                    compiledCodeDocInvisible.push(doc.compileResult.docInvisible);
                 }
             }
             else {
+                moduleCodeStarted = true;
+                for (let className of doc.compileResult.nameCompiled) {
+                    classesName.push(className);
+                }
                 if (doc.compileResult.src != "") {
                     compiledCode.push(doc.compileResult.src)
                 }
-                if (doc.compileResult.doc != "") {
-                    compiledCodeDoc.push(doc.compileResult.doc);
+                if (doc.compileResult.docVisible != "") {
+                    compiledCodeDoc.push(doc.compileResult.docVisible);
+                }
+                if (doc.compileResult.docInvisible != "") {
+                    compiledCodeDocInvisible.push(doc.compileResult.docInvisible);
                 }
             }
         }
-        this.buildCode(compiledCode, compiledCodeNoNamespace, classesName)
+        this.buildCode(compiledCode, compiledCodeNoNamespaceBefore, compiledCodeNoNamespaceAfter, classesName)
         if (this.buildConfig.generateDefinition) {
-            this.buildDocumentation(compiledCodeDoc, compiledCodeDocNoNamespace)
+            this.buildDocumentation(compiledCodeDoc, compiledCodeDocNoNamespace, compiledCodeDocInvisible)
         }
         else if (existsSync(this.buildConfig.outputFile.replace(".js", ".def.avt"))) {
             unlinkSync(this.buildConfig.outputFile.replace(".js", ".def.avt"));
         }
         ClientConnection.getInstance().sendNotification("aventus/compiled", this.name);
     }
-    private buildCode(compiledCode: string[], compiledCodeNoNamespace: string[], classesName: string[]) {
+    private buildCode(compiledCode: string[], compiledCodeNoNamespaceBefore: string[], compiledCodeNoNamespaceAfter: string[], classesName: string[]) {
         let finalTxt = '';
         finalTxt += this.buildLoadInclude().join(EOL) + EOL;
         let moduleName = this.buildConfig.module;
+        finalTxt += compiledCodeNoNamespaceBefore.join(EOL) + EOL;
         finalTxt += "var " + moduleName + ";(function (" + moduleName + ") {\r\n var namespace = '" + moduleName + "';\r\n"
 
         finalTxt += compiledCode.join(EOL) + EOL;
@@ -221,7 +241,7 @@ export class Build {
             finalTxt += "})(" + moduleName + " || (" + moduleName + " = {}));" + EOL;
         }
 
-        finalTxt += compiledCodeNoNamespace.join(EOL) + EOL;
+        finalTxt += compiledCodeNoNamespaceAfter.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;
 
         let folderPath = getFolder(this.buildConfig.outputFile.replace(/\\/g, "/"));
@@ -230,11 +250,15 @@ export class Build {
         }
         writeFileSync(this.buildConfig.outputFile, finalTxt);
     }
-    private buildDocumentation(compiledCodeDoc: string[], compiledCodeDocNoNamespace: string[]) {
+    private buildDocumentation(compiledCodeDoc: string[], compiledCodeDocNoNamespace: string[], compiledCodeDocInvisible: string[]) {
         let finaltxt = "";
+        finaltxt = "declare global {" + EOL;
+        finaltxt += "\tdeclare namespace " + this.buildConfig.module + "{" + EOL;
         finaltxt += compiledCodeDoc.join(EOL) + EOL;
-        finaltxt = "declare namespace " + this.buildConfig.module + "{" + EOL + finaltxt.replace(/declare /g, '') + "}" + EOL;
-        finaltxt += compiledCodeDocNoNamespace.join(EOL) + EOL;
+        finaltxt += "\t}";
+        compiledCodeDocNoNamespace.length > 0 ? (finaltxt += EOL + compiledCodeDocNoNamespace.join(EOL) + EOL) : (finaltxt += EOL)
+        finaltxt += "}";
+        compiledCodeDocInvisible.length > 0 ? (finaltxt += EOL + compiledCodeDocInvisible.join(EOL) + EOL) : (finaltxt += EOL)
 
         finaltxt = "// version " + this.buildConfig.version + EOL + "// region js //" + EOL + finaltxt;
         finaltxt += "// end region js //" + EOL;
@@ -253,7 +277,7 @@ export class Build {
             if (include.src) {
                 let pathToImport = include.src;
                 if (include.src.startsWith(".")) {
-                    pathToImport = this.project.getConfigFile().path + '/' + include.src;
+                    pathToImport = this.project.getConfigFile().folderPath + '/' + include.src;
                 }
                 let normalizePath = normalize(pathToImport);
                 if (existsSync(normalizePath) && statSync(normalizePath).isFile()) {
@@ -423,11 +447,8 @@ export class Build {
 
     private registerDef(pathToImport: string) {
         pathToImport = normalize(pathToImport);
-        if (pathToImport == this.buildConfig.outputFile.replace(".js", AventusExtension.Definition)) {
-            return;
-        }
         if (existsSync(pathToImport) && statSync(pathToImport).isFile()) {
-            let uriToImport = pathToUri(pathToImport.replace(/\\/g, '/'));
+            let uriToImport = pathToUri(pathToImport);
             let file = FilesWatcher.getInstance().registerFile(uriToImport, AventusLanguageId.TypeScript)
             AventusTsFileSelector(file, this);
         }

@@ -1,17 +1,22 @@
+import { EOL } from 'os';
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ClientConnection } from '../../../Connection';
 import { AventusExtension, AventusLanguageId } from "../../../definition";
-import { AventusFile, InternalAventusFile } from "../../../FilesManager";
+import { AventusFile, InternalAventusFile } from '../../../files/AventusFile';
 import { Build } from "../../../project/Build";
 import { ClassModel } from "../../../ts-file-parser";
 import { AventusBaseFile } from "../../BaseFile";
 import { AventusTsFile } from "../File";
 
 export class AventusDefinitionFile extends AventusTsFile {
-    private tsDef: AventusDefinitionTsFile | undefined;
-    private htmlDef: AventusDefinitionHTMLFile | undefined;
-    private scssDef: AventusDefinitionSCSSFile | undefined;
+    private tsDef: AventusDefinitionTsFile;
+    private tsFile: InternalAventusFile;
+    private tsDefStart: number = 0;
+    private htmlDef: AventusDefinitionHTMLFile;
+    private htmlFile: InternalAventusFile;
+    private scssDef: AventusDefinitionSCSSFile;
+    private scssFile: InternalAventusFile;
 
     protected get extension(): string {
         return AventusExtension.Definition;
@@ -21,77 +26,112 @@ export class AventusDefinitionFile extends AventusTsFile {
     }
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
-        let resultBySection = this.separeSection();
+        let resultBySection = this.getSplittedFiles();
         this.tsDef = resultBySection.tsDef;
+        this.tsFile = resultBySection.tsFile;
         this.htmlDef = resultBySection.htmlDef;
+        this.htmlFile = resultBySection.htmlFile;
         this.scssDef = resultBySection.scssDef;
-        this.tsLanguageService.addFile(this.tsDef);
+        this.scssFile = resultBySection.scssFile;
+        let outputPath = this.build.getOutputUri();
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+            this.tsLanguageService.addFile(this.tsDef);
+        }
+    }
+    private getSplittedFiles(): {
+        tsDef: AventusDefinitionTsFile,
+        tsFile: InternalAventusFile,
+        scssDef: AventusDefinitionSCSSFile,
+        scssFile: InternalAventusFile,
+        htmlDef: AventusDefinitionHTMLFile,
+        htmlFile: InternalAventusFile,
+    } {
+        let result = this.separeSection();
+        let documentTs = TextDocument.create(this.file.uri, AventusLanguageId.TypeScript, this.file.version, result.jsTxt);
+        let tsFile = new InternalAventusFile(documentTs);
+        let tsDef = new AventusDefinitionTsFile(tsFile, this.build);
+
+        let documentScss = TextDocument.create(this.file.uri, AventusLanguageId.SCSS, this.file.version, result.scssTxt);
+        let scssFile = new InternalAventusFile(documentScss);
+        let scssDef = new AventusDefinitionSCSSFile(scssFile, this.build);
+
+        let documentHtml = TextDocument.create(this.file.uri, AventusLanguageId.HTML, this.file.version, result.htmlTxt);
+        let htmlFile = new InternalAventusFile(documentHtml)
+        let htmlDef = new AventusDefinitionHTMLFile(htmlFile, this.build);
+
+        return {
+            tsDef,
+            tsFile,
+            scssDef,
+            scssFile,
+            htmlDef,
+            htmlFile
+        };
     }
 
     private separeSection(): {
-        tsDef: AventusDefinitionTsFile,
-        scssDef: AventusDefinitionSCSSFile,
-        htmlDef: AventusDefinitionHTMLFile
+        jsTxt: string,
+        scssTxt: string,
+        htmlTxt: string
     } {
-
+        this.tsDefStart = 0;
         if (this.file.content.match(/\/\/ region js \/\/((\s|\S)*)\/\/ end region js \/\//g)) {
-
 
             let jsToImport = /\/\/ region js \/\/((\s|\S)*)\/\/ end region js \/\//g.exec(this.file.content);
             let jsTxt = "";
             if (jsToImport) {
+                this.tsDefStart = jsToImport.index + 15;
                 jsTxt = jsToImport[1];
             }
-            let documentTs = TextDocument.create(this.file.uri, AventusLanguageId.TypeScript, 0, jsTxt);
-            let tsDef = new AventusDefinitionTsFile(new InternalAventusFile(documentTs), this.build);
 
-            let cssToImport = /\/\/ region css \/\/((\s|\S)*)\/\/ end region css \/\//g.exec(this.file.content);
-            let cssTxt = "";
-            if (cssToImport) {
-                cssTxt = cssToImport[1];
+            let scssToImport = /\/\/ region css \/\/((\s|\S)*)\/\/ end region css \/\//g.exec(this.file.content);
+            let scssTxt = "";
+            if (scssToImport) {
+                scssTxt = scssToImport[1];
             }
-            let documentScss = TextDocument.create(this.file.uri, AventusLanguageId.SCSS, 0, cssTxt);
-            let scssDef = new AventusDefinitionSCSSFile(new InternalAventusFile(documentScss), this.build);
+
 
             let htmlToImport = /\/\/ region html \/\/((\s|\S)*)\/\/ end region html \/\//g.exec(this.file.content);
             let htmlTxt = "";
             if (htmlToImport) {
                 htmlTxt = htmlToImport[1];
             }
-            let documentHtml = TextDocument.create(this.file.uri, AventusLanguageId.HTML, 0, htmlTxt);
-            let htmlDef = new AventusDefinitionHTMLFile(new InternalAventusFile(documentHtml), this.build);
+
             return {
-                tsDef,
-                scssDef,
-                htmlDef
+                jsTxt,
+                scssTxt,
+                htmlTxt
             };
         }
 
         else {
-            let documentTs = TextDocument.create(this.file.uri, AventusLanguageId.TypeScript, 0, this.file.content);
-            let tsDef = new AventusDefinitionTsFile(new InternalAventusFile(documentTs), this.build);
-            let documentScss = TextDocument.create(this.file.uri, AventusLanguageId.SCSS, 0, '');
-            let scssDef = new AventusDefinitionSCSSFile(new InternalAventusFile(documentScss), this.build);
-            let documentHtml = TextDocument.create(this.file.uri, AventusLanguageId.HTML, 0, '');
-            let htmlDef = new AventusDefinitionHTMLFile(new InternalAventusFile(documentHtml), this.build);
             return {
-                tsDef,
-                scssDef,
-                htmlDef
+                jsTxt: '',
+                scssTxt: '',
+                htmlTxt: ''
             };
         }
-
     }
 
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         return [];
     }
-    protected async onSave() {
+    protected async onContentChange(): Promise<void> {
+        let result = this.separeSection();
+        let documentTs = TextDocument.create(this.file.uri, AventusLanguageId.TypeScript, this.file.version, result.jsTxt);
+        this.tsFile.triggerContentChange(documentTs);
+        
+        let documentScss = TextDocument.create(this.file.uri, AventusLanguageId.SCSS, this.file.version, result.scssTxt);
+        this.scssFile.triggerContentChange(documentScss);
 
+        let documentHtml = TextDocument.create(this.file.uri, AventusLanguageId.HTML, this.file.version, result.htmlTxt);
+        this.htmlFile.triggerContentChange(documentHtml);
+    }
+    protected async onSave() {
     }
     protected override async onDelete(): Promise<void> {
         super.onDelete();
-        if (this.file.path.replace(AventusExtension.Definition, ".js") != this.build.getOutputPath()) {
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             this.tsLanguageService.removeFile(this);
         }
     }
@@ -102,18 +142,37 @@ export class AventusDefinitionFile extends AventusTsFile {
         return item;
     }
     protected async onHover(document: AventusFile, position: Position): Promise<Hover | null> {
-        return null;
+        let currentOffset = document.document.offsetAt(position);
+        let newPosition = this.tsDef.file.document.positionAt(currentOffset - this.tsDefStart)
+        return await (this.tsDef.file as InternalAventusFile).getHover(newPosition);
     }
     protected async onDefinition(document: AventusFile, position: Position): Promise<Definition | null> {
-        return null;
+        let currentOffset = document.document.offsetAt(position);
+        let newPosition = this.tsDef.file.document.positionAt(currentOffset - this.tsDefStart)
+        return await (this.tsDef.file as InternalAventusFile).getDefinition(newPosition);
     }
     protected async onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
-        return [];
+        let result: TextEdit[] = [];
+        let convertedRanges: Range[] = [];
+        let ctx = this.tsDef.file.content;
+        let resultsTemp = await (this.tsDef.file as InternalAventusFile).getFormatting(options);
+        for (let temp of resultsTemp) {
+            if (convertedRanges.indexOf(temp.range) == -1) {
+                convertedRanges.push(temp.range);
+                temp.range.start = this.transformPosition(this.tsDef, temp.range.start, this, this.tsDefStart * -1);
+                temp.range.end = this.transformPosition(this.tsDef, temp.range.end, this, this.tsDefStart * -1);
+            }
+            result.push(temp);
+        }
+        return result;
     }
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    private transformPosition(fileFrom: AventusBaseFile, positionFrom: Position, fileTo: AventusBaseFile, offset: number): Position {
+        let currentOffset = fileFrom.file.document.offsetAt(positionFrom);
+        return fileTo.file.document.positionAt(currentOffset - offset);
+    }
 }
 
 export class AventusDefinitionTsFile extends AventusTsFile {
@@ -129,10 +188,15 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     }
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
-        this.refreshFileParsed(false);
-        this.loadDefinitionInsideBuild();
-        this.build.tsDefFiles[this.file.uri] = this;
-        this.build.rebuildDefinitionWebComponent();
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+            this.refreshFileParsed(false);
+            this.loadDefinitionInsideBuild();
+            this.build.tsDefFiles[this.file.uri] = this;
+            this.build.rebuildDefinitionWebComponent();
+        }
+    }
+    public setFile() {
+        this.file
     }
 
     private loadDefinitionInsideBuild() {
@@ -162,8 +226,15 @@ export class AventusDefinitionTsFile extends AventusTsFile {
             ClientConnection.getInstance().showErrorMessage("There is an error inside file :" + fileName);
         }
     }
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         return [];
+    }
+    protected async onContentChange(): Promise<void> {
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+            this.refreshFileParsed(false);
+            this.loadDefinitionInsideBuild();
+            this.build.rebuildDefinitionWebComponent();
+        }
     }
     protected async onSave() {
     }
@@ -179,13 +250,13 @@ export class AventusDefinitionTsFile extends AventusTsFile {
         return item;
     }
     protected async onHover(document: AventusFile, position: Position): Promise<Hover | null> {
-        return null;
+        return await this.tsLanguageService.doHover(document, position);
     }
     protected async onDefinition(document: AventusFile, position: Position): Promise<Definition | null> {
-        return null;
+        return await this.tsLanguageService.findDefinition(document, position);
     }
     protected async onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
-        return [];
+        return await this.tsLanguageService.format(document, range, options);
     }
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
@@ -199,9 +270,10 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
         this.build.scssLanguageService.addDefinition(this);
     }
 
-
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         return [];
+    }
+    protected async onContentChange(): Promise<void> {
     }
     protected async onSave() {
     }
@@ -229,8 +301,11 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
 
 }
 export class AventusDefinitionHTMLFile extends AventusBaseFile {
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         return [];
+
+    }
+    protected async onContentChange(): Promise<void> {
     }
     protected async onSave() {
     }

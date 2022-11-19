@@ -3,8 +3,8 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { unlinkSync, writeFileSync } from 'fs';
 import { getPathFromCommandArguments, uriToPath } from '../tools';
 import { AventusExtension, AventusLanguageId } from '../definition';
-import { FilesManager } from '../FilesManager';
 import { ClientConnection } from '../Connection';
+import { FilesManager } from '../files/FilesManager';
 
 export class MergeComponent {
 	static cmd: string = "aventus.component.merge";

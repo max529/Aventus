@@ -1,6 +1,6 @@
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
-import { AventusFile } from "../../../FilesManager";
+import { AventusFile } from '../../../files/AventusFile';
 import { TsCompileResult } from "../compiler";
 import { AventusTsFile } from "../File";
 
@@ -12,15 +12,19 @@ export class AventusStaticFile extends AventusTsFile {
     protected override mustBeAddedToLanguageService(): boolean {
         return false;
     }
-    protected async onContentChange(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         return [];
+    }
+    protected async onContentChange(): Promise<void> {
+        
     }
     protected async onSave() {
         let result: TsCompileResult = {
             nameCompiled: [],
             nameDoc: [],
             src: this.file.content,
-            doc: '',
+            docInvisible: '',
+            docVisible: '',
             dependances: []
         }
         this.setCompileResult(result);

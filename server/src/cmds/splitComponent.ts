@@ -3,7 +3,7 @@ import { ExecuteCommandParams } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ClientConnection } from '../Connection';
 import { AventusExtension, AventusLanguageId } from '../definition';
-import { FilesManager } from '../FilesManager';
+import { FilesManager } from '../files/FilesManager';
 import { AventusWebComponentSingleFile } from '../language-services/ts/component/File';
 import { getPathFromCommandArguments, uriToPath } from '../tools';
 

@@ -1,6 +1,6 @@
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
-import { AventusFile } from "../../../FilesManager";
+import { AventusFile } from '../../../files/AventusFile';
 import { Build } from '../../../project/Build';
 import { createErrorTsPos } from "../../../tools";
 import { genericTsCompile } from "../compiler";
@@ -11,59 +11,25 @@ export class AventusDataFile extends AventusTsFile {
     protected get extension(): string {
         return AventusExtension.Data;
     }
-    constructor(file: AventusFile, build: Build){
+    constructor(file: AventusFile, build: Build) {
         super(file, build);
         this.refreshFileParsed();
     }
-    protected async onContentChange(): Promise<Diagnostic[]> {
-        this.refreshFileParsed();
+    protected async onValidate(): Promise<Diagnostic[]> {
         let document = this.file.document;
         this.diagnostics = this.tsLanguageService.doValidation(this.file);
         const struct = this.fileParsed;
-        for (let enumTemp of struct.enumDeclarations) {
-            if (!enumTemp.isExported) {
-                this.diagnostics.push(createErrorTsPos(document, 'Enum must be exported', enumTemp.start, enumTemp.end));
-            }
+        if (this.build.isCoreBuild) {
+            this.validateRules({
+                class_implement: ['IData']
+            })
+        }
+        else {
+            this.validateRules({
+                class_implement: ['Aventus.IData']
+            })
         }
         for (let classTemp of struct.classes) {
-            if (!classTemp.isExported) {
-                this.diagnostics.push(createErrorTsPos(document, 'Class must start with "export"', classTemp.start, classTemp.end));
-            }
-
-            //#region found Data or IData
-            let foundData = false;
-            if (classTemp.isInterface) {
-                if (classTemp.name != "IData") {
-                    for (let implement of classTemp.extends) {
-                        if (implement.typeName == 'IData' || implement.typeName == 'Aventus.IData') {
-                            foundData = true;
-                            break;
-                        }
-                    }
-                }
-                else {
-                    foundData = true;
-                }
-            }
-            else {
-                for (let implement of classTemp.implements) {
-                    if (implement.typeName == 'IData' || implement.typeName == 'Aventus.IData') {
-                        foundData = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!foundData) {
-                if (classTemp.isInterface) {
-                    this.diagnostics.push(createErrorTsPos(document, 'Interface must extends IData', classTemp.start, classTemp.end));
-                }
-                else {
-                    this.diagnostics.push(createErrorTsPos(document, 'Class must implement IData', classTemp.start, classTemp.end));
-                }
-            }
-            //#endregion
-
             for (let field of classTemp.fields) {
                 if (!field.valueConstraint) {
                     this.diagnostics.push(createErrorTsPos(document, `Property '${field.name}' has no initializer and is not definitely assigned.`, field.start, field.end));
@@ -71,6 +37,9 @@ export class AventusDataFile extends AventusTsFile {
             }
         }
         return this.diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+        this.refreshFileParsed();
     }
     protected async onSave() {
         if (this.diagnostics.length == 0) {

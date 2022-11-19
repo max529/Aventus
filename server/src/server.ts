@@ -3,7 +3,8 @@ import { CodeActionKind, InitializedParams, InitializeParams, TextDocuments, Tex
 import { Commands } from "./cmds";
 import { ClientConnection } from './Connection';
 import { AventusExtension } from "./definition";
-import { FilesManager, FilesWatcher } from './FilesManager';
+import { FilesManager } from './files/FilesManager';
+import { FilesWatcher } from './files/FilesWatcher';
 import { ProjectManager } from './project/ProjectManager';
 
 // all documents loaded

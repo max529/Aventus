@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { join, basename, dirname, sep } from 'path';
-import { fstatSync, readFileSync, existsSync } from 'fs';
-import { FilesManager } from '../../FilesManager';
+import { join, dirname, sep } from 'path';
+import {  readFileSync, existsSync } from 'fs';
 
 const contents: { [name: string]: string } = {};
 

@@ -1,5 +1,5 @@
 import { AventusExtension } from '../../definition';
-import { AventusFile } from '../../FilesManager';
+import { AventusFile } from '../../files/AventusFile';
 import { Build } from '../../project/Build';
 import { AventusWebComponentLogicalFile } from './component/File';
 import { AventusDataFile } from './data/File';

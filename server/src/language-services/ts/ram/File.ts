@@ -1,6 +1,6 @@
 import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
-import { AventusFile } from "../../../FilesManager";
+import { AventusFile } from '../../../files/AventusFile';
 import { Build } from '../../../project/Build';
 import { createErrorTsPos } from "../../../tools";
 import { genericTsCompile } from "../compiler";
@@ -11,39 +11,26 @@ export class AventusRamFile extends AventusTsFile {
     protected get extension(): string {
         return AventusExtension.RAM;
     }
-    constructor(file: AventusFile, build: Build){
+    constructor(file: AventusFile, build: Build) {
         super(file, build);
         this.refreshFileParsed();
     }
-    protected async onContentChange(): Promise<Diagnostic[]> {
-        this.refreshFileParsed();
-        let document = this.file.document;
+    protected async onValidate(): Promise<Diagnostic[]> {
         this.diagnostics = this.tsLanguageService.doValidation(this.file);
-        const struct = this.fileParsed;
-        for (let enumTemp of struct.enumDeclarations) {
-            if (!enumTemp.isExported) {
-                this.diagnostics.push(createErrorTsPos(document, 'Enum must be exported', enumTemp.start, enumTemp.end));
-            }
+        if (this.build.isCoreBuild) {
+            this.validateRules({
+                class_implement: ['RAMExtension', 'IRAMManager']
+            })
         }
-
-        for (let classTemp of struct.classes) {
-            if (!classTemp.isExported) {
-                this.diagnostics.push(createErrorTsPos(document, 'Class must start with "export"', classTemp.start, classTemp.end));
-            }
-            if (!classTemp.isInterface) {
-                let foundData = false;
-                for (let implement of classTemp.implements) {
-                    if (implement.typeName == 'IRAMManager' || implement.typeName == 'Aventus.IRAMManager') {
-                        foundData = true;
-                        break;
-                    }
-                }
-                if (!foundData) {
-                    this.diagnostics.push(createErrorTsPos(document, 'Class must implement IRAMManager', classTemp.start, classTemp.end));
-                }
-            }
+        else {
+            this.validateRules({
+                class_implement: ['Aventus.RAMExtension', 'Aventus.IRAMManager']
+            })
         }
         return this.diagnostics;
+    }
+    protected async onContentChange(): Promise<void> {
+        this.refreshFileParsed();
     }
     protected async onSave() {
         if (this.diagnostics.length == 0) {

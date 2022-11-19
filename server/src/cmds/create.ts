@@ -5,9 +5,9 @@ import { EOL } from 'os';
 import { getFolder, getPathFromCommandArguments, pathToUri, uriToPath } from '../tools';
 import { AventusExtension, AventusLanguageId } from '../definition';
 import { normalize } from 'path';
-import { FilesManager } from '../FilesManager';
 import { ProjectManager } from '../project/ProjectManager';
 import { ClientConnection } from '../Connection';
+import { FilesManager } from '../files/FilesManager';
 
 
 export class Create {
@@ -25,7 +25,7 @@ export class Create {
 				if (params.arguments[3]) {
 
 					if (type == "RAM") {
-						this.createRAM(params.arguments[3].label, params.arguments[3].detail, baseFolder);
+						this.createRAM(params.arguments[3], baseFolder);
 					}
 					else {
 						let name: string = params.arguments[3];
@@ -65,7 +65,7 @@ export class Create {
 	"build": [
 		{
 			"name": "${name}",
-			"namespace":"${name.replace(/ /g, "_")}",
+			"module":"${name.replace(/ /g, "_")}",
 			"componentPrefix": "av",
 			"version": "0.0.1",
 			"inputPath": [
@@ -87,37 +87,55 @@ export class Create {
 		}
 	}
 
-	private createRAM(objectName: string, objectPath: string, baseFolderUri: string) {
+	private createRAM(objectName: string, baseFolderUri: string) {
 		objectName = objectName.charAt(0).toUpperCase() + objectName.slice(1);
 		let newScriptPath = uriToPath(baseFolderUri + "/" + objectName + AventusExtension.RAM);
 		let newScriptUri = pathToUri(newScriptPath);
-		let importPath = this.getImportPath(newScriptPath, objectPath);
-		let classItemName = objectName + "RAMItem";
+		// let importPath = this.getImportPath(newScriptPath, objectPath);
 		let className = objectName + "RAM";
-
-		let defaultRAM = `import { ${objectName} } from "${importPath}";
-
-declare module "${importPath}" {
-	export interface ${objectName} {
-	// declare your functions here
-	}
-}
-
-export class ${className} extends Aventus.GenericSocketRAMManager<${objectName}, ${classItemName}> implements Aventus.IRAMManager {
+		let defaultRAM = ''
+		defaultRAM = `
+export class ${className} extends Aventus.SocketRAMManager<$objectFrom, ${objectName}> implements Aventus.IRAMManager {
 
 	static getInstance(): ${className} {
 		return ${className}._getInstance<${className}>();
 	}
 
 	protected getObjectName(): string {
-		return "${objectName}";
+		return "";
 	}
 
-	protected override addCustomFunctions(item: ${objectName} & Aventus.SocketRAMManagerObject<${objectName}>): Aventus.SocketRAMManagerItem<${objectName}> {
-		// implement your functions here
-		return item;
+	protected getObjectForRAM(itemFromSocket: $objectFrom | Aventus.KeysObject<$objectFrom>): ${objectName} {
+		// prepare type
+		let TypeSocketFct = this.addSocketFunction($objectFrom);
+		let TypeHelloWorldFct = ${objectName}Extension.addHelloWorldFunction(TypeSocketFct);
+		// create instance
+		let item = new TypeHelloWorldFct();
+		// fill instance with data
+        Object.assign(item, itemFromSocket);
+        return item;
 	}
-}`;
+	
+}
+
+export interface ${objectName}Action extends Aventus.IData {
+	// define your function here
+    helloWorld(): void;
+}
+// define generic type
+export interface ${objectName} extends $objectFrom, ${objectName}Action, Aventus.ISocketData<$objectFrom>, Aventus.IData {}
+
+export class ${objectName}Extension implements Aventus.RAMExtension {
+    public static addHelloWorldFunction<B extends new (...args: any[]) => $objectFrom>(Base: B) {
+        return class Extension extends Base implements ${objectName}Action {
+            helloWorld(): void {
+                console.log("hello world");
+            }
+
+        };
+    }
+}
+`;
 		writeFileSync(newScriptPath, defaultRAM);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultRAM);
 		FilesManager.getInstance().registerFile(textDocument);
