@@ -105,8 +105,9 @@ export class AventusDefinitionFile extends AventusTsFile {
         }
 
         else {
+            this.tsDefStart = 0;
             return {
-                jsTxt: '',
+                jsTxt: this.file.content,
                 scssTxt: '',
                 htmlTxt: ''
             };
@@ -195,9 +196,7 @@ export class AventusDefinitionTsFile extends AventusTsFile {
             this.build.rebuildDefinitionWebComponent();
         }
     }
-    public setFile() {
-        this.file
-    }
+
 
     private loadDefinitionInsideBuild() {
         try {

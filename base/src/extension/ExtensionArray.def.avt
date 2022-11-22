@@ -1,4 +1,6 @@
-interface Array<T> {
-    unique: () => Array<T>;
-	last:() => T; 
+declare global {
+    interface Array<T> {
+        unique: () => Array<T>;
+        last:() => T; 
+    }
 }

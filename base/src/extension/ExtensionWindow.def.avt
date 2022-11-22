@@ -1,1 +1,3 @@
-var namespace: string
+declare global {
+    var namespace: string;
+}

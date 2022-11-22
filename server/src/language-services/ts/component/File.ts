@@ -40,7 +40,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
                 docVisible: this.compilationResult.result.docVisible,
-                docInvisible: this.compilationResult.result.docVisible,
+                docInvisible: this.compilationResult.result.docInvisible,
                 nameCompiled: this.compilationResult.result.nameCompiled,
                 nameDoc: this.compilationResult.result.nameDoc,
                 src: this.compilationResult.result.src

@@ -1,3 +1,5 @@
-declare namespace luxon {
-	class Date extends luxon.DateTime {}
+declare global {
+    declare namespace luxon {
+        class Date extends luxon.DateTime { }
+    }
 }

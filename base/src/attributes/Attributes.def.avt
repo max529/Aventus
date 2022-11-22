@@ -1,36 +1,34 @@
-/**
- * Add an attribute inside on your component
- */
-function Attribute();
-/**
- * Add an attribute inside on your component with changes analyze
- */
-function Property();
-/**
- * Add an attribute inside on your component with changes analyze
- */
-function Property<T>(onChange: (component: T) => void);
-/**
- * Add a property inside a watcher to be notify of changing
- */
-function Watch();
-/**
- * Add a property inside a watcher to be notify of changing
- */
-function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
-/**
- * Signal that this variable is a link to your shadowroot
- */
-function ViewElement(config?:ViewElementConfig);
-/**
- * Clear parent view and use yours 
- */
-function OverrideView();
-/**
- * Declare namespace
- */
-function Namespace(name:string);
-/**
- * Add debbuger action function for your component
- */
-function Debugger(config: DebuggerConfig);
+declare global {
+    /**
+     * Add an attribute inside on your component
+     */
+    function Attribute();
+    /**
+     * Add an attribute inside on your component with changes analyze
+     */
+    function Property();
+    /**
+     * Add an attribute inside on your component with changes analyze
+     */
+    function Property<T>(onChange: (component: T) => void);
+    /**
+     * Add a property inside a watcher to be notify of changing
+     */
+    function Watch();
+    /**
+     * Add a property inside a watcher to be notify of changing
+     */
+    function Watch<T>(onChange: (component: T, action: Aventus.WatchAction, path: string, value: any) => void);
+    /**
+     * Signal that this variable is a link to your shadowroot
+     */
+    function ViewElement(config?:ViewElementConfig);
+    /**
+     * Clear parent view and use yours 
+     */
+    function OverrideView();
+    /**
+     * Add debbuger action function for your component
+     */
+    function Debugger(config: DebuggerConfig);
+}

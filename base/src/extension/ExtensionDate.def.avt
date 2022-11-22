@@ -1,3 +1,5 @@
-interface Date {
-    clone: () => Date;
+declare global {
+    interface Date {
+        clone: () => Date;
+    }
 }

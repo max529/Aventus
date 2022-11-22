@@ -168,7 +168,8 @@ export abstract class AventusTsFile extends AventusBaseFile {
         let currentPath = this.file.path;
         let definitionPath = currentPath.replace(this.extension, AventusExtension.Definition);
         if (definitionPath.endsWith(AventusExtension.Definition) && existsSync(definitionPath)) {
-            compileResult.docVisible = readFileSync(definitionPath, 'utf8');
+            // #TODO improve loading for manual def
+            compileResult.docVisible = readFileSync(definitionPath, 'utf8').replace(/declare global \{((\s|\S)*)\}/gm, '$1');
             compileResult.docInvisible = '';
         }
 

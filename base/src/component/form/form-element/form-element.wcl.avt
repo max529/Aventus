@@ -29,7 +29,9 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
     /**
      * Value to use inside your component
      */
-    @Watch()
+    @Watch((target: AvFormElement<T>, action: WatchAction, path: string, value: any) => {
+        target.onValueChanged();
+    })
     value: T = this.getDefaultValue();
 
     @Watch((target: AvFormElement<T>) => {
