@@ -34,9 +34,9 @@ export class AventusDefinitionFile extends AventusTsFile {
         this.scssDef = resultBySection.scssDef;
         this.scssFile = resultBySection.scssFile;
         let outputPath = this.build.getOutputUri();
-        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+        //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             this.tsLanguageService.addFile(this.tsDef);
-        }
+        //}
     }
     private getSplittedFiles(): {
         tsDef: AventusDefinitionTsFile,
@@ -132,9 +132,9 @@ export class AventusDefinitionFile extends AventusTsFile {
     }
     protected override async onDelete(): Promise<void> {
         super.onDelete();
-        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+        //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             this.tsLanguageService.removeFile(this);
-        }
+        //}
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
         return { isIncomplete: false, items: [] };
@@ -189,12 +189,12 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     }
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
-        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+        //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             this.refreshFileParsed(false);
             this.loadDefinitionInsideBuild();
             this.build.tsDefFiles[this.file.uri] = this;
             this.build.rebuildDefinitionWebComponent();
-        }
+        //}
     }
 
 
@@ -229,10 +229,14 @@ export class AventusDefinitionTsFile extends AventusTsFile {
         return [];
     }
     protected async onContentChange(): Promise<void> {
-        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+        //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             this.refreshFileParsed(false);
             this.loadDefinitionInsideBuild();
             this.build.rebuildDefinitionWebComponent();
+        //}
+        // TODO : Maybe this ll trigger an infinite loop
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+            //this.build.build();
         }
     }
     protected async onSave() {

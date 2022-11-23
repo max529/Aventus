@@ -125,7 +125,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                         let id = this.getId(obj);
                         if(id !== undefined) {
                             this.records[id] = this.getObjectForRAM(obj);
-                            this.publish(this.socketActions.created, this.records[id]);
+                            this.publish('created', this.records[id]);
                         }
 
                     }
@@ -144,11 +144,11 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                         if(id !== undefined) {
                             if(this.records[id] !== undefined) {
                                 this.updateDataInRAM(newData);
-                                this.publish(this.socketActions.updated, this.records[id]);
+                                this.publish('updated', this.records[id]);
                             }
                             else {
                                 this.records[id] = this.getObjectForRAM(newData);
-                                this.publish(this.socketActions.created, this.records[id]);
+                                this.publish('created', this.records[id]);
                             }
                         }
                     }
@@ -166,7 +166,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                         if(this.records[id] !== undefined) {
                             let oldData = this.records[id];
                             delete this.records[id];
-                            this.publish(this.socketActions.deleted, oldData);
+                            this.publish('deleted', oldData);
 
                         }
                     }
@@ -425,7 +425,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                     }
                 }
             }
-            public async delete() : Promise<void> {
+            public async delete(): Promise<void> {
                 let id = that.getId(this);
                 await that.deleteById(id);
             }
@@ -454,8 +454,38 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
 
     protected abstract getObjectForRAM(objFromSocket: KeysObject<U> | U): R;
 
-    private publish(type: string, data: R) {
+
+
+    private publish(type: 'created' | 'updated' | 'deleted', data: R) {
         [...this.subscribers[type]].forEach(callback => callback(data));
+    }
+    public subscribe(type: 'created' | 'updated' | 'deleted', cb: (item: R) => void) {
+        this.subscribers[type].push(cb);
+    }
+    public unsubscribe(type: 'created' | 'updated' | 'deleted', cb: (item: R) => void) {
+        let index = this.subscribers[type].indexOf(cb);
+        if(index != -1) {
+            this.subscribers[type].splice(index, 1);
+        }
+    }
+
+    public onCreated(cb: (item: R) => void) {
+       this.subscribe('created', cb);
+    }
+    public offCreated(cb: (item: R) => void) {
+        this.unsubscribe('created', cb);
+    }
+    public onUpdated(cb: (item: R) => void) {
+        this.subscribe('updated', cb);
+    }
+    public offUpdated(cb: (item: R) => void) {
+        this.unsubscribe('updated', cb);
+    }
+    public onDeleted(cb: (item: R) => void) {
+        this.subscribe('deleted', cb);
+    }
+    public offDeleted(cb: (item: R) => void) {
+        this.unsubscribe('deleted', cb);
     }
 
     // TODO deal with errors
@@ -467,5 +497,5 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
 
 }
 
-export interface RAMExtension{}
+export interface RAMExtension { }
 

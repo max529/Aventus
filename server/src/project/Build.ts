@@ -211,35 +211,45 @@ export class Build {
         let finalTxt = '';
         finalTxt += this.buildLoadInclude().join(EOL) + EOL;
         let moduleName = this.buildConfig.module;
+        let splittedNames = moduleName.split(".");
         finalTxt += compiledCodeNoNamespaceBefore.join(EOL) + EOL;
-        finalTxt += "var " + moduleName + ";(function (" + moduleName + ") {\r\n var namespace = '" + moduleName + "';\r\n"
+        finalTxt += "var " + splittedNames[0] + ";" + EOL;
+        // create intermediate namespace
+        let baseName = '';
+        for (let i = 0; i < splittedNames.length; i++) {
+            if (baseName != "") { baseName += '.' + splittedNames[i]; }
+            else { baseName = splittedNames[i] }
+
+            finalTxt += '(' + baseName + '||(' + baseName + ' = {}));' + EOL
+        }
+        finalTxt += "(function (" + splittedNames[0] + ") {\r\n var namespace = '" + moduleName + "';\r\n"
 
         finalTxt += compiledCode.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;
         let subNamespace: string[] = [];
-        if (this.buildConfig.module.length > 0) {
-            for (let className of classesName) {
-                if (className != "") {
-                    let classNameSplitted = className.split(".");
-                    let currentNamespace = "";
-                    for (let i = 0; i < classNameSplitted.length - 1; i++) {
-                        if (currentNamespace.length == 0) {
-                            currentNamespace = classNameSplitted[i]
-                        }
-                        else {
-                            currentNamespace += "." + classNameSplitted[i];
-                        }
-                        if (subNamespace.indexOf(currentNamespace) == -1) {
-                            subNamespace.push(currentNamespace);
-                            finalTxt += moduleName + "." + currentNamespace + "={};" + EOL;
-                        }
+
+        for (let className of classesName) {
+            if (className != "") {
+                let classNameSplitted = className.split(".");
+                let currentNamespace = "";
+                for (let i = 0; i < classNameSplitted.length - 1; i++) {
+                    if (currentNamespace.length == 0) {
+                        currentNamespace = classNameSplitted[i]
                     }
-                    let finalName = classNameSplitted[classNameSplitted.length - 1];
-                    finalTxt += moduleName + "." + className + "=" + finalName + ";" + EOL;
+                    else {
+                        currentNamespace += "." + classNameSplitted[i];
+                    }
+                    if (subNamespace.indexOf(currentNamespace) == -1) {
+                        subNamespace.push(currentNamespace);
+                        let nameToCreate = moduleName + "." + currentNamespace;
+                        finalTxt += '(' + nameToCreate + '||(' + nameToCreate + ' = {}));' + EOL
+                    }
                 }
+                let finalName = classNameSplitted[classNameSplitted.length - 1];
+                finalTxt += moduleName + "." + className + "=" + finalName + ";" + EOL;
             }
-            finalTxt += "})(" + moduleName + " || (" + moduleName + " = {}));" + EOL;
         }
+        finalTxt += "})(" + splittedNames[0] + ");" + EOL;
 
         finalTxt += compiledCodeNoNamespaceAfter.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;

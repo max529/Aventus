@@ -78,6 +78,7 @@ export abstract class RAMManager<U extends IDataConstraint<U>> implements IRAMMa
     protected async afterCreateList(list: U[]): Promise<U[]> {
         return list;
     }
+
     //#endregion
 
     //#region update
