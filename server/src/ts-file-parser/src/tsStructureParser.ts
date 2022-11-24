@@ -252,18 +252,20 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             if (cmod.body) {
                 let parentNamespace = getNamespace(cmod.getStart());
                 let _namespace = cmod.name.text;
-                if (parentNamespace.name != "") {
-                    _namespace = parentNamespace.name + '.' + _namespace;
-                }
-                module.namespaces.push({
-                    start: cmod.getStart(),
-                    end: cmod.getEnd(),
-                    name: _namespace,
-                    body: {
-                        start: cmod.body.getStart() + 1,
-                        end: cmod.body.getEnd() - 1,
+                if (_namespace != "global") {
+                    if (parentNamespace.name != "") {
+                        _namespace = parentNamespace.name + '.' + _namespace;
                     }
-                })
+                    module.namespaces.push({
+                        start: cmod.getStart(),
+                        end: cmod.getEnd(),
+                        name: _namespace,
+                        body: {
+                            start: cmod.body.getStart() + 1,
+                            end: cmod.body.getEnd() - 1,
+                        }
+                    })
+                }
             }
         }
 
@@ -404,7 +406,6 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                 clazz.decorators = decorators.map((el: ts.Decorator) => buildDecorator(el.expression));
             }
 
-            clazz.moduleName = currentModule;
             clazz.namespace = getNamespace(c.getStart());
             let jsDocTxt: string[] = [];
             if (c["jsDoc"]) {

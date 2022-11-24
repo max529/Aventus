@@ -1,5 +1,5 @@
 import { normalize, sep } from "path";
-import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit, DiagnosticSeverity } from "vscode-languageserver";
 import { AventusExtension } from "../../definition";
 import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
@@ -24,14 +24,14 @@ export class AventusSCSSFile extends AventusBaseFile {
         this.loadDependances();
     }
 
-    protected async  onValidate(): Promise<Diagnostic[]> {
+    protected async onValidate(): Promise<Diagnostic[]> {
         this.loadDependances();
         this.diagnostics = await this.build.scssLanguageService.doValidation(this.file);
         this.compileRoot();
         return this.diagnostics;
     }
     protected async onContentChange(): Promise<void> {
-        
+
     }
     protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic))
@@ -54,7 +54,14 @@ export class AventusSCSSFile extends AventusBaseFile {
     private compile() {
         try {
             let newCompiledTxt = "";
-            if (this.diagnostics.length == 0) {
+            let hasError = false;
+            for (let diagnostic of this.diagnostics) {
+                if (diagnostic.severity == DiagnosticSeverity.Error) {
+                    hasError = true;
+                    break;
+                }
+            }
+            if (!hasError) {
                 let errorMsgTxt = "|error|";
                 const _loadContent = (file: AventusFile): string => {
                     let textToSearch = file.content;

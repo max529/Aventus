@@ -213,8 +213,8 @@ export class AventusDefinitionTsFile extends AventusTsFile {
 
                 if (foundDefaultComponent) {
                     let name = classInfo.name;
-                    if (classInfo.moduleName != "") {
-                        name = classInfo.moduleName + "." + name;
+                    if (classInfo.namespace.name != "") {
+                        name = classInfo.namespace.name + "." + name;
                     }
                     this._classInfoByName[name] = classInfo;
                 }

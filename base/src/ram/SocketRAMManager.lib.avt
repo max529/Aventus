@@ -117,7 +117,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
     }
     private initSocket() {
         let createdRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.getObjectName() + "/" + this.socketActions.created,
+            channel: this.socketActions.created,
             callback: response => {
                 if(response.data) {
                     for(let key in response.data) {
@@ -135,7 +135,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
         Socket.getInstance(this._getSocketName()).addRoute(createdRoute);
 
         let updatedRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.getObjectName() + "/" + this.socketActions.updated,
+            channel: this.socketActions.updated,
             callback: response => {
                 if(response.data) {
                     for(let key in response.data) {
@@ -158,7 +158,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
         Socket.getInstance(this._getSocketName()).addRoute(updatedRoute);
 
         let deletedRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.getObjectName() + "/" + this.socketActions.deleted,
+            channel: this.socketActions.deleted,
             callback: response => {
                 if(response.data) {
                     for(let data of response.data) {
@@ -452,6 +452,18 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
         };
     }
 
+    protected mergeObject(item: R, objFromSocket: KeysObject<U> | U) {
+        let props = Object.getOwnPropertyNames(item);
+        for(let prop of props) {
+            if(objFromSocket[prop]) {
+                let propInfo = Object.getOwnPropertyDescriptor(item, prop);
+                if(propInfo.writable) {
+                    item[prop] = objFromSocket[prop];
+                }
+            }
+        }
+    }
+
     protected abstract getObjectForRAM(objFromSocket: KeysObject<U> | U): R;
 
 
@@ -470,7 +482,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
     }
 
     public onCreated(cb: (item: R) => void) {
-       this.subscribe('created', cb);
+        this.subscribe('created', cb);
     }
     public offCreated(cb: (item: R) => void) {
         this.unsubscribe('created', cb);

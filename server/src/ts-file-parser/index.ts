@@ -185,7 +185,6 @@ export interface ClassModel {
     constructorBody: string;
     decorators: Decorator[];
     annotations: Annotation[];
-    moduleName: string;
     extends: TypeModel[];
     implements: TypeModel[];
 
@@ -220,7 +219,6 @@ let DefaultClassModel: ClassModel = {
     decorators: [],
     annotations: [],
     extends: [],
-    moduleName: '',
     annotationOverridings: {},
     start: 0,
     end: 0,
@@ -254,7 +252,6 @@ export function classDecl(name: string, isInteface: boolean): ClassModel {
         decorators: [],
         annotations: [],
         extends: [],
-        moduleName: '',
         annotationOverridings: {},
         start: 0,
         end: 0,

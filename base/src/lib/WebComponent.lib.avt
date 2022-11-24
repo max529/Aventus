@@ -234,8 +234,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         return undefined;
     }
     private __subscribeState() {
-        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
-        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
+        var currentState = Aventus.StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
+        var currentSlug = Aventus.StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
         var stateSlugged = currentState.replace("*", currentSlug);
         if(this.statesList.hasOwnProperty(stateSlugged)) {
             this.statesList[stateSlugged].active(stateSlugged);
@@ -245,7 +245,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         }
 
         for(let route in this.statesList) {
-            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
+            Aventus.StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
         }
     }
 
@@ -266,7 +266,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private _unsubscribeState() {
         if(this.statesList) {
             for(let key in this.statesList) {
-                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
+                Aventus.StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
             }
         }
     }

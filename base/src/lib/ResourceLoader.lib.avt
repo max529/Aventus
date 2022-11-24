@@ -114,10 +114,6 @@ export class ResourceLoader {
 
     private static async fetching(url: string, useBlob = false): Promise<string> {
         if(useBlob) {
-            let result = await fetch(url);
-            return await result.text();
-        }
-        else {
             let result = await fetch(url, {
                 headers: {
                     responseType: 'blob'
@@ -125,6 +121,10 @@ export class ResourceLoader {
             });
             let blob = await result.blob();
             return await this.readFile(blob);
+        }
+        else {
+            let result = await fetch(url);
+            return await result.text();
         }
     }
     private static readFile(blob: Blob): Promise<string> {

@@ -367,7 +367,7 @@ export class AventusWebcomponentCompiler {
         let elementCompile = (cls: ClassModel | EnumDeclaration | AliasNode) => {
             let result = AventusTsLanguageService.compileTs(cls, this.logicalFile);
             this.otherContent += result.compiled;
-            if(cls.isExported){
+            if (cls.isExported) {
                 this.otherDocVisible += result.doc;
             }
             else {
@@ -885,6 +885,44 @@ export class AventusWebcomponentCompiler {
         }
 
     }
+    private getFieldConstraintValue(field: CustomFieldModel) {
+        let value = "undefined";
+        if (field.valueConstraint && field.valueConstraint.hasOwnProperty("value")) {
+            if (field.valueConstraint.isCallConstraint) {
+                value = field.valueConstraint.value.name + `(${field.valueConstraint.value.arguments.join(", ")})`
+            }
+            else if (field.type) {
+                if (field.type.typeName.toLowerCase() === TYPES.string) {
+                    value = `"${field.valueConstraint.value}"`;
+                } else if (field.type.typeName.toLowerCase() === TYPES.date) {
+                    value = `luxon.DateTime.fromJSDate(${field.valueConstraint.value})`;
+                } else if (TYPES[field.type.typeName.toLowerCase()]) {
+                    value = field.valueConstraint.value
+                } else if (field.valueConstraint.value.startsWith && field.valueConstraint.value.startsWith("new ")) {
+                    value = field.valueConstraint.value;
+                } else if(field.valueConstraint.value instanceof Object) {
+                    // TODO write a proper JSON manually
+                    value = JSON.stringify(field.valueConstraint.value);
+                } else {
+                    value = JSON.stringify(field.valueConstraint.value);
+                }
+            }
+            else {
+                value = JSON.stringify(field.valueConstraint.value);
+            }
+        }
+        else if (field.type){
+            if (field.type.typeName.toLowerCase() === TYPES.string) {
+                value = `""`;
+            } else if (field.type.typeName.toLowerCase() === TYPES.boolean) {
+                value = "false";
+            } else if (field.type.typeName.toLowerCase() === TYPES.number) {
+                value = "0";
+            }
+        }
+        if (value == '"undefined"') { value = "undefined" }
+        return value;
+    }
     private writeFileFieldsSimpleVariable(fields: CustomFieldModel[]) {
         let variablesStatic = "";
         let variablesSimple = "";
@@ -893,12 +931,7 @@ export class AventusWebcomponentCompiler {
                 this.result.diagnostics.push(createErrorTsPos(this.document, "Please add @ViewElement", field.start, field.end));
                 return;
             }
-            let value = "undefined";
-            if (field.hasOwnProperty('valueConstraint')) {
-                if (field.valueConstraint != null && field.valueConstraint.hasOwnProperty("value")) {
-                    value = JSON.stringify(field.valueConstraint.value);
-                }
-            }
+            let value = this.getFieldConstraintValue(field);
             if (field.isStatic) {
                 variablesStatic += `static ${field.name} = ${value};` + EOL;
             }
@@ -1324,35 +1357,10 @@ export class AventusWebcomponentCompiler {
         for (let watch of watches) {
             let field = watch.field;
             let args = watch.args;
-            let value = "";
-            if (!field.valueConstraint || field.valueConstraint.value == undefined || field.valueConstraint.value == "undefined") {
+            let value = this.getFieldConstraintValue(field);
+            if (value == "undefined") {
                 this.result.diagnostics.push(createErrorTsPos(this.document, "A watchable prop must be initialized", field.start, field.end));
             }
-            else {
-                // constraint is a function
-                if (field.valueConstraint.isCallConstraint) {
-                    value = field.valueConstraint.value.name + `(${field.valueConstraint.value.arguments.join(", ")})`
-                }
-                else {
-                    if (field.type) {
-                        if (field.type.typeName.toLowerCase() === TYPES.string) {
-                            value = `"${field.valueConstraint.value}"`;
-                        } else if (field.type.typeName.toLowerCase() === TYPES.date) {
-                            value = `luxon.DateTime.fromJSDate(${field.valueConstraint.value})`;
-                        } else if (TYPES[field.type.typeName.toLowerCase()]) {
-                            value = field.valueConstraint.value
-                        } else if (field.valueConstraint.value.startsWith && field.valueConstraint.value.startsWith("new ")) {
-                            value = field.valueConstraint.value;
-                        } else {
-                            value = JSON.stringify(field.valueConstraint.value);
-                        }
-                    }
-                    else {
-                        value = JSON.stringify(field.valueConstraint.value);
-                    }
-                }
-            }
-            if (value == '"undefined"') { value = "undefined" }
             let watchAction = `this.__watchActions["${field.name}"] = []`;
             let txtWatchFct = "";
             if (args.length > 0) {
@@ -1653,7 +1661,7 @@ this.clearWatchHistory = () => {
 
 
             eventsMapped += `
-                new PressManager({
+                new Aventus.PressManager({
                     "element": this._components['${key}'],
                     ${onPressTxt}
                     ${onLongPressTxt}

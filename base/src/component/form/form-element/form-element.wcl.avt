@@ -58,7 +58,10 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
 
     //#region methods
     protected override postCreation(): void {
-        this.findParentByType(AvForm).subscribe(this);
+        let parentForm = this.findParentByType(AvForm);
+        if(parentForm) {
+            parentForm.subscribe(this);
+        }
     }
 
     public abstract getDefaultValue(): T;
@@ -71,7 +74,7 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
         }));
     }
 
-    public setFocus() {}
+    public setFocus() { }
 
     public validate(): boolean {
         return true;
@@ -85,7 +88,7 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
         this.errors = [];
     }
 
-    protected displayErrors() {}
-	//#endregion
+    protected displayErrors() { }
+    //#endregion
 
 }

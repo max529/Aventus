@@ -83,6 +83,8 @@ export class Build {
             // insert aventus as first
             buildConfig.include.splice(0, 0, includeBase);
         }
+
+        ClientConnection.getInstance().sendNotification("aventus/registerBuild", [project.getConfigFile().uri, buildConfig.name])
     }
     public async init() {
         await this.loadFiles();
@@ -491,6 +493,7 @@ export class Build {
             this.tsFiles[uri].removeEvents();
             this.tsFiles[uri].file.removeOnDelete(this.onFileDeleteUUIDs[uri]);
         }
+        ClientConnection.getInstance().sendNotification("aventus/unregisterBuild", [this.project.getConfigFile().uri, this.buildConfig.name])
     }
 
 
