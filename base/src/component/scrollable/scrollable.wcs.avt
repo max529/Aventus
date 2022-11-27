@@ -1,4 +1,22 @@
-@import './vars';
+:host {
+	--internal-scrollbar-content-overflow: var(--scrollbar-content-overflow, hidden);
+	--internal-scrollbar-content-height: var(--scrollbar-content-height, auto);
+	--internal-scrollbar-content-width: var(--scrollbar-content-width, 100%);
+	--internal-scrollbar-container-color: var(--scrollbar-container-color, transparent);
+	--internal-scrollbar-color: var(--scrollbar-color, #757575);
+	--internal-scrollbar-active-color: var(--scrollbar-active-color, #757575);
+
+	--internal-scroller-width: var(--scroller-width, 6px);
+	--internal-scroller-bottom: var(--scroller-bottom, 3px);
+	--internal-scroller-right: var(--scroller-right, 3px);
+	--internal-scroller-left: var(--scroller-left, 3px);
+	--internal-scroller-top: var(--scroller-top, 3px);
+
+	--internal-scroller-vertical-shadow: var(--scroller-shadow, var(--scroller-vertical-shadow, none));
+	--internal-scroller-horizontal-shadow: var(--scroller-shadow, var(--scroller-horizontal-shadow, none));
+
+	--internal-scollable-delay: var(--scrollable-delay, 0.3s);
+}
 
 :host {
 	-webkit-user-drag: none;

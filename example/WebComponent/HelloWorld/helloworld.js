@@ -1,5 +1,8 @@
-var AventusTest;(function (AventusTest) {
- var namespace = 'AventusTest';class AvHelloWorld extends Aventus.WebComponent {
+var AventusTest;
+(AventusTest||(AventusTest = {}));
+(function (AventusTest) {
+ var namespace = 'AventusTest';
+class AvHelloWorld extends Aventus.WebComponent {
     static get observedAttributes() {return ["hello_clicked", "word_clicked"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'hello_clicked'() {
                     return Number(this.getAttribute('hello_clicked'));
@@ -53,7 +56,7 @@ var AventusTest;(function (AventusTest) {
     __defaultValue() { super.__defaultValue(); if(!this.hasAttribute('hello_clicked')){ this['hello_clicked'] = ''; }if(!this.hasAttribute('word_clicked')){ this['word_clicked'] = ''; } }
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('hello_clicked');this.__upgradeProperty('word_clicked'); }
     __addEvents(ids = null) { super.__addEvents(ids); 
-                new PressManager({
+                new Aventus.PressManager({
                     "element": this._components['avhelloworld_0'],
                     "onPress": (e, pressInstance) => {
                         this.onHelloClicked(e, pressInstance);
@@ -63,4 +66,4 @@ var AventusTest;(function (AventusTest) {
      onHelloClicked(){this.hello_clicked++;} postCreation(){}}
 window.customElements.define('av-hello-world', AvHelloWorld);
 AventusTest.AvHelloWorld=AvHelloWorld;
-})(AventusTest || (AventusTest = {}));
+})(AventusTest);

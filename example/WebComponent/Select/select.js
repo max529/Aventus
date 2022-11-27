@@ -1,5 +1,8 @@
-var AventusTest;(function (AventusTest) {
- var namespace = 'AventusTest';class AvSelect extends Aventus.AvFormElement {
+var AventusTest;
+(AventusTest||(AventusTest = {}));
+(function (AventusTest) {
+ var namespace = 'AventusTest';
+class AvSelect extends Aventus.AvFormElement {
     static get observedAttributes() {return ["label"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'label'() {
                     return this.getAttribute('label');
@@ -109,6 +112,7 @@ var AventusTest;(function (AventusTest) {
     __upgradeAttributes() { super.__upgradeAttributes(); this.__upgradeProperty('label'); }
      getDefaultValue(){return "";} selectValueText(){for (var i = 0; i < this.children.length; i++) {    if (this.children[i] instanceof AvOption) {        let optionEl = this.children[i];        if (this.value == optionEl.value) {            this.value_display = this.children[i].innerHTML;            return;        }    }}this.value_display = '';} openOptions(){this.options.innerHTML = '';var list = this.children;for (var i = 0; i < list.length; i++) {    if (list[i] instanceof AvOption) {        let optionEl = list[i];        if (optionEl.value == this.value) {            optionEl.selected = true;        }        else {            optionEl.selected = false;        }        var clone = optionEl.cloneNode(true);        clone.addEventListener('click', (e) => {            this.selectOption(e.currentTarget);        });        this.options.appendChild(clone);    }}this.hider.show();var offset = this.baseEl.getPositionOnScreen();this.options.style.left = offset.x + 'px';this.options.style.top = offset.y + this.baseEl.offsetHeight + 2 + 'px';this.options.style.minWidth = this.offsetWidth + 'px';} selectOption(opt){this.value = opt.value;this.value_display = opt.innerHTML;this.onValueChanged();this.hider.hide({    force: true});} postCreation(){let valueAttr = this.getAttribute("value");if (valueAttr) {    this.value = valueAttr;    this.removeAttribute("value");}var list = this.children;for (var i = 0; i < list.length; i++) {    if (!(list[i] instanceof AvOption)) {        list[i].remove();        i--;    }    else {        let optionEl = list[i];        if (optionEl.selected) {            this.value = optionEl.value;        }    }}this.addEventListener('click', () => {    this.openOptions();});let form = this.findParentByTag("av-form");if (form) {    form.subscribe(this);}setTimeout(() => {    this.selectValueText();});}}
 window.customElements.define('av-select', AvSelect);
+
 class AvOption extends Aventus.WebComponent {
     get 'value'() {
                     return this.getAttribute('value');
@@ -170,4 +174,4 @@ class AvOption extends Aventus.WebComponent {
 window.customElements.define('av-option', AvOption);
 AventusTest.AvSelect=AvSelect;
 AventusTest.AvOption=AvOption;
-})(AventusTest || (AventusTest = {}));
+})(AventusTest);

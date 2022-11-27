@@ -174,6 +174,10 @@
 			{
 				"command": "aventus.component.split",
 				"title": "Aventus : Split component in multiple files"
+			},
+			{
+				"command": "aventus.addConfigSection",
+				"title": "Aventus : Add Config Section"
 			}
 		],
 		"menus": {
@@ -191,6 +195,11 @@
 				{
 					"when": "resourceFilename =~ /^.*\\.(wcl|wcs|wcv).avt/",
 					"command": "aventus.component.merge",
+					"group": "navigation@-50"
+				},
+				{
+					"when": "resourceFilename == aventus.conf.json",
+					"command": "aventus.addConfigSection",
 					"group": "navigation@-50"
 				}
 			]

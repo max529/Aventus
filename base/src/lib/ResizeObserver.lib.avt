@@ -2,6 +2,7 @@ export interface ResizeObserverOptions {
     callback: CallableFunction;
     fps?: number;
 }
+type WindowResizeObserver = globalThis.ResizeObserver;
 export class ResizeObserver {
     private callback: CallableFunction;
     private targets: Element[];
@@ -13,10 +14,10 @@ export class ResizeObserver {
     private static resizeObserverClassByObject: {
         [key: string]: ResizeObserver[];
     } = {};
-    private static uniqueInstance: ResizeObserver;
-    private static getUniqueInstance(): ResizeObserver {
+    private static uniqueInstance: WindowResizeObserver;
+    private static getUniqueInstance(): WindowResizeObserver {
         if(!ResizeObserver.uniqueInstance) {
-            ResizeObserver.uniqueInstance = new ResizeObserver(entries => {
+            ResizeObserver.uniqueInstance = new window.ResizeObserver(entries => {
                 let allClasses: ResizeObserver[] = [];
                 for(let j = 0; j < entries.length; j++) {
                     let entry = entries[j];
