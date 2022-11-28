@@ -32,17 +32,10 @@ export const AventusConfigSchema = {
                     "generateDefinition": { type: "boolean" },
                     "compileOnSave": { type: "boolean" },
                     "includeBase": { type: "boolean" },
-                    "include": {
+                    "includeOnBuild": {
                         type: "array",
                         items: {
-                            type: "object",
-                            properties: {
-                                "definition": { type: "string" },
-                                "src": { type: "string" },
-                                "libraryName": { type: "string" }
-                            },
-                            required: ["definition"],
-                            additionalProperties: false
+                            type: "string",
                         },
                     },
                     "module": { type: "string" }
@@ -51,6 +44,19 @@ export const AventusConfigSchema = {
                 additionalProperties: false
             },
             minItems: 1
+        },
+        "include": {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    "definition": { type: "string" },
+                    "src": { type: "string" },
+                    "name": { type: "string" }
+                },
+                required: ["definition", "name"],
+                additionalProperties: false
+            }
         },
         "static": {
             type: "array",

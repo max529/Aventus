@@ -457,6 +457,9 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
                     x.types.forEach(y => {
                         if (x.token === ts.SyntaxKind.ExtendsKeyword) {
                             let temp = buildType(y, mpth, module);
+                            if (temp) {
+                                temp.typeName = y.getText();
+                            }
                             if (temp?.typeKind == TypeKind.BASIC) {
                                 updateImport(temp as BasicType, module);
                             }
@@ -848,9 +851,10 @@ export function buildType(t: ts.TypeNode | undefined, path: string, module: Modu
     }
     if (t.kind === ts.SyntaxKind.ExpressionWithTypeArguments) {
         var tra = <ts.ExpressionWithTypeArguments>t;
+        let parsedName2 = tra.expression.getText();
         let parsedName = parseQualified2(tra.expression);
-        if (parsedName) {
-            res = basicType(parsedName, path);
+        if (parsedName2) {
+            res = basicType(parsedName2, path);
             if (tra.typeArguments) {
                 tra.typeArguments.forEach(x => {
                     let temp = buildType(x, path, module);

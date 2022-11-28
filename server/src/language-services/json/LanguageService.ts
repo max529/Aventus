@@ -89,6 +89,9 @@ export class AventusJSONLanguageService {
     }
 
     private prepareConfigFile(uri: string, config: AventusConfig) {
+        if(!config.include){
+            config.include = [];
+        }
         for (let build of config.build) {
             this.prepareBuild(uri, build);
         }
@@ -104,8 +107,8 @@ export class AventusJSONLanguageService {
         if (!build.hasOwnProperty("compileOnSave")) {
             build.compileOnSave = true;
         }
-        if (!build.include) {
-            build.include = [];
+        if (!build.includeOnBuild) {
+            build.includeOnBuild = [];
         }
         // input
         for (let inputPath of build.inputPath) {

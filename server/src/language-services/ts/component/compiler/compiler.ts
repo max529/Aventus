@@ -272,9 +272,16 @@ export class AventusWebcomponentCompiler {
 
             if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent" && jsonStruct.classes[0].extends[0].typeName != "Aventus.WebComponent") {
                 // search parent inside local import
+                let nameToUse = jsonStruct.classes[0].extends[0].typeName;
+                if (jsonStruct.classes[0].extends[0].typeKind == TypeKind.BASIC) {
+                    let namespace = (jsonStruct.classes[0].extends[0] as BasicType).nameSpace;
+                    if (namespace) { namespace += '.' }
+                    nameToUse = namespace + (jsonStruct.classes[0].extends[0] as BasicType).basicName;
+                }
                 for (let importTemp of jsonStruct._imports) {
                     for (let name of importTemp.clauses) {
-                        if (name == jsonStruct.classes[0].extends[0].typeName) {
+
+                        if (name == nameToUse) {
                             let newPath = importTemp.absPathString.replace(/\\/g, "/");
                             let newUri = pathToUri(newPath);
                             let parentScript = this.build.tsFiles[newUri];
@@ -286,7 +293,7 @@ export class AventusWebcomponentCompiler {
                     }
                 }
                 // search parent inside definition file
-                let classInfoInDef = this.build.getWebComponentDefinition(jsonStruct.classes[0].extends[0].typeName);
+                let classInfoInDef = this.build.getWebComponentDefinition(nameToUse);
                 if (classInfoInDef) {
                     let fields = this.loadFields(classInfoInDef, false);
                     this.allFields = {
@@ -900,7 +907,7 @@ export class AventusWebcomponentCompiler {
                     value = field.valueConstraint.value
                 } else if (field.valueConstraint.value.startsWith && field.valueConstraint.value.startsWith("new ")) {
                     value = field.valueConstraint.value;
-                } else if(field.valueConstraint.value instanceof Object) {
+                } else if (field.valueConstraint.value instanceof Object) {
                     // TODO write a proper JSON manually
                     value = JSON.stringify(field.valueConstraint.value);
                 } else {
@@ -911,7 +918,7 @@ export class AventusWebcomponentCompiler {
                 value = JSON.stringify(field.valueConstraint.value);
             }
         }
-        else if (field.type){
+        else if (field.type) {
             if (field.type.typeName.toLowerCase() === TYPES.string) {
                 value = `""`;
             } else if (field.type.typeName.toLowerCase() === TYPES.boolean) {

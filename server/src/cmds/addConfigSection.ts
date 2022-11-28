@@ -30,7 +30,7 @@ export class AddConfigSection {
 				"outputFile": "./dist/" + nameFile + ".js",
 				"generateDefinition": true,
 				"includeBase": false,
-				"include": []
+				"includeOnBuild": []
 			});
 			writeFileSync(uriToPath(uri), JSON.stringify(config, null, 4))
 			ClientConnection.getInstance().sendNotification("aventus/openfile", uri)

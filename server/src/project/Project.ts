@@ -1,7 +1,10 @@
+import { normalize } from 'path';
 import { CompletionItem, CompletionList, FormattingOptions, Hover, Position, Range, TextEdit } from 'vscode-languageserver';
+import { AventusExtension } from '../definition';
 import { AventusFile } from '../files/AventusFile';
 import { AventusConfig } from "../language-services/json/definition";
 import { AventusJSONLanguageService } from '../language-services/json/LanguageService';
+import { AVENTUS_BASE_PATH, AVENTUS_DEF_BASE_PATH } from '../language-services/ts/libLoader';
 import { Build } from "./Build";
 import { Static } from "./Static";
 
@@ -11,7 +14,6 @@ export class Project {
     private builds: Build[] = [];
     private statics: Static[] = [];
     private _isCoreBuild: Boolean = false;
-    private outputFiles: string[] = [];
 
     private onValidateUUID: string;
     private onSaveUUID: string;
@@ -26,9 +28,20 @@ export class Project {
     public getConfigFile() {
         return this.configFile;
     }
-    public getOutputFiles() {
-        return this.outputFiles;
+    public getConfig() {
+        return this.config;
     }
+    public getDefSrcFile(libName: string) {
+        if (this.config) {
+            for (let include of this.config.include) {
+                if (include.name == libName) {
+                    return include.src;
+                }
+            }
+        }
+        return null;
+    }
+
 
     public constructor(configFile: AventusFile) {
         this.configFile = configFile;
@@ -47,7 +60,7 @@ export class Project {
     public async init() {
         await this.onConfigSave();
     }
-    public async onValidate(){
+    public async onValidate() {
         return await AventusJSONLanguageService.getInstance().valideConfig(this.configFile);
     }
 
@@ -74,8 +87,29 @@ export class Project {
         this.builds = [];
         this.config = newConfig;
         if (this.config) {
+            if (!this.isCoreBuild) {
+                let includeBase: {
+                    definition: string,
+                    src: string,
+                    name: string
+                } = {
+                    definition: AVENTUS_DEF_BASE_PATH,
+                    src: AVENTUS_BASE_PATH,
+                    name: "Aventus"
+                }
+                // insert aventus as first
+                this.config.include.splice(0, 0, includeBase);
+            }
             for (let build of this.config.build) {
-                this.outputFiles.push(build.outputFile);
+                let includeLocal: {
+                    definition: string,
+                    name: string
+                } = {
+                    definition: normalize(build.outputFile.replace(".js", AventusExtension.Definition)),
+                    name: build.name
+                }
+                this.config.include.splice(0, 0, includeLocal);
+
             }
             for (let build of this.config.build) {
                 let newBuild = new Build(this, build)

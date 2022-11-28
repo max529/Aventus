@@ -49,6 +49,7 @@ export class Build {
         return this.project.isCoreBuild;
     }
 
+
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
         this.project = project;
         this.buildConfig = buildConfig;
@@ -57,32 +58,6 @@ export class Build {
         this.scssLanguageService = new AventusSCSSLanguageService(this);
         this.htmlLanguageService = new AventusHTMLLanguageService(this);
 
-        let outputFiles = this.project.getOutputFiles();
-        for (let outputFile of outputFiles) {
-            let includeOutput: {
-                definition: string,
-                src?: string,
-                libraryName?: string
-            } = {
-                definition: normalize(outputFile.replace(".js", AventusExtension.Definition))
-            }
-            buildConfig.include.splice(0, 0, includeOutput);
-        }
-
-        if (!project.isCoreBuild) {
-            let includeBase: {
-                definition: string,
-                src?: string,
-                libraryName?: string
-            } = {
-                definition: AVENTUS_DEF_BASE_PATH
-            }
-            if (buildConfig.includeBase) {
-                includeBase.src = AVENTUS_BASE_PATH;
-            }
-            // insert aventus as first
-            buildConfig.include.splice(0, 0, includeBase);
-        }
 
         ClientConnection.getInstance().sendNotification("aventus/registerBuild", [project.getConfigFile().uri, buildConfig.name])
     }
@@ -285,11 +260,12 @@ export class Build {
     }
     private buildLoadInclude() {
         let result: string[] = [];
-        for (let include of this.buildConfig.include) {
-            if (include.src) {
-                let pathToImport = include.src;
-                if (include.src.startsWith(".")) {
-                    pathToImport = this.project.getConfigFile().folderPath + '/' + include.src;
+        for (let includeName of this.buildConfig.includeOnBuild) {
+            let includeSrc = this.project.getDefSrcFile(includeName);
+            if (includeSrc) {
+                let pathToImport = includeSrc;
+                if (includeSrc.startsWith(".")) {
+                    pathToImport = this.project.getConfigFile().folderPath + '/' + includeSrc;
                 }
                 let normalizePath = normalize(pathToImport);
                 if (existsSync(normalizePath) && statSync(normalizePath).isFile()) {
@@ -388,12 +364,15 @@ export class Build {
                 this.noNamespaceUri[file.uri] = true;
             }
         }
-        for (let include of this.buildConfig.include) {
-            let pathToImport = include.definition;
-            if (include.definition.startsWith(".")) {
-                pathToImport = this.project.getConfigFile().folderPath + '/' + include.definition;
+        let config = this.project.getConfig();
+        if (config) {
+            for (let include of config.include) {
+                let pathToImport = include.definition;
+                if (include.definition.startsWith(".")) {
+                    pathToImport = this.project.getConfigFile().folderPath + '/' + include.definition;
+                }
+                this.registerDef(pathToImport);
             }
-            this.registerDef(pathToImport);
         }
         if (ClientConnection.getInstance().isDebug()) {
             console.log("loaded all files needed");

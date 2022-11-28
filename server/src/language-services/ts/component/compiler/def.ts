@@ -64,10 +64,10 @@ export const configTS = {
 	"noImplicitOverride": false,
 	"target": "ES6"
 }
-export type CustomTypeAttribute = "luxon.date" | 'luxon.datetime' | 'string' | 'number' | 'boolean';
+export type CustomTypeAttribute = "luxon.Date" | 'luxon.DateTime' | 'string' | 'number' | 'boolean';
 export const TYPES = {
-	date: 'luxon.date',
-	datetime: 'luxon.datetime',
+	date: 'luxon.Date',
+	datetime: 'luxon.DateTime',
 	string: 'string',
 	number: 'number',
 	boolean: 'boolean',
