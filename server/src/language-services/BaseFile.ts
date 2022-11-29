@@ -1,4 +1,4 @@
-import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { AventusFile, InternalAventusFile } from '../files/AventusFile';
 import { Build } from "../project/Build";
 
@@ -34,6 +34,8 @@ export abstract class AventusBaseFile {
         onDefinition: '',
         onFormatting: '',
         onCodeAction: '',
+        onReferences: '',
+        onCodeLens: '',
     }
     private addEvents(): void {
         this.uuidEvents.onContentChange = this.file.onContentChange(this.onContentChange.bind(this));
@@ -46,6 +48,8 @@ export abstract class AventusBaseFile {
         this.uuidEvents.onDefinition = this.file.onDefinition(this.onDefinition.bind(this));
         this.uuidEvents.onFormatting = this.file.onFormatting(this.onFormatting.bind(this));
         this.uuidEvents.onCodeAction = this.file.onCodeAction(this.onCodeAction.bind(this));
+        this.uuidEvents.onReferences = this.file.onReferences(this.onReferences.bind(this));
+        this.uuidEvents.onCodeLens = this.file.onCodeLens(this.onCodeLens.bind(this));
     }
     public removeEvents(): void {
         this.file.removeOnContentChange(this.uuidEvents.onContentChange);
@@ -58,6 +62,9 @@ export abstract class AventusBaseFile {
         this.file.removeOnDefinition(this.uuidEvents.onDefinition);
         this.file.removeOnFormatting(this.uuidEvents.onFormatting);
         this.file.removeOnCodeAction(this.uuidEvents.onCodeAction);
+        this.file.removeOnReferences(this.uuidEvents.onReferences);
+        this.file.removeOnCodeLens(this.uuidEvents.onCodeLens);
+
     }
 
     public async validate() {
@@ -85,6 +92,8 @@ export abstract class AventusBaseFile {
     protected abstract onDefinition(document: AventusFile, position: Position): Promise<Definition | null>;
     protected abstract onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]>;
     protected abstract onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]>;
+    protected abstract onReferences(document: AventusFile, position: Position): Promise<Location[]>;
+    protected abstract onCodeLens(document: AventusFile): Promise<CodeLens[]>;
 
 
 }

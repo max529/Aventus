@@ -231,25 +231,6 @@ class AvFor extends WebComponent implements DefaultComponent {
     private getAllIndexes;
 }
 
-abstract class DisplayElement<T extends IData> extends WebComponent implements DefaultComponent {
-    currentInstance: SocketRAMManagerItem<T>;
-    eventsFunctions: {
-        "onUpdate": (data: T) => void;
-        "onDelete": (data: T) => void;
-    };
-    protected abstract displayInfos(newData: SocketRAMManagerItem<T>): any;
-    protected onDeleteFunction(data: SocketRAMManagerItem<T>): void;
-    protected onUpdateFunction(data: SocketRAMManagerItem<T>): void;
-    protected destroy(): void;
-    protected subscribeToInstance(): void;
-    protected unsubscribeFromInstance(): void;
-    /**
-     * Assign a new instance to the component
-     * @param {SocketRAMManagerItem<T>} newInstance - The new instance to display
-     */
-    protected switchInstance(newInstance: SocketRAMManagerItem<T>): void;
-}
-
 	}
 
     var namespace: string;
@@ -343,7 +324,7 @@ type MethodType = 'get' | 'post' | 'put';
 
 // end region js //
 // region css //
-{"av-display-element":[],"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
+{"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
 // end region css //
 // region html //
 {"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","type":"string","values":[]},"in":{"name":"in","description":"Name of property to loop though","type":"string","values":[]},"index":{"name":"index","description":"Name of your index","type":"string","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","type":"boolean","values":[]},"method":{"name":"method","description":"Define method for your","type":"string","values":[{"name":"'get'","description":""},{"name":"'post'","description":""},{"name":"'put'","description":""}]},"action":{"name":"action","description":"","type":"string","values":[]},"use_event":{"name":"use_event","description":"","type":"boolean","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{"state":{"name":"state","description":"","type":"string","values":[]}}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"floating_scroll":{"name":"floating_scroll","description":"","type":"boolean","values":[]},"only_vertical":{"name":"only_vertical","description":"","type":"boolean","values":[]},"disable_scroll":{"name":"disable_scroll","description":"","type":"boolean","values":[]},"zoom":{"name":"zoom","description":"","type":"number","values":[]}}}}

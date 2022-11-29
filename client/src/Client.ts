@@ -1,5 +1,5 @@
 import { join } from "path";
-import { ExtensionContext } from "vscode";
+import { ExtensionContext, Location, Position, Range, Uri } from "vscode";
 import { ExecuteCommandSignature, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient";
 import { Commands } from "./cmds";
 import { AvenutsVsComponent } from "./component";
@@ -67,7 +67,23 @@ export class Client {
                 provideCodeActions(this, document, range, context, token, next) {
                     return next(document, range, context, token);
                 },
-
+                async provideCodeLenses(document, token, next) {
+                    let codeLenses = await next(document, token);
+                    if (codeLenses) {
+                        for (let codeLens of codeLenses) {
+                            if (codeLens.command && codeLens.command.command == "editor.action.showReferences" && codeLens.command.arguments) {
+                                codeLens.command.arguments[0] = Uri.parse(codeLens.command.arguments[0]);
+                                codeLens.command.arguments[1] = new Position(codeLens.command.arguments[1].line, codeLens.command.arguments[1].character);
+                                let locations: Location[] = []
+                                for (let location of codeLens.command.arguments[2]) {
+                                    locations.push(new Location(Uri.parse(location.uri), new Range(location.range.start, location.range.end)));
+                                }
+                                codeLens.command.arguments[2] = locations;
+                            }
+                        }
+                    }
+                    return codeLenses;
+                },
             },
 
 

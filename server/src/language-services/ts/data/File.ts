@@ -1,4 +1,4 @@
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
 import { AventusFile } from '../../../files/AventusFile';
 import { Build } from '../../../project/Build';
@@ -7,7 +7,6 @@ import { genericTsCompile } from "../compiler";
 import { AventusTsFile } from "../File";
 
 export class AventusDataFile extends AventusTsFile {
-
     protected get extension(): string {
         return AventusExtension.Data;
     }
@@ -68,5 +67,10 @@ export class AventusDataFile extends AventusTsFile {
     protected onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return this.tsLanguageService.doCodeAction(document, range);
     }
-
+    protected onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return this.tsLanguageService.onReferences(document, position);
+    }
+    protected onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return this.tsLanguageService.onCodeLens(document);
+    }
 }

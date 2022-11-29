@@ -1,4 +1,4 @@
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
 import { AventusFile } from '../../../files/AventusFile';
 import { TsCompileResult } from "../compiler";
@@ -47,5 +47,10 @@ export class AventusStaticFile extends AventusTsFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }

@@ -92,6 +92,7 @@ export class AventusHTMLLanguageService {
         }
         return [];
     }
+    
     //#endregion
 
     //#region language service function

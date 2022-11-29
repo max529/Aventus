@@ -2,7 +2,7 @@ import postcss from 'postcss';
 import * as postcssSorting from 'postcss-sorting';
 import * as postcssScss from 'postcss-scss';
 import { CSSFormatConfiguration, getSCSSLanguageService, LanguageService } from "vscode-css-languageservice";
-import { CodeAction, CodeActionContext, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CodeActionContext, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { Build } from '../../project/Build';
 import { getNodePath, SCSSDoc, Node, NodeType, CustomCssProperty } from './helper/CSSNode';
 import { AventusDefinitionSCSSFile } from '../ts/definition/File';
@@ -115,6 +115,11 @@ export class AventusSCSSLanguageService {
         let codeActionContext = CodeActionContext.create(this.languageService.doValidation(file.document, docSCSS))
         return this.languageService.doCodeActions2(file.document, range, codeActionContext, docSCSS);
     }
+    public async onReferences(file: AventusFile, position: Position): Promise<Location[]> {
+        let docSCSS = this.languageService.parseStylesheet(file.document)
+        return this.languageService.findReferences(file.document, position, docSCSS);
+    }
+
 
     //#region custom definition
     private rebuildDefinition() {

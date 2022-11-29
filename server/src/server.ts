@@ -51,6 +51,11 @@ ClientConnection.getInstance().connection?.onInitialize((_params: InitializePara
             codeActionProvider: {
                 codeActionKinds: [CodeActionKind.QuickFix],
                 resolveProvider: true,
+            },
+            referencesProvider: {
+            },
+            codeLensProvider: {
+                resolveProvider: true,
             }
         }
     };
@@ -109,8 +114,21 @@ ClientConnection.getInstance().connection?.onCodeAction(async (params, token) =>
         return await FilesManager.getInstance().onCodeAction(document, params.range);
     }
     return null;
-
 });
+ClientConnection.getInstance().connection?.onCodeLens(async (params, token) => {
+    const document = documents.get(params.textDocument.uri);
+    if (document && isAllowed(document)) {
+        return await FilesManager.getInstance().onCodeLens(document);
+    }
+    return null;
+});
+ClientConnection.getInstance().connection?.onReferences(async (params, token, workDoneProgress) => {
+    const document = documents.get(params.textDocument.uri);
+    if (document && isAllowed(document)) {
+        return await FilesManager.getInstance().onReferences(document, params.position);
+    }
+    return null;
+})
 
 // not on document
 ClientConnection.getInstance().connection?.onExecuteCommand(async (params) => {

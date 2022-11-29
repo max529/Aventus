@@ -1,7 +1,7 @@
 import { EOL } from 'os';
 import { normalize, sep } from 'path';
-import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
-import { CodeAction, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, DiagnosticSeverity, FormattingOptions, Hover, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
+import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ReferencedSymbol, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
+import { CodeAction, CodeLens, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, DiagnosticSeverity, FormattingOptions, Hover, Location, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
 import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../files/AventusFile';
 import { Build } from '../../project/Build';
@@ -10,7 +10,6 @@ import { AliasNode, ClassModel, EnumDeclaration } from '../../ts-file-parser';
 import { correctTypeInsideDefinition } from '../../ts-file-parser/src/tsDefinitionParser';
 import { AventusTsFile } from './File';
 import { loadLibrary } from './libLoader';
-
 
 export class AventusTsLanguageService {
     private languageService: LanguageService;
@@ -439,6 +438,50 @@ export class AventusTsLanguageService {
         return result;
     }
 
+    public async onReferences(file: AventusFile, position: Position): Promise<Location[]> {
+        let offset = file.document.offsetAt(position);
+        let result: Location[] = []
+        let referencedSymbols = this.languageService.findReferences(file.uri, offset);
+        if (referencedSymbols) {
+            for (let referencedSymbol of referencedSymbols) {
+                for (let reference of referencedSymbol.references) {
+                    if (this.filesLoaded[reference.fileName]) {
+                        let startPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start)
+                        let endPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start + reference.textSpan.length)
+                        result.push(Location.create(reference.fileName, {
+                            start: startPos,
+                            end: endPos
+                        }));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    public async onCodeLens(file: AventusFile): Promise<CodeLens[]> {
+        let result: CodeLens[] = []
+        if (this.filesLoaded[file.uri]) {
+            for (let _class of this.filesLoaded[file.uri].fileParsed.classes) {
+                let startPos = file.document.positionAt(_class.start)
+                let refs = await this.onReferences(file, startPos);
+                let title = refs.length > 1 ? refs.length + ' references' : refs.length + ' reference';
+                result.push({
+                    range: {
+                        start: startPos,
+                        end: startPos,
+                    },
+                    command: {
+                        title: title,
+                        command: refs.length ? 'editor.action.showReferences' : '',
+                        arguments: [file.uri, startPos, refs]
+                    }
+                });
+            }
+
+        }
+        return result;
+    }
 
 
     private static removeComments(txt: string): string {

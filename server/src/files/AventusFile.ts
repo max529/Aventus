@@ -1,5 +1,5 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { v4 as randomUUID } from 'uuid';
 import { getFolder, uriToPath } from '../tools';
 import { ClientConnection } from '../Connection';
@@ -12,6 +12,8 @@ export type onHoverType = (document: AventusFile, position: Position) => Promise
 export type onDefinitionType = (document: AventusFile, position: Position) => Promise<Definition | null>;
 export type onFormattingType = (document: AventusFile, range: Range, options: FormattingOptions) => Promise<TextEdit[]>;
 export type onCodeActionType = (document: AventusFile, range: Range) => Promise<CodeAction[]>;
+export type onReferencesType = (document: AventusFile, position: Position) => Promise<Location[]>;
+export type onCodeLensType = (document: AventusFile) => Promise<CodeLens[]>;
 
 export interface AventusFile {
     document: TextDocument;
@@ -52,6 +54,12 @@ export interface AventusFile {
 
     onCodeAction(cb: onCodeActionType): string;
     removeOnCodeAction(uuid: string): void;
+
+    onReferences(cb: onReferencesType): string;
+    removeOnReferences(uuid: string): void;
+
+    onCodeLens(cb: onCodeLensType): string;
+    removeOnCodeLens(uuid: string): void;
 }
 export class InternalAventusFile implements AventusFile {
     public document: TextDocument;
@@ -413,6 +421,66 @@ export class InternalAventusFile implements AventusFile {
 
     public removeOnCodeAction(uuid: string): void {
         delete this.onCodeActionCb[uuid];
+    }
+    //#endregion
+
+    //#region onReferences
+    private onReferencesCb: { [uuid: string]: onReferencesType } = {};
+
+    public async getReferences(position: Position): Promise<Location[]> {
+        let result: Location[] = [];
+        let proms: Promise<Location[]>[] = [];
+        for (let uuid in this.onReferencesCb) {
+            proms.push(this.onReferencesCb[uuid](this, position));
+        }
+        let promsResult = await Promise.all(proms);
+        for (let promResult of promsResult) {
+            result = [...result, ...promResult];
+        }
+        return result;
+    }
+
+    public onReferences(cb: onReferencesType): string {
+        let uuid = randomUUID();
+        while (this.onReferencesCb[uuid] != undefined) {
+            uuid = randomUUID();
+        }
+        this.onReferencesCb[uuid] = cb;
+        return uuid;
+    }
+
+    public removeOnReferences(uuid: string): void {
+        delete this.onReferencesCb[uuid];
+    }
+    //#endregion
+
+    //#region onCodeLens
+    private onCodeLensCb: { [uuid: string]: onCodeLensType } = {};
+
+    public async getCodeLens(): Promise<CodeLens[]> {
+        let result: CodeLens[] = [];
+        let proms: Promise<CodeLens[]>[] = [];
+        for (let uuid in this.onCodeLensCb) {
+            proms.push(this.onCodeLensCb[uuid](this));
+        }
+        let promsResult = await Promise.all(proms);
+        for (let promResult of promsResult) {
+            result = [...result, ...promResult];
+        }
+        return result;
+    }
+
+    public onCodeLens(cb: onCodeLensType): string {
+        let uuid = randomUUID();
+        while (this.onCodeLensCb[uuid] != undefined) {
+            uuid = randomUUID();
+        }
+        this.onCodeLensCb[uuid] = cb;
+        return uuid;
+    }
+
+    public removeOnCodeLens(uuid: string): void {
+        delete this.onCodeLensCb[uuid];
     }
     //#endregion
 

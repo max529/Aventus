@@ -1,6 +1,6 @@
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { EOL } from 'os';
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension, AventusLanguageId } from "../../../definition";
 import { AventusFile, InternalAventusFile } from '../../../files/AventusFile';
@@ -17,8 +17,8 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     protected get extension(): string {
         return AventusExtension.ComponentLogic;
     }
-    
-    constructor(file: AventusFile, build: Build){
+
+    constructor(file: AventusFile, build: Build) {
         super(file, build);
         this.refreshFileParsed();
     }
@@ -82,7 +82,12 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     protected onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return this.tsLanguageService.doCodeAction(document, range);
     }
-
+    protected onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return this.tsLanguageService.onReferences(document, position);
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }
 
 interface AventusWebComponentSingleFileRegion<T extends AventusBaseFile> {
@@ -175,7 +180,7 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
         return diagnostics;
     }
     protected async onContentChange(): Promise<void> {
-       
+
     }
     protected async onSave() {
         this.build.disableBuild();
@@ -402,6 +407,13 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
         delete this.build.tsFiles[this.file.uri];
     }
 
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
+
 
     private getDocuments() {
         let resultTxt = this.splitDocument();
@@ -503,4 +515,6 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
 
         return resultTxt;
     }
+
+
 }

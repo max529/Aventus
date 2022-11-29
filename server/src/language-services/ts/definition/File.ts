@@ -1,5 +1,5 @@
 import { EOL } from 'os';
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ClientConnection } from '../../../Connection';
 import { AventusExtension, AventusLanguageId } from "../../../definition";
@@ -35,7 +35,7 @@ export class AventusDefinitionFile extends AventusTsFile {
         this.scssFile = resultBySection.scssFile;
         let outputPath = this.build.getOutputUri();
         //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
-            this.tsLanguageService.addFile(this.tsDef);
+        this.tsLanguageService.addFile(this.tsDef);
         //}
     }
     private getSplittedFiles(): {
@@ -121,7 +121,7 @@ export class AventusDefinitionFile extends AventusTsFile {
         let result = this.separeSection();
         let documentTs = TextDocument.create(this.file.uri, AventusLanguageId.TypeScript, this.file.version, result.jsTxt);
         this.tsFile.triggerContentChange(documentTs);
-        
+
         let documentScss = TextDocument.create(this.file.uri, AventusLanguageId.SCSS, this.file.version, result.scssTxt);
         this.scssFile.triggerContentChange(documentScss);
 
@@ -133,7 +133,7 @@ export class AventusDefinitionFile extends AventusTsFile {
     protected override async onDelete(): Promise<void> {
         super.onDelete();
         //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
-            this.tsLanguageService.removeFile(this);
+        this.tsLanguageService.removeFile(this);
         //}
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
@@ -170,6 +170,13 @@ export class AventusDefinitionFile extends AventusTsFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
+
     private transformPosition(fileFrom: AventusBaseFile, positionFrom: Position, fileTo: AventusBaseFile, offset: number): Position {
         let currentOffset = fileFrom.file.document.offsetAt(positionFrom);
         return fileTo.file.document.positionAt(currentOffset - offset);
@@ -190,10 +197,10 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
         //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
-            this.refreshFileParsed(false);
-            this.loadDefinitionInsideBuild();
-            this.build.tsDefFiles[this.file.uri] = this;
-            this.build.rebuildDefinitionWebComponent();
+        this.refreshFileParsed(false);
+        this.loadDefinitionInsideBuild();
+        this.build.tsDefFiles[this.file.uri] = this;
+        this.build.rebuildDefinitionWebComponent();
         //}
     }
 
@@ -230,9 +237,9 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     }
     protected async onContentChange(): Promise<void> {
         //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
-            this.refreshFileParsed(false);
-            this.loadDefinitionInsideBuild();
-            this.build.rebuildDefinitionWebComponent();
+        this.refreshFileParsed(false);
+        this.loadDefinitionInsideBuild();
+        this.build.rebuildDefinitionWebComponent();
         //}
         // TODO : Maybe this ll trigger an infinite loop
         if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
@@ -264,7 +271,12 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }
 export class AventusDefinitionSCSSFile extends AventusBaseFile {
 
@@ -301,7 +313,12 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }
 export class AventusDefinitionHTMLFile extends AventusBaseFile {
     protected async onValidate(): Promise<Diagnostic[]> {
@@ -332,5 +349,10 @@ export class AventusDefinitionHTMLFile extends AventusBaseFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }

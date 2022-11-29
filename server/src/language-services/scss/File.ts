@@ -1,5 +1,5 @@
 import { normalize, sep } from "path";
-import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit, DiagnosticSeverity } from "vscode-languageserver";
+import { CodeAction, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit, DiagnosticSeverity, CodeLens } from "vscode-languageserver";
 import { AventusExtension } from "../../definition";
 import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
@@ -137,6 +137,12 @@ export class AventusSCSSFile extends AventusBaseFile {
     }
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return this.build.scssLanguageService.doCodeAction(document, range);
+    }
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return await this.build.scssLanguageService.onReferences(document, position);
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return []
     }
 
 

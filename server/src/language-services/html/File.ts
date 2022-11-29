@@ -1,4 +1,4 @@
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
 import { AventusExtension } from '../../definition';
 import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
@@ -19,7 +19,7 @@ export class AventusHTMLFile extends AventusBaseFile {
         return diagnostics;
     }
     protected async onContentChange(): Promise<void> {
-        
+
     }
     protected async onSave() {
         let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic))
@@ -65,5 +65,10 @@ export class AventusHTMLFile extends AventusBaseFile {
     protected async onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {
         return [];
     }
-
+    protected async onReferences(document: AventusFile, position: Position): Promise<Location[]> {
+        return [];
+    }
+    protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
+        return [];
+    }
 }

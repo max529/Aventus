@@ -1,12 +1,13 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { Hover } from 'vscode-languageclient';
-import { CodeAction, CompletionItem, CompletionList, Definition, FormattingOptions, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, FormattingOptions, Location, Position, Range, TextEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ClientConnection } from '../Connection';
 import { AventusExtension, AventusLanguageId } from '../definition';
 import { pathToUri, uriToPath } from '../tools';
 import { AventusFile, InternalAventusFile } from './AventusFile';
 import { v4 as randomUUID } from 'uuid';
+import { ReferencedSymbol } from 'typescript';
 
 export class FilesManager {
     private static instance: FilesManager;
@@ -137,6 +138,19 @@ export class FilesManager {
         }
         return this.files[document.uri].getCodeAction(range);
     }
+    public async onReferences(document: TextDocument, position: Position): Promise<Location[] | undefined> {
+        if (!this.files[document.uri]) {
+            return [];
+        }
+        return this.files[document.uri].getReferences(position);
+    }
+    public async onCodeLens(document: TextDocument): Promise<CodeLens[]> {
+        if (!this.files[document.uri]) {
+            return [];
+        }
+        return this.files[document.uri].getCodeLens();
+    }
+    
 
     //#region event new file
     private onNewFileCb: { [uuid: string]: (document: AventusFile) => Promise<void> } = {};
