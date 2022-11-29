@@ -2,7 +2,7 @@ var AventusTest;
 (AventusTest||(AventusTest = {}));
 (function (AventusTest) {
  var namespace = 'AventusTest';
-class AvScrollTest extends Aventus.WebComponent {
+class AvScrollTest extends WebComponent {
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(`:host av-scrollable{width:200px;height:200px;border:1px solid gray}:host av-scrollable .item{width:200%;height:50px;background:linear-gradient(90deg, rgb(2, 0, 36) 0%, rgb(9, 9, 121) 35%, rgb(0, 212, 255) 100%);margin:10px 0}:host(.big) av-scrollable{width:400px;height:1000px}`);

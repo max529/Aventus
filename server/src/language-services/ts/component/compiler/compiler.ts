@@ -256,7 +256,12 @@ export class AventusWebcomponentCompiler {
             this.className = classInfo.name;
             this.parentClassName = 'Aventus.WebComponent';
             if (classInfo.extends.length > 0) {
-                this.parentClassName = classInfo.extends[0].typeName;
+                if (classInfo.extends[0].typeKind == TypeKind.BASIC) {
+                    this.parentClassName = (classInfo.extends[0] as BasicType).basicName;
+                }
+                else {
+                    this.parentClassName = classInfo.extends[0].typeName;
+                }
                 this.dependances.push(classInfo.extends[0].typeName);
             }
         }
