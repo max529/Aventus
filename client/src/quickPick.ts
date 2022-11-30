@@ -28,6 +28,15 @@ export namespace QuickPick {
 		new BuildQuickPick("Multiple", "Splitted files"),
 	];
 
+	export const attrType: BuildQuickPick[] = [
+		new BuildQuickPick("Number", "number"),
+		new BuildQuickPick("String", "string"),
+		new BuildQuickPick("Boolean", "boolean"),
+		new BuildQuickPick("Date", "luxon.Date"),
+		new BuildQuickPick("Datetime", "luxon.Datetime"),
+		new BuildQuickPick("Custom", ""),
+	];
+
 	export function reorder(list: BuildQuickPick[], selected: BuildQuickPick) {
 		let indexResult = list.indexOf(selected);
 		if (indexResult > -1) {

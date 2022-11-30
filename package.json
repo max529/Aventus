@@ -178,6 +178,22 @@
 			{
 				"command": "aventus.addConfigSection",
 				"title": "Aventus : Add Config Section"
+			},
+			{
+				"command": "aventus.wc.create.attribute",
+				"title": "Aventus : Create attribute"
+			},
+			{
+				"command": "aventus.wc.create.property",
+				"title": "Aventus : Create property"
+			},
+			{
+				"command": "aventus.wc.create.watch",
+				"title": "Aventus : Create watch"
+			},
+			{
+				"command": "aventus.wc.import.viewElement",
+				"title": "Aventus : Import view element"
 			}
 		],
 		"menus": {
@@ -204,9 +220,84 @@
 				}
 			],
 			"editor/context": [
-				
+				{
+					"when": "resourceFilename =~ /^.*\\.(wcl|wc).avt/",
+					"command": "aventus.wc.create.attribute"
+				},
+				{
+					"when": "resourceFilename =~ /^.*\\.(wcl|wc).avt/",
+					"command": "aventus.wc.create.property"
+				},
+				{
+					"when": "resourceFilename =~ /^.*\\.(wcl|wc).avt/",
+					"command": "aventus.wc.create.watch"
+				},
+				{
+					"when": "resourceFilename =~ /^.*\\.(wcl|wc).avt/",
+					"command": "aventus.wc.import.viewElement"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "aventus.create",
+					"when": "false"
+				},
+				{
+					"command": "aventus.component.merge",
+					"when": "false"
+				},
+				{
+					"command": "aventus.component.split",
+					"when": "false"
+				},
+				{
+					"command": "aventus.addConfigSection",
+					"when": "editorTextFocus && resourceFilename == aventus.conf.json"
+				},
+				{
+					"command": "aventus.wc.create.attribute",
+					"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+				},
+				{
+					"command": "aventus.wc.create.property",
+					"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+				},
+				{
+					"command": "aventus.wc.create.watch",
+					"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+				},
+				{
+					"command": "aventus.wc.import.viewElement",
+					"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+				}
 			]
-		}
+		},
+		"keybindings": [
+			{
+				"command": "aventus.wc.create.attribute",
+				"key": "ctrl+numpad1",
+				"mac": "cmd+f1",
+				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+			},
+			{
+				"command": "aventus.wc.create.property",
+				"key": "ctrl+numpad2",
+				"mac": "cmd+f2",
+				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+			},
+			{
+				"command": "aventus.wc.create.watch",
+				"key": "ctrl+numpad3",
+				"mac": "cmd+f3",
+				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+			},
+			{
+				"command": "aventus.wc.import.viewElement",
+				"key": "ctrl+numpad4",
+				"mac": "cmd+f4",
+				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run webpack",

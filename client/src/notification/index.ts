@@ -1,5 +1,6 @@
 import { CloseFile } from "./CloseFile";
 import { Compiled } from "./Compiled";
+import { EditFile } from './EditFile';
 import { OpenFile } from "./OpenFile";
 import { OpenPreview } from "./OpenPreview";
 import { RegisterBuild } from "./RegisterBuild";
@@ -21,6 +22,7 @@ export const Notifications = {
         [RegisterStatic.cmd]: RegisterStatic,
         [UnregisterBuild.cmd]: UnregisterBuild,
         [UnregisterData.cmd]: UnregisterData,
-        [UnregisterStatic.cmd]: UnregisterStatic
+        [UnregisterStatic.cmd]: UnregisterStatic,
+        [EditFile.cmd]: EditFile,
     },
 }

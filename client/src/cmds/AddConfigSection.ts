@@ -4,10 +4,17 @@ export class AddConfigSection {
 	static cmd: string = "aventus.addConfigSection";
 
 	public static async middleware(args: any[]): Promise<any[]> {
-		const name = await window.showInputBox({
-			title: "Provide a name for your config section",
-		});
-		args.push(name);
-		return args;
+		let result: string[] = []
+		if (args.length > 0) {
+			let uri = "file://" + args[0].path.replace(":", "%3A");
+			result.push(uri);
+			const name = await window.showInputBox({
+				title: "Provide a name for your config section",
+			});
+			if (name) {
+				result.push(name);
+			}
+		}
+		return result;
 	}
 }
