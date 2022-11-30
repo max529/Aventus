@@ -144,7 +144,7 @@ export class AventusWebcomponentCompiler {
             if (this.result.writeCompiled) {
                 this.result.result.debug = this.otherDebugTxt + finalSrc;
             }
-            
+
             this.result.result.src = finalSrc;
             this.result.result.docVisible = finalDocVisible;
             this.result.result.docInvisible = finalDocInvisible;
@@ -201,11 +201,13 @@ export class AventusWebcomponentCompiler {
                         }
                     }
                     else {
-                        this.result.diagnostics.push(createErrorTs(this.document, "Only one class is allowed inside a file. Get " + classInfo.name + " and " + this.jsonStructure.classes[i].name));
+                        let txt = "Only one class is allowed inside a file. Get " + classInfo.name + " and " + this.jsonStructure.classes[i].name;
+                        this.result.diagnostics.push(createErrorTsPos(this.document, txt, classInfo.nameStart, classInfo.nameEnd));
+                        this.result.diagnostics.push(createErrorTsPos(this.document, txt, this.jsonStructure.classes[i].nameStart, this.jsonStructure.classes[i].nameEnd));
                     }
                 }
                 else {
-                    this.result.diagnostics.push(createErrorTs(this.document, "Only class that implements DefaultComponent can be used"));
+                    this.result.diagnostics.push(createErrorTsPos(this.document, "Only class that implements DefaultComponent can be used", classInfo.nameStart, classInfo.nameEnd));
                 }
             }
         }
@@ -324,7 +326,12 @@ export class AventusWebcomponentCompiler {
                     }
                     return;
                 }
-                this.result.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
+                if (this.classInfo) {
+                    this.result.diagnostics.push(createErrorTsPos(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName, this.classInfo.nameStart, this.classInfo.nameEnd));
+                }
+                else {
+                    this.result.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
+                }
             }
         }
     }
@@ -1891,7 +1898,7 @@ this.clearWatchHistory = () => {
     //#endregion
 
     //#region prepare doc
-   
+
 
     private prepareDocSCSS() {
         let customCssProperties: SCSSDoc = {

@@ -5,6 +5,10 @@ import { Create } from "./create";
 import { MergeComponent } from "./mergeComponent";
 import { SplitComponent } from "./splitComponent";
 import { StaticExport } from "./staticExport";
+import { CreateAttribute } from './webcomponent/CreateAttribute';
+import { CreateProperty } from './webcomponent/CreateProperty';
+import { CreateWatch } from './webcomponent/CreateWatch';
+import { ImportViewElement } from './webcomponent/ImportViewElement';
 
 export const Commands = {
     allCommandes: {
@@ -13,7 +17,11 @@ export const Commands = {
         [MergeComponent.cmd]: MergeComponent,
         [SplitComponent.cmd]: SplitComponent,
         [StaticExport.cmd]: StaticExport,
-        [AddConfigSection.cmd]: AddConfigSection
+        [AddConfigSection.cmd]: AddConfigSection,
+        [CreateAttribute.cmd]: CreateAttribute,
+        [CreateProperty.cmd]: CreateProperty,
+        [CreateWatch.cmd]: CreateWatch,
+        [ImportViewElement.cmd]: ImportViewElement,
     },
     execute: function (params: ExecuteCommandParams) {
         let cmd = this.allCommandes[params.command];

@@ -319,6 +319,9 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
     }
+    protected onGetBuild(): Build[] {
+        return [this.build]
+    }
 }
 export class AventusDefinitionHTMLFile extends AventusBaseFile {
     protected async onValidate(): Promise<Diagnostic[]> {
@@ -354,5 +357,8 @@ export class AventusDefinitionHTMLFile extends AventusBaseFile {
     }
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
+    }
+    protected onGetBuild(): Build[] {
+        return [this.build]
     }
 }

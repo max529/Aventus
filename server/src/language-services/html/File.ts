@@ -2,6 +2,7 @@ import { Position, CompletionList, CompletionItem, Hover, Definition, Range, For
 import { AventusExtension } from '../../definition';
 import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
+import { Build } from '../../project/Build';
 import { AventusBaseFile } from "../BaseFile";
 
 export class AventusHTMLFile extends AventusBaseFile {
@@ -70,5 +71,8 @@ export class AventusHTMLFile extends AventusBaseFile {
     }
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
+    }
+    protected onGetBuild(): Build[] {
+        return [this.build]
     }
 }

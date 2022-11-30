@@ -144,6 +144,9 @@ export class AventusSCSSFile extends AventusBaseFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return []
     }
+    protected onGetBuild(): Build[] {
+        return [this.build]
+    }
 
 
     //#region dependances

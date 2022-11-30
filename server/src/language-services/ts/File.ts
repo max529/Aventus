@@ -182,4 +182,8 @@ export abstract class AventusTsFile extends AventusBaseFile {
         return true;
     }
 
+    protected onGetBuild(): Build[] {
+        return [this.build]
+    }
+
 }

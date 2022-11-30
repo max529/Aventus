@@ -62,18 +62,15 @@ export class Create {
 			mkdirSync(baseFolder + "/src/ram");
 			mkdirSync(baseFolder + "/src/socket");
 			let defaultConfig = `{
+	"module": "${name.replace(/ /g, "_")}",
+	"componentPrefix": "av",
 	"build": [
 		{
-			"name": "${name}",
-			"module":"${name.replace(/ /g, "_")}",
-			"componentPrefix": "av",
-			"version": "0.0.1",
+			"name": "Main",
 			"inputPath": [
 				"./src/*"
 			],
-			"outputFile": "./dist/${nameFile}.js",
-			"generateDefinition": true,
-			"includeBase": true
+			"outputFile": "./dist/${nameFile}.js"
 		}
 	]
 }`

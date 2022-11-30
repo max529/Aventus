@@ -16,8 +16,7 @@ import { AventusDefinitionTsFile } from "../language-services/ts/definition/File
 import { AventusTsFile } from "../language-services/ts/File";
 import { AventusTsFileSelector } from '../language-services/ts/FileSelector';
 import { AventusTsLanguageService } from "../language-services/ts/LanguageService";
-import { AVENTUS_BASE_PATH, AVENTUS_DEF_BASE_PATH } from "../language-services/ts/libLoader";
-import { getFolder, pathToUri, uriToPath } from "../tools";
+import { getFolder, pathToUri } from "../tools";
 import { ClassModel } from "../ts-file-parser";
 import { Project } from "./Project";
 

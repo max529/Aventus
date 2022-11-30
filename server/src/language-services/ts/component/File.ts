@@ -76,7 +76,6 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         return this.tsLanguageService.findDefinition(document, position);
     }
     protected onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
-        let txt = document.content;
         return this.tsLanguageService.format(document, range, options);
     }
     protected onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]> {

@@ -10,7 +10,7 @@ export class AddConfigSection {
 	static cmd: string = "aventus.addConfigSection";
 	constructor(params: ExecuteCommandParams) {
 		if (params.arguments && params.arguments.length > 1) {
-			let uri = "file://" + params.arguments[0].path.replace(":", "%3A");
+			let uri = params.arguments[0];
 			let name: string = params.arguments[1];
 			let jsonContent = readFileSync(uriToPath(uri), 'utf8');
 			let config: AventusConfig = JSON.parse(jsonContent);
@@ -21,17 +21,14 @@ export class AddConfigSection {
 				version = config.build[0].version;
 				componentPrefix = config.build[0].componentPrefix;
 			}
-			config.build.push({
+
+			let newBuild: any = {
 				"name": name,
-				"module": name.replace(/ /g, "_"),
-				"componentPrefix": componentPrefix,
-				"version": version,
 				"inputPath": [],
 				"outputFile": "./dist/" + nameFile + ".js",
-				"generateDefinition": true,
-				"includeBase": false,
-				"includeOnBuild": []
-			});
+			}
+
+			config.build.push(newBuild);
 			writeFileSync(uriToPath(uri), JSON.stringify(config, null, 4))
 			ClientConnection.getInstance().sendNotification("aventus/openfile", uri)
 		}

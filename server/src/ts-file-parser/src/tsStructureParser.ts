@@ -399,6 +399,8 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             var fields: { [n: string]: FieldModel } = {};
             var clazz = classDecl(c.name?.text || '', isInterface);
             clazz.start = c.getStart();
+            clazz.nameStart = c.name?.getStart() || 0;
+            clazz.nameEnd = c.name?.getEnd() || 0;
             clazz.end = c.getEnd();
             clazz.content = content.substring(c.getStart(), c.getEnd());
             const decorators = ts.canHaveDecorators(c) ? ts.getDecorators(c) : undefined;

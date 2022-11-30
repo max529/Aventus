@@ -36,6 +36,7 @@ export abstract class AventusBaseFile {
         onCodeAction: '',
         onReferences: '',
         onCodeLens: '',
+        onGetBuild: '',
     }
     private addEvents(): void {
         this.uuidEvents.onContentChange = this.file.onContentChange(this.onContentChange.bind(this));
@@ -50,6 +51,7 @@ export abstract class AventusBaseFile {
         this.uuidEvents.onCodeAction = this.file.onCodeAction(this.onCodeAction.bind(this));
         this.uuidEvents.onReferences = this.file.onReferences(this.onReferences.bind(this));
         this.uuidEvents.onCodeLens = this.file.onCodeLens(this.onCodeLens.bind(this));
+        this.uuidEvents.onGetBuild = this.file.onGetBuild(this.onGetBuild.bind(this));
     }
     public removeEvents(): void {
         this.file.removeOnContentChange(this.uuidEvents.onContentChange);
@@ -64,6 +66,7 @@ export abstract class AventusBaseFile {
         this.file.removeOnCodeAction(this.uuidEvents.onCodeAction);
         this.file.removeOnReferences(this.uuidEvents.onReferences);
         this.file.removeOnCodeLens(this.uuidEvents.onCodeLens);
+        this.file.removeOnGetBuild(this.uuidEvents.onGetBuild);
 
     }
 
@@ -94,6 +97,7 @@ export abstract class AventusBaseFile {
     protected abstract onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]>;
     protected abstract onReferences(document: AventusFile, position: Position): Promise<Location[]>;
     protected abstract onCodeLens(document: AventusFile): Promise<CodeLens[]>;
+    protected abstract onGetBuild(): Build[];
 
 
 }

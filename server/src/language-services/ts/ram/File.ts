@@ -33,12 +33,7 @@ export class AventusRamFile extends AventusTsFile {
         this.refreshFileParsed();
     }
     protected async onSave() {
-        if (this.diagnostics.length == 0) {
-            this.setCompileResult(genericTsCompile(this));
-        }
-        else {
-            this.setCompileResult(this.getDefaultCompileResult());
-        }
+        this.setCompileResult(genericTsCompile(this));
     }
     protected onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
         return this.tsLanguageService.doComplete(document, position);

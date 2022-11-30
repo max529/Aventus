@@ -8,6 +8,7 @@ import { pathToUri, uriToPath } from '../tools';
 import { AventusFile, InternalAventusFile } from './AventusFile';
 import { v4 as randomUUID } from 'uuid';
 import { ReferencedSymbol } from 'typescript';
+import { Build } from '../project/Build';
 
 export class FilesManager {
     private static instance: FilesManager;
@@ -150,7 +151,13 @@ export class FilesManager {
         }
         return this.files[document.uri].getCodeLens();
     }
-    
+    public getBuild(document: TextDocument): Build[] {
+        if (!this.files[document.uri]) {
+            return [];
+        }
+        return this.files[document.uri].getBuild();
+    }
+
 
     //#region event new file
     private onNewFileCb: { [uuid: string]: (document: AventusFile) => Promise<void> } = {};

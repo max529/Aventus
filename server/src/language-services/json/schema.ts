@@ -5,6 +5,16 @@ export const AventusConfigSchema = {
     "type": "object",
     "additionalProperties": false,
     "properties": {
+        "module": { type: "string" },
+        "version": {
+            type: "string",
+            pattern: "^[0-9]+\.[0-9]+\.[0-9]+$"
+        },
+        "componentPrefix": {
+            type: "string",
+            description: "Identifier to prefix all your components (case sensitive)",
+            minLength: 2
+        },
         "build": {
             type: "array",
             items: {
@@ -30,7 +40,6 @@ export const AventusConfigSchema = {
                     },
                     "outputFile": { type: "string" },
                     "generateDefinition": { type: "boolean" },
-                    "compileOnSave": { type: "boolean" },
                     "includeBase": { type: "boolean" },
                     "includeOnBuild": {
                         type: "array",
@@ -40,23 +49,10 @@ export const AventusConfigSchema = {
                     },
                     "module": { type: "string" }
                 },
-                required: ["name", "inputPath", "outputFile", "componentPrefix", "module"],
+                required: ["name", "inputPath", "outputFile"],
                 additionalProperties: false
             },
             minItems: 1
-        },
-        "include": {
-            type: "array",
-            items: {
-                type: "object",
-                properties: {
-                    "definition": { type: "string" },
-                    "src": { type: "string" },
-                    "name": { type: "string" }
-                },
-                required: ["definition", "name"],
-                additionalProperties: false
-            }
         },
         "static": {
             type: "array",
@@ -76,6 +72,19 @@ export const AventusConfigSchema = {
                 additionalProperties: false
             }
         },
+        "include": {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    "definition": { type: "string" },
+                    "src": { type: "string" },
+                    "name": { type: "string" }
+                },
+                required: ["definition", "name"],
+                additionalProperties: false
+            }
+        },
     },
-    "required": ["build"]
+    "required": ["build", "componentPrefix", "module"]
 };

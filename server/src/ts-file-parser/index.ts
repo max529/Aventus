@@ -181,6 +181,8 @@ export interface ValueConstraint extends Constraint {
 export interface ClassModel {
     documentation: string[];
     name: string;
+    nameStart: number,
+    nameEnd: number,
     content: string;
     constructorBody: string;
     decorators: Decorator[];
@@ -206,6 +208,8 @@ export interface ClassModel {
 let DefaultClassModel: ClassModel = {
     documentation: [],
     name: "",
+    nameStart: 0,
+    nameEnd: 0,
     content: "",
     constructorBody: "",
     methods: [],
@@ -239,6 +243,8 @@ export function classDecl(name: string, isInteface: boolean): ClassModel {
     return {
         documentation: [],
         name: name,
+        nameStart: 0,
+        nameEnd: 0,
         content: "",
         constructorBody: "",
         methods: [],

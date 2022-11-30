@@ -41,7 +41,7 @@ export class AventusJSONLanguageService {
                 errors.push(createErrorTs(document, "Can't parse the json"))
             }
         }
-        for(let error of errors){
+        for (let error of errors) {
             error.severity = DiagnosticSeverity.Error;
         }
         return errors;
@@ -54,7 +54,7 @@ export class AventusJSONLanguageService {
             let configTxt = document.getText();
             try {
                 let resultConfig: AventusConfig = JSON.parse(configTxt);
-                this.prepareConfigFile(document.uri, resultConfig);
+                resultConfig = this.prepareConfigFile(document.uri, resultConfig);
                 return resultConfig;
             }
             catch (e) {
@@ -88,28 +88,33 @@ export class AventusJSONLanguageService {
         return await this.languageService.doHover(document, position, jsonDoc);
     }
 
-    private prepareConfigFile(uri: string, config: AventusConfig) {
-        if(!config.include){
-            config.include = [];
-        }
+    private prepareConfigFile(uri: string, config: AventusConfig): AventusConfig {
+        config = {
+            ...this.defaultConfigValue(),
+            ...config
+        };
+        let builds: AventusConfigBuild[] = [];
         for (let build of config.build) {
-            this.prepareBuild(uri, build);
+            builds.push(this.prepareBuild(uri, build, config));
         }
+        config.build = builds;
         if (config.static) {
+            let statics: AventusConfigStatic[] = []
             for (let _static of config.static) {
-                this.prepareStatic(uri, _static);
+                statics.push(this.prepareStatic(uri, _static));
             }
+            config.static = statics;
         }
+        return config;
     }
-    private prepareBuild(configUri: string, build: AventusConfigBuild) {
+    private prepareBuild(configUri: string, build: AventusConfigBuild, config: AventusConfig): AventusConfigBuild {
         let baseDir = getFolder(configUri);
         let regexs: string[] = [];
-        if (!build.hasOwnProperty("compileOnSave")) {
-            build.compileOnSave = true;
+        build = {
+            ...this.defaultConfigBuildValue(config),
+            ...build
         }
-        if (!build.includeOnBuild) {
-            build.includeOnBuild = [];
-        }
+
         // input
         for (let inputPath of build.inputPath) {
             let slash = "";
@@ -166,9 +171,10 @@ export class AventusJSONLanguageService {
             }
             build.outsideModulePathRegex = new RegExp(regexJoin);
         }
+        return build;
     }
 
-    private prepareStatic(configUri: string, _static: AventusConfigStatic) {
+    private prepareStatic(configUri: string, _static: AventusConfigStatic): AventusConfigStatic {
         let baseDir = getFolder(configUri);
         let slash = "";
         if (!_static.inputPath.startsWith("/")) {
@@ -183,8 +189,33 @@ export class AventusJSONLanguageService {
         }
         _static.outputPathFolder = normalize(uriToPath(baseDir) + slash + _static.outputPath);
         _static.outputPathFolder = _static.outputPathFolder.replace(/\\/g, '/');
-        if (_static.hasOwnProperty("exportOnChange") && !_static.exportOnChange) {
-            return;
+        return _static;
+    }
+
+    private defaultConfigValue(): AventusConfig {
+        return {
+            module: '',
+            version: '1.0.0',
+            componentPrefix: 'av',
+            build: [],
+            include: [],
+            static: []
+        }
+    }
+    private defaultConfigBuildValue(config: AventusConfig): AventusConfigBuild {
+        return {
+            name: '',
+            version: config.version,
+            inputPath: [],
+            inputPathRegex: new RegExp('(?!)'),
+            outsideModulePath: [],
+            outsideModulePathRegex: new RegExp('(?!)'),
+            outputFile: '',
+            generateDefinition: true,
+            includeBase: false,
+            includeOnBuild: [],
+            module: config.module,
+            componentPrefix: config.componentPrefix
         }
     }
 }

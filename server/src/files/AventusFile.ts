@@ -3,6 +3,7 @@ import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagn
 import { v4 as randomUUID } from 'uuid';
 import { getFolder, uriToPath } from '../tools';
 import { ClientConnection } from '../Connection';
+import { Build } from '../project/Build';
 
 export type onValidateType = (document: AventusFile) => Promise<Diagnostic[]>;
 export type onContentChangeType = (document: AventusFile) => Promise<void>;
@@ -14,6 +15,7 @@ export type onFormattingType = (document: AventusFile, range: Range, options: Fo
 export type onCodeActionType = (document: AventusFile, range: Range) => Promise<CodeAction[]>;
 export type onReferencesType = (document: AventusFile, position: Position) => Promise<Location[]>;
 export type onCodeLensType = (document: AventusFile) => Promise<CodeLens[]>;
+export type onGetBuildType = () => Build[];
 
 export interface AventusFile {
     document: TextDocument;
@@ -23,6 +25,10 @@ export interface AventusFile {
     content: string;
     folderUri: string;
     folderPath: string;
+
+    getBuild(): Build[]
+    onGetBuild(cb: onGetBuildType): string;
+    removeOnGetBuild(uuid: string): void;
 
     validate(sendDiagnostics?: boolean): Promise<Diagnostic[]>;
     onValidate(cb: onValidateType): string;
@@ -89,6 +95,36 @@ export class InternalAventusFile implements AventusFile {
     get folderPath() {
         return getFolder(this.path);
     }
+
+    //#region get build
+    private onGetBuildCb: { [uuid: string]: onGetBuildType } = {};
+
+    public getBuild(): Build[] {
+        let result: Build[] = [];
+        for (let uuid in this.onGetBuildCb) {
+            let builds = this.onGetBuildCb[uuid]();
+            for(let build of builds){
+                if(result.indexOf(build) == -1){
+                    result.push(build);
+                }
+            }
+        }
+        return result;
+    }
+
+    public onGetBuild(cb: onGetBuildType): string {
+        let uuid = randomUUID();
+        while (this.onGetBuildCb[uuid] != undefined) {
+            uuid = randomUUID();
+        }
+        this.onGetBuildCb[uuid] = cb;
+        return uuid;
+    }
+
+    public removeOnGetBuild(uuid: string): void {
+        delete this.onGetBuildCb[uuid];
+    }
+    //#endregion
 
     //#region content change
 
