@@ -30,9 +30,13 @@ declare interface DebuggerConfig {
 	writeCompiled?: boolean,
 	enableWatchHistory?: boolean,
 }
+declare interface OverrideViewConfig {
+	enable: boolean,
+	removeViewVariables: string[]
+}
 export declare interface CustomClassInfo {
 	debuggerOption: DebuggerConfig,
-	overrideView?: boolean
+	overrideView: OverrideViewConfig
 }
 export declare interface ItoPrepare {
 	variablesInView: {},

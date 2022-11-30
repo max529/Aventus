@@ -3,6 +3,7 @@ import { flattenDiagnosticMessageText } from 'typescript';
 import { Diagnostic, DiagnosticSeverity, ExecuteCommandParams, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusLanguageId } from "./definition";
+import { SectionType } from './language-services/ts/LanguageService';
 
 export function pathToUri(path: string): string {
     if (path.startsWith("file://")) {
@@ -25,6 +26,21 @@ export function uriToPath(uri: string): string {
 //#region errors
 export function createErrorTs(currentDoc: TextDocument, msg: string): Diagnostic {
     return createErrorTsPos(currentDoc, msg, 0, currentDoc.getText().length)
+}
+export function createErrorTsSection(currentDoc: TextDocument, msg: string, section: SectionType): Diagnostic {
+    let regex = new RegExp("//#region " + section + "(\\s|\\S)*?//#endregion")
+    let match = regex.exec(currentDoc.getText());
+    if (match) {
+        let indexStart = match.index + 10 + section.length;
+        let indexEnd = match.index + match[0].length;
+        return {
+            range: Range.create(currentDoc.positionAt(indexStart), currentDoc.positionAt(indexEnd)),
+            severity: DiagnosticSeverity.Error,
+            source: AventusLanguageId.TypeScript,
+            message: flattenDiagnosticMessageText(msg, '\n')
+        }
+    }
+    return createErrorTs(currentDoc, msg);
 }
 
 export function createErrorTsPos(currentDoc: TextDocument, msg: string, start: number, end: number): Diagnostic {

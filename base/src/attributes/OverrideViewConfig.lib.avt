@@ -1,0 +1,5 @@
+
+export interface OverrideViewConfig {
+	/** if set the component ll do a query selector else the component is the one loaded on first render */
+	removeViewVariables?:string[]
+}

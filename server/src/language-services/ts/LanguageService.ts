@@ -6,7 +6,7 @@ import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../files/AventusFile';
 import { Build } from '../../project/Build';
 import { convertRange, pathToUri } from '../../tools';
-import { AliasNode, ClassModel, EnumDeclaration } from '../../ts-file-parser';
+import { AliasNode, BasicType, ClassModel, EnumDeclaration, TypeKind } from '../../ts-file-parser';
 import { correctTypeInsideDefinition } from '../../ts-file-parser/src/tsDefinitionParser';
 import { AventusTsFile } from './File';
 import { loadLibrary } from './libLoader';
@@ -462,24 +462,46 @@ export class AventusTsLanguageService {
     public async onCodeLens(file: AventusFile): Promise<CodeLens[]> {
         let result: CodeLens[] = []
         if (this.filesLoaded[file.uri]) {
-            for (let _class of this.filesLoaded[file.uri].fileParsed.classes) {
-                let startPos = file.document.positionAt(_class.start)
-                let refs = await this.onReferences(file, startPos);
-                let title = refs.length > 1 ? refs.length + ' references' : refs.length + ' reference';
-                result.push({
-                    range: {
-                        start: startPos,
-                        end: startPos,
-                    },
-                    command: {
-                        title: title,
-                        command: refs.length ? 'editor.action.showReferences' : '',
-                        arguments: [file.uri, startPos, refs]
-                    }
-                });
+            let _createCodeLens = async (instances: ClassModel[] | EnumDeclaration[] | AliasNode[]) => {
+                for (let instance of instances) {
+                    let startPos = file.document.positionAt(instance.start)
+                    let refs = await this.onReferences(file, startPos);
+                    let title = refs.length > 1 ? refs.length + ' references' : refs.length + ' reference';
+                    result.push({
+                        range: {
+                            start: startPos,
+                            end: startPos,
+                        },
+                        command: {
+                            title: title,
+                            command: refs.length ? 'editor.action.showReferences' : '',
+                            arguments: [file.uri, startPos, refs]
+                        }
+                    });
+                }
             }
+            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.classes);
+            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.enumDeclarations);
+            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.aliases);
 
         }
+
+        let propSection = getSectionStart(file, 'props');
+        if (propSection != -1) {
+            let position = file.document.positionAt(propSection)
+            result.push({
+                range: {
+                    start: position,
+                    end: position,
+                },
+                command: {
+                    title: "Add property | attribute",
+                    command: 'editor.action.showReferences',
+                    arguments: [file.uri]
+                }
+            })
+        }
+
         return result;
     }
 
@@ -529,12 +551,15 @@ export class AventusTsLanguageService {
             }
         }
         for (let extend of element.extends) {
-            let name = extend.typeName;
-            if (typeToFullname[extend.typeName]) {
-                name = typeToFullname[extend.typeName]
+            let nameToUse = extend.typeName
+            if (extend.typeKind == TypeKind.BASIC) {
+                nameToUse = (extend as BasicType).basicName;
             }
-            if (result.dependances.indexOf(name) == -1) {
-                result.dependances.push(name);
+            if (typeToFullname[nameToUse]) {
+                nameToUse = typeToFullname[nameToUse]
+            }
+            if (result.dependances.indexOf(nameToUse) == -1) {
+                result.dependances.push(nameToUse);
             }
         }
 
@@ -897,8 +922,8 @@ function repeat(value: string, count: number) {
     }
     return s;
 }
-type SectionType = "static" | "props" | "variables" | "states" | "constructor" | "methods";
-function getSectionStart(file: AventusFile, sectionName: SectionType): number {
+export type SectionType = "static" | "props" | "variables" | "states" | "constructor" | "methods";
+export function getSectionStart(file: AventusFile, sectionName: SectionType): number {
     let regex = new RegExp("//#region " + sectionName + "(\\s|\\S)*?//#endregion")
     let match = regex.exec(file.document.getText());
     if (match) {

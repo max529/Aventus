@@ -22,11 +22,11 @@ declare global {
     /**
      * Signal that this variable is a link to your shadowroot
      */
-    function ViewElement(config?:ViewElementConfig);
+    function ViewElement(config?: ViewElementConfig);
     /**
      * Clear parent view and use yours 
      */
-    function OverrideView();
+    function OverrideView(config?: OverrideViewConfig);
     /**
      * Add debbuger action function for your component
      */

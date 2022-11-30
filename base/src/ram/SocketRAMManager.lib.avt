@@ -120,8 +120,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
             channel: this.socketActions.created,
             callback: response => {
                 if(response.data) {
-                    for(let key in response.data) {
-                        let obj = response.data[key];
+                    for(let obj of response.data) {
                         let id = this.getId(obj);
                         if(id !== undefined) {
                             this.records[id] = this.getObjectForRAM(obj);
@@ -138,8 +137,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
             channel: this.socketActions.updated,
             callback: response => {
                 if(response.data) {
-                    for(let key in response.data) {
-                        const newData = response.data[key];
+                    for(let newData of response.data) {
                         let id = this.getId(newData);
                         if(id !== undefined) {
                             if(this.records[id] !== undefined) {

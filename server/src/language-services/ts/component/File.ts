@@ -86,7 +86,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         return this.tsLanguageService.onReferences(document, position);
     }
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
-        return [];
+        return this.tsLanguageService.onCodeLens(document);
     }
 }
 

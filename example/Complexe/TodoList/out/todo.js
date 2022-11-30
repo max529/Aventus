@@ -4,7 +4,7 @@ var AventusTest;
  var namespace = 'AventusTest';
 class AvTodoData {    id = 0;    name = "";    state = AvTodoState.Waiting;}var AvTodoState;(function (AvTodoState) {    AvTodoState[AvTodoState["Waiting"] = 0] = "Waiting";    AvTodoState[AvTodoState["InProgress"] = 1] = "InProgress";    AvTodoState[AvTodoState["Done"] = 2] = "Done";})(AvTodoState || (AvTodoState = {}));
 class AvLight {    name = "";    value = 0;    color = "";    values = [];}
-class AvTodoList extends WebComponent {
+class AvTodoList extends Aventus.WebComponent {
     get 'items'() {
 						return this.__watch["items"];
 					}
@@ -98,7 +98,7 @@ class AvTodoList extends WebComponent {
      addItem(item){this.items.push(item);}}
 window.customElements.define('av-todo-list', AvTodoList);
 
-class AvTodoItem extends WebComponent {
+class AvTodoItem extends Aventus.WebComponent {
     get 'item'() {
 						return this.__watch["item"];
 					}
@@ -168,7 +168,7 @@ class AvTodoItem extends WebComponent {
 }
 window.customElements.define('av-todo-item', AvTodoItem);
 
-class AvTodoCreation extends WebComponent {
+class AvTodoCreation extends Aventus.WebComponent {
     __prepareVariables() { super.__prepareVariables(); if(this.todoList === undefined) {this.todoList = undefined;} }
     __getStyle() {
         let arrStyle = super.__getStyle();
@@ -216,7 +216,7 @@ class AvTodoCreation extends WebComponent {
      addTodo(){let data = new AvTodoData();data.name = this.inputEl.value;this.todoList?.addItem(data);}}
 window.customElements.define('av-todo-creation', AvTodoCreation);
 
-class AvTodo extends WebComponent {
+class AvTodo extends Aventus.WebComponent {
     __getStyle() {
         let arrStyle = super.__getStyle();
         arrStyle.push(`:host{display:flex;flex-direction:column}:host av-todo-list{margin-bottom:30px}`);
@@ -253,7 +253,7 @@ class AvTodo extends WebComponent {
      postCreation(){this.creationEl.todoList = this.listEl;}}
 window.customElements.define('av-todo', AvTodo);
 
-class AvInput extends AvFormElement {
+class AvInput extends Aventus.AvFormElement {
     static get observedAttributes() {return ["label"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'label'() {
                     return this.getAttribute('label');
@@ -316,7 +316,7 @@ class AvInput extends AvFormElement {
      getDefaultValue(){return "";} inputChanged(){this.value = this.inputEl.value;this.onValueChanged();}}
 window.customElements.define('av-input', AvInput);
 
-class AvComplexTest extends WebComponent {
+class AvComplexTest extends Aventus.WebComponent {
     static get observedAttributes() {return ["testvariable"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'testvariable'() {
                     return this.getAttribute('testvariable');

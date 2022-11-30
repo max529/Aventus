@@ -53,13 +53,16 @@ export class Build {
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
         this.project = project;
         this.buildConfig = buildConfig;
+        if(buildConfig.includeBase){
+            buildConfig.includeOnBuild.splice(0, 0, "Aventus");
+        }
         this.onNewFileUUID = FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
         this.tsLanguageService = new AventusTsLanguageService(this);
         this.scssLanguageService = new AventusSCSSLanguageService(this);
         this.htmlLanguageService = new AventusHTMLLanguageService(this);
 
 
-        ClientConnection.getInstance().sendNotification("aventus/registerBuild", [project.getConfigFile().uri, buildConfig.name])
+        ClientConnection.getInstance().sendNotification("aventus/registerBuild", [project.getConfigFile().path, buildConfig.name])
     }
     public async init() {
         await this.loadFiles();
@@ -297,8 +300,7 @@ export class Build {
             if (previousIndex != -1) {
                 return previousIndex + 1;
             }
-
-
+            
             let insertIndex = 0;
             for (let dependanceName of currentDoc.compileResult.dependances) {
                 if (docUriByTypes[dependanceName]) {
@@ -472,7 +474,7 @@ export class Build {
             this.tsFiles[uri].removeEvents();
             this.tsFiles[uri].file.removeOnDelete(this.onFileDeleteUUIDs[uri]);
         }
-        ClientConnection.getInstance().sendNotification("aventus/unregisterBuild", [this.project.getConfigFile().uri, this.buildConfig.name])
+        ClientConnection.getInstance().sendNotification("aventus/unregisterBuild", [this.project.getConfigFile().path, this.buildConfig.name])
     }
 
 

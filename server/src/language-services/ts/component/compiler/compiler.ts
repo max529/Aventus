@@ -2,7 +2,7 @@ import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension } from "../../../../definition";
 import { Build } from "../../../../project/Build";
-import { createErrorTs, createErrorTsPos, pathToUri } from "../../../../tools";
+import { createErrorTs, createErrorTsPos, createErrorTsSection, pathToUri } from "../../../../tools";
 import { AliasNode, BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType } from "../../../../ts-file-parser";
 import { getAlias } from "../../../../ts-file-parser/src/tsStructureParser";
 import { AventusHTMLFile } from "../../../html/File";
@@ -44,7 +44,6 @@ export class AventusWebcomponentCompiler {
     private otherDocInvisible: string = "";
     private otherDebugTxt: string = "";
     //#region variable to use for preparation
-    private dependances: string[] = [];
     private variablesIdInView: { [name: string]: string } = {};
     private eventsPerso: { componentId: string, value: string, event: string }[] = [];
     private pressEvents: { [id: string]: {} } = {};
@@ -111,6 +110,10 @@ export class AventusWebcomponentCompiler {
 
         if (classInfo) {
             this.classInfo = classInfo;
+            let normalCompile = AventusTsLanguageService.compileTs(this.classInfo, this.logicalFile);
+            this.result.result.dependances = normalCompile.dependances;
+            this.result.result.nameCompiled.push(normalCompile.classScript);
+            this.result.result.nameDoc.push(normalCompile.classDoc);
             this.loadParent(this.jsonStructure);
             this.prepareViewRecu(this.jQuery._root);
             this.prepareOtherContent();
@@ -131,28 +134,27 @@ export class AventusWebcomponentCompiler {
                 finalDocInvisible += EOL;
             }
             if (classInfo.isExported) {
-                finalDocVisible += this.prepareDocTs();
+                finalDocVisible += normalCompile.doc;
             }
             else {
-                finalDocInvisible += this.prepareDocTs();
+                finalDocInvisible += normalCompile.doc;
             }
 
             this.result.writeCompiled = classInfo.debuggerOption.writeCompiled ? true : false;
             if (this.result.writeCompiled) {
                 this.result.result.debug = this.otherDebugTxt + finalSrc;
             }
-            this.result.result.nameCompiled.push(classInfo.name);
-            this.result.result.nameDoc.push(classInfo.name);
+            
             this.result.result.src = finalSrc;
             this.result.result.docVisible = finalDocVisible;
             this.result.result.docInvisible = finalDocInvisible;
-            this.result.result.dependances = this.dependances;
             this.result.result.htmlDoc = this.htmlDoc ? this.htmlDoc : {};
             this.result.result.scssDoc = this.prepareDocSCSS();
         }
         return this.result;
     }
     //#region load info from files
+
     private getClassInfo(): CompilerClassInfo | null {
 
         if (this.jsonStructure.functions.length > 0) {
@@ -167,6 +169,10 @@ export class AventusWebcomponentCompiler {
         }
         let customClassInfo: CustomClassInfo = {
             debuggerOption: {},
+            overrideView: {
+                enable: false,
+                removeViewVariables: []
+            }
         }
         let classInfo: CompilerClassInfo = {
             ...DefaultClassModel,
@@ -210,7 +216,15 @@ export class AventusWebcomponentCompiler {
         }
         for (let decorator of classInfo.decorators) {
             if (decorator.name == 'OverrideView') {
-                classInfo.overrideView = true;
+                classInfo.overrideView.enable = true;
+                if (decorator.arguments.length > 0) {
+                    for (let arg of decorator.arguments) {
+                        if (arg.removeViewVariables) {
+                            classInfo.overrideView.removeViewVariables = arg.removeViewVariables;
+                        }
+                    }
+
+                }
             }
             else if (decorator.name == 'Debugger') {
                 if (decorator.arguments.length > 0) {
@@ -228,7 +242,7 @@ export class AventusWebcomponentCompiler {
         }
 
         if (classInfo.extends[0]?.typeName == "WebComponent" || classInfo.extends[0]?.typeName == "Aventus.WebComponent") {
-            classInfo.overrideView = true;
+            classInfo.overrideView.enable = true;
         }
         this.getClassName(classInfo);
 
@@ -257,12 +271,15 @@ export class AventusWebcomponentCompiler {
             this.parentClassName = 'Aventus.WebComponent';
             if (classInfo.extends.length > 0) {
                 if (classInfo.extends[0].typeKind == TypeKind.BASIC) {
-                    this.parentClassName = (classInfo.extends[0] as BasicType).basicName;
+                    let namespace = (classInfo.extends[0] as BasicType).nameSpace;
+                    if (namespace != "") {
+                        namespace += "."
+                    }
+                    this.parentClassName = namespace + (classInfo.extends[0] as BasicType).basicName;
                 }
                 else {
                     this.parentClassName = classInfo.extends[0].typeName;
                 }
-                this.dependances.push(classInfo.extends[0].typeName);
             }
         }
     }
@@ -393,8 +410,8 @@ export class AventusWebcomponentCompiler {
                 this.result.result.nameDoc.push(result.classDoc);
             }
             for (let dependance of result.dependances) {
-                if (this.dependances.indexOf(dependance) == -1) {
-                    this.dependances.push(dependance);
+                if (this.result.result.dependances.indexOf(dependance) == -1) {
+                    this.result.result.dependances.push(dependance);
                 }
             }
         }
@@ -704,7 +721,7 @@ export class AventusWebcomponentCompiler {
         this.writeFileReplaceVar("blockHTML", blocks.join(","));
 
         let overrideViewFct = "";
-        if (!this.classInfo?.overrideView) {
+        if (!this.classInfo?.overrideView.enable) {
             overrideViewFct = `
             let newHtml = parentInfo.html
             for (let blockName in info.blocks) {
@@ -826,7 +843,7 @@ export class AventusWebcomponentCompiler {
         for (let fieldName in this.allFields) {
             let field = this.allFields[fieldName];
 
-            if (field.inParent) {
+            if (field.inParent && !this.classInfo?.overrideView.enable) {
                 removeVarNameToCheck(field);
                 // if (this.variablesIdInView.hasOwnProperty(field.name)) {
                 //     // allow override value
@@ -893,7 +910,7 @@ export class AventusWebcomponentCompiler {
         this.writeFileReplaceVar("listBool", listBoolTxt);
 
         for (let missingVar of varNameToCheck) {
-            this.result.diagnostics.push(createErrorTs(this.document, "missing variable " + missingVar));
+            this.result.diagnostics.push(createErrorTsSection(this.document, "missing variable " + missingVar, "variables"));
         }
 
     }
@@ -1446,7 +1463,14 @@ this.clearWatchHistory = () => {
         let variablesInViewStatic = "";
         for (let field of fields) {
             if (!this.variablesIdInView.hasOwnProperty(field.name)) {
-                this.result.diagnostics.push(createErrorTsPos(this.document, "Can't find this variable inside the view", field.start, field.end));
+                if (this.classInfo?.overrideView.enable) {
+                    if (this.classInfo.overrideView.removeViewVariables.indexOf(field.name) == -1) {
+                        this.result.diagnostics.push(createErrorTsPos(this.document, "Can't find the variable " + field.name + " inside the view", field.start, field.end));
+                    }
+                }
+                else {
+                    this.result.diagnostics.push(createErrorTsPos(this.document, "Can't find the variable " + field.name + " inside the view", field.start, field.end));
+                }
             }
             else {
                 let id = this.variablesIdInView[field.name];
@@ -1540,7 +1564,7 @@ this.clearWatchHistory = () => {
                         else if (propType == TYPES.boolean) {
                             stringToAdd += `if(${check.join("||")}){
                                 for(var i = 0;i<this._components[${componentId}].length;i++){
-                                    if (newValue) { 
+                                    if (this.${prop.toLowerCase()}) { 
                                         this._components[${componentId}][i].setAttribute("${prop.toLowerCase()}", "true"); 
                                     } 
                                     else { 
@@ -1578,7 +1602,8 @@ this.clearWatchHistory = () => {
                     propertiesChangedTxt += `this.__onChangeFct['${realKey}'].push((path) => {${this.propertiesChanged[key]}})` + EOL;
                 }
                 else {
-                    this.result.diagnostics.push(createErrorTs(this.document, realKey + ' can\'t be found'));
+
+                    this.result.diagnostics.push(createErrorTsSection(this.document, realKey + ' can\'t be found', 'props'));
                 }
             }
         }
@@ -1866,15 +1891,7 @@ this.clearWatchHistory = () => {
     //#endregion
 
     //#region prepare doc
-    private prepareDocTs() {
-        let doc = "";
-        if (this.classInfo) {
-            let classContent = this.removeComments(this.removeDecoratorFromClassContent(this.classInfo));
-            classContent = this.replaceFirstExport(classContent);
-            doc = AventusTsLanguageService.compileDocTs(classContent);
-        }
-        return doc;
-    }
+   
 
     private prepareDocSCSS() {
         let customCssProperties: SCSSDoc = {
@@ -1984,27 +2001,6 @@ this.clearWatchHistory = () => {
     }
     private removeWhiteSpaceLines(txt: string) {
         return txt.replace(/^(?:[\t ]*(?:\r?\n|\r))+/gm, '');
-    }
-    private removeComments(txt: string): string {
-        let regex = /(\".*?\"|\'.*?\')|(\/\*.*?\*\/|\/\/[^(\r\n|\n)]*$)/gm
-        txt = txt.replace(regex, (match, grp1, grp2) => {
-            if (grp2) {
-                return "";
-            }
-            return grp1;
-        })
-        return txt;
-    }
-    private removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration) {
-        let classContent = cls.content.trim();
-        cls.decorators.forEach(decorator => {
-            classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
-        });
-
-        return classContent.trim();
-    }
-    private replaceFirstExport(txt: string): string {
-        return txt.replace(/^\s*export\s+(class|interface|enum|type|abstract)/m, "$1");
     }
     //#endregion
 }

@@ -205,7 +205,7 @@ function correctType(t: ts.TypeNode): void {
 		var tra = <ts.ExpressionWithTypeArguments>t;
 		let parsedName = parseQualified2(tra.expression);
 		if (parsedName) {
-			addChange(parsedName, tra.getStart(), tra.getEnd());
+			addChange(parsedName, tra.expression.getStart(), tra.expression.getEnd());
 			if (tra.typeArguments) {
 				tra.typeArguments.forEach(x => {
 					correctType(x);
