@@ -1,29 +1,53 @@
 import { window } from 'vscode';
-import { BuildQuickPick } from '../../quickPick';
+import { BuildQuickPick, QuickPick } from '../../quickPick';
 
 export class CreateProperty {
 	static cmd: string = "aventus.wc.create.property";
 
 	public static async middleware(args: any[]): Promise<any[]> {
-		let result: string[] = [];
-		if (args.length > 0) {
-			let uri = "file://" + args[0].path.replace(":", "%3A");
-			result.push(uri);
+		let result: (string | number)[] = [];
 
-			const name = await window.showInputBox({
-				title: "Provide a name for your Property",
-			});
-			if (name) {
-				result.push(name);
-				let toDisplay: BuildQuickPick[] = [];
-				toDisplay.push(new BuildQuickPick("Yes", ""));
-				toDisplay.push(new BuildQuickPick("No", ""));
-				const yesOrNo = await window.showQuickPick(toDisplay, {
-					placeHolder: 'Do you need a callback function?',
-					canPickMany: false,
+		if (window.activeTextEditor) {
+			let uri = "";
+			if (args.length > 0) {
+				uri = "file://" + args[0].path.replace(":", "%3A");
+			}
+			else {
+				// use command with key binding
+				uri = window.activeTextEditor.document.uri.toString();
+			}
+			if (uri != "") {
+				result.push(uri);
+				const name = await window.showInputBox({
+					title: "Provide a name for your Property",
 				});
-				if (yesOrNo !== undefined) {
-					result.push(yesOrNo.label);
+				if (name) {
+					result.push(name);
+					const type = await window.showQuickPick(QuickPick.attrType, {
+						placeHolder: 'Choose a type?',
+						canPickMany: false,
+					});
+					if (type !== undefined && type.detail !== undefined) {
+						let toDisplay: BuildQuickPick[] = [];
+						toDisplay.push(new BuildQuickPick("Yes", ""));
+						toDisplay.push(new BuildQuickPick("No", ""));
+						const yesOrNo = await window.showQuickPick(toDisplay, {
+							placeHolder: 'Do you need a callback function?',
+							canPickMany: false,
+						});
+						if (yesOrNo !== undefined) {
+							result.push(yesOrNo.label);
+						}
+
+
+						QuickPick.reorder(QuickPick.attrType, type);
+						result.push(type.detail);
+
+						let activeEditor = window.activeTextEditor;
+						let document = activeEditor.document;
+						let curPos = activeEditor.selection.active;
+						result.push(document.offsetAt(curPos));
+					}
 				}
 			}
 		}

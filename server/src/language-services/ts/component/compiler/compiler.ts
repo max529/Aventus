@@ -13,7 +13,7 @@ import { AventusWebcomponentTemplate } from "./Template";
 import * as cheerio from 'cheerio';
 import { ElementType } from "htmlparser2";
 import { transpile } from "typescript";
-import { AventusTsLanguageService } from "../../LanguageService";
+import { AventusTsLanguageService, getSectionStart } from "../../LanguageService";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { EOL } from "os";
 import { HTMLDoc } from "../../../html/helper/definition";
@@ -44,7 +44,7 @@ export class AventusWebcomponentCompiler {
     private otherDocInvisible: string = "";
     private otherDebugTxt: string = "";
     //#region variable to use for preparation
-    private variablesIdInView: { [name: string]: string } = {};
+    private variablesIdInView: { [name: string]: { id: string, type: string } } = {};
     private eventsPerso: { componentId: string, value: string, event: string }[] = [];
     private pressEvents: { [id: string]: {} } = {};
     private allFields: { [fieldName: string]: CustomFieldModel } = {};
@@ -63,6 +63,7 @@ export class AventusWebcomponentCompiler {
     private result: CompileComponentResult = {
         diagnostics: [],
         writeCompiled: false,
+        missingViewElements: { position: -1, elements: {} },
         result: {
             nameCompiled: [],
             nameDoc: [],
@@ -483,10 +484,17 @@ export class AventusWebcomponentCompiler {
                 let varName = value[0];
 
                 if (!this.variablesIdInView.hasOwnProperty(varName)) {
+
                     if (value.length == 1) {
-                        this.variablesIdInView[varName] = _id;
+                        this.variablesIdInView[varName] = {
+                            id: _id,
+                            type: el.name
+                        }
                     } else {
-                        this.variablesIdInView[varName] = ''
+                        this.variablesIdInView[varName] = {
+                            id: '',
+                            type: el.name
+                        }
                     }
                 }
                 this.jQuery(el).removeAttr(key);
@@ -610,7 +618,7 @@ export class AventusWebcomponentCompiler {
                 else if (key == "in") {
                     inFound = true;
                     if (dependances.length == 0) {
-                        this.variablesIdInView[el.attribs[key].split(".")[0]] = '';
+                        this.variablesIdInView[el.attribs[key].split(".")[0]].id = '';
                     }
                     inName = el.attribs[key];
                 }
@@ -852,10 +860,6 @@ export class AventusWebcomponentCompiler {
 
             if (field.inParent && !this.classInfo?.overrideView.enable) {
                 removeVarNameToCheck(field);
-                // if (this.variablesIdInView.hasOwnProperty(field.name)) {
-                //     // allow override value
-                //     simpleVariables.push(field);
-                // }
                 continue;
             }
             if (field.propType == "State") {
@@ -894,8 +898,15 @@ export class AventusWebcomponentCompiler {
                 views.push(field);
             }
             else if (field.propType == "Simple") {
-                removeVarNameToCheck(field);
-                simpleVariables.push(field);
+                // TODO : add attribute to export => hot fix to avoid this
+                if (this.variablesIdInView.hasOwnProperty(field.name) && field.inParent) {
+                    removeVarNameToCheck(field);
+                    views.push(field);
+                }
+                else {
+                    removeVarNameToCheck(field);
+                    simpleVariables.push(field);
+                }
             }
         }
 
@@ -917,9 +928,34 @@ export class AventusWebcomponentCompiler {
         this.writeFileReplaceVar("listBool", listBoolTxt);
 
         for (let missingVar of varNameToCheck) {
+            this.createMissingViewVar(missingVar);
             this.result.diagnostics.push(createErrorTsSection(this.document, "missing variable " + missingVar, "variables"));
         }
 
+    }
+    private createMissingViewVar(missingVar: string) {
+        if (this.result.missingViewElements.position == -1) {
+            let startPos = getSectionStart(this.file, "variables");
+            this.result.missingViewElements.position = startPos;
+        }
+        if (this.result.missingViewElements.position != -1) {
+            if (this.variablesIdInView[missingVar]) {
+                let type = this.variablesIdInView[missingVar].type;
+                let finalType = "";
+                if (type == "div") { finalType = "HTMLDivElement"; }
+                else if (type == "div") { finalType = "HTMLSpanElement"; }
+                else if (type.indexOf('-') != -1) {
+                    let splitted = type.split('-');
+                    for (let split of splitted) {
+                        finalType += split.slice(0, 1).toUpperCase() + split.slice(1, split.length)
+                    }
+                }
+                else {
+                    finalType = "HTMLElement";
+                }
+                this.result.missingViewElements.elements[missingVar] = finalType;
+            }
+        }
     }
     private getFieldConstraintValue(field: CustomFieldModel) {
         let value = "undefined";
@@ -964,7 +1000,7 @@ export class AventusWebcomponentCompiler {
         let variablesSimple = "";
         for (let field of fields) {
             if (this.variablesIdInView.hasOwnProperty(field.name)) {
-                this.result.diagnostics.push(createErrorTsPos(this.document, "Please add @ViewElement", field.start, field.end));
+                this.result.diagnostics.push(createErrorTsPos(this.document, "Please add @ViewElement for " + field.name, field.start, field.end));
                 return;
             }
             let value = this.getFieldConstraintValue(field);
@@ -1480,7 +1516,7 @@ this.clearWatchHistory = () => {
                 }
             }
             else {
-                let id = this.variablesIdInView[field.name];
+                let id = this.variablesIdInView[field.name].id;
                 if (id != "") {
                     let isArray: boolean = false;
                     if (field.type?.typeKind == TypeKind.ARRAY) {
@@ -1509,6 +1545,12 @@ this.clearWatchHistory = () => {
                                 variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
                             }
                         }
+                    }
+                    else if(field.inParent){
+                        // TODO remove it when attribute added to export
+                        variablesInViewDynamic += `get ${field.name} () {
+                            return this.shadowRoot.querySelector('[_id="${id}"]');
+                        }`+ EOL
                     }
                     else {
                         this.result.diagnostics.push(createErrorTsPos(this.document, "You must add the decorator ViewElement", field.start, field.end));

@@ -7,6 +7,7 @@ export type CompilerClassInfo = ClassModel & CustomClassInfo;
 export interface CompileComponentResult {
 	diagnostics: Diagnostic[],
 	writeCompiled: Boolean,
+	missingViewElements: { position: number, elements: { [name: string]: string } }
 	result: {
 		nameCompiled: string[],
 		nameDoc: string[],

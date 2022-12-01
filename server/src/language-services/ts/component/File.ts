@@ -87,6 +87,24 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return this.tsLanguageService.onCodeLens(document);
     }
+
+    public getMissingVariablesInfo(): { start: number, text: string } {
+        let result = "";
+        let position = -1;
+        if (this.compilationResult) {
+            position = this.compilationResult?.missingViewElements.position;
+            for (let name in this.compilationResult.missingViewElements.elements) {
+                result += "@ViewElement()" + EOL + "private " + name + ": " + this.compilationResult.missingViewElements.elements[name] + ";" + EOL
+            }
+        }
+        if (result != "") {
+            result = EOL + result;
+        }
+        return {
+            start: position,
+            text: result
+        };
+    }
 }
 
 interface AventusWebComponentSingleFileRegion<T extends AventusBaseFile> {

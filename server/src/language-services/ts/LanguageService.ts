@@ -676,6 +676,7 @@ const compilerOptionsRead: CompilerOptions = {
     noImplicitOverride: true,
     strictPropertyInitialization: true,
     noImplicitReturns: true,
+    
 };
 const compilerOptionsCompile: CompilerOptions = {
     allowNonTsExtensions: true,
