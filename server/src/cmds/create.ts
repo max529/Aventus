@@ -116,7 +116,7 @@ export class ${className} extends Aventus.SocketRAMManager<$objectFrom, ${object
 	
 }
 
-export interface ${objectName}Action extends Aventus.IData {
+interface ${objectName}Action extends Aventus.IData {
 	// define your function here
     helloWorld(): void;
 }
