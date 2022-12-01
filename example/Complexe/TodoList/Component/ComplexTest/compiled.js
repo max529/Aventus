@@ -1,4 +1,4 @@
-class AvComplexTest extends Aventus.WebComponent {
+class AvComplexTest extends WebComponent {
     static get observedAttributes() {return ["testvariable"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'testvariable'() {
                     return this.getAttribute('testvariable');

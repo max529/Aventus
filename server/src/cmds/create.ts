@@ -8,6 +8,7 @@ import { normalize } from 'path';
 import { ProjectManager } from '../project/ProjectManager';
 import { ClientConnection } from '../Connection';
 import { FilesManager } from '../files/FilesManager';
+import { OpenFile } from '../notification/OpenFile';
 
 
 export class Create {
@@ -77,7 +78,7 @@ export class Create {
 			writeFileSync(configPath, defaultConfig);
 			let textDocument: TextDocument = TextDocument.create(configUri, AventusLanguageId.TypeScript, 0, defaultConfig);
 			FilesManager.getInstance().registerFile(textDocument);
-			ClientConnection.getInstance().sendNotification("aventus/openfile", textDocument.uri)
+			OpenFile.send(textDocument.uri);
 		}
 		else {
 			ClientConnection.getInstance().showErrorMessage("A config file already exists");
@@ -136,7 +137,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 		writeFileSync(newScriptPath, defaultRAM);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultRAM);
 		FilesManager.getInstance().registerFile(textDocument);
-		ClientConnection.getInstance().sendNotification("aventus/openfile", newScriptUri)
+		OpenFile.send(newScriptUri);
 	}
 
 	private createComponent(componentName: string, baseFolderUri: string, isMultiple: boolean) {
@@ -178,7 +179,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 	
 	//#endregion
 	
-	}`
+}`
 			writeFileSync(newScriptPath + AventusExtension.ComponentLogic, defaultTs);
 			let textDocumentTs: TextDocument = TextDocument.create(pathToUri(newScriptPath + AventusExtension.ComponentLogic), AventusLanguageId.TypeScript, 0, defaultTs);
 
@@ -193,8 +194,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 			FilesManager.getInstance().registerFile(textDocumentHTML);
 			FilesManager.getInstance().registerFile(textDocumentSCSS);
 			FilesManager.getInstance().registerFile(textDocumentTs);
-
-			ClientConnection.getInstance().sendNotification("aventus/openfile", textDocumentTs.uri)
+			OpenFile.send(textDocumentTs.uri);
 		}
 		else {
 			let defaultWc = `<script>
@@ -216,8 +216,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 			writeFileSync(newScriptPath + AventusExtension.Component, defaultWc);
 			let textDocumentTs: TextDocument = TextDocument.create(pathToUri(newScriptPath + AventusExtension.Component), AventusLanguageId.WebComponent, 0, defaultWc);
 			FilesManager.getInstance().registerFile(textDocumentTs);
-
-			ClientConnection.getInstance().sendNotification("aventus/openfile", textDocumentTs.uri)
+			OpenFile.send(textDocumentTs.uri);
 		}
 
 
@@ -233,7 +232,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 		writeFileSync(newScriptPath, defaultTs);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultTs);
 		FilesManager.getInstance().registerFile(textDocument);
-		ClientConnection.getInstance().sendNotification("aventus/openfile", textDocument.uri)
+		OpenFile.send(textDocument.uri);
 	}
 	private createLib(libName: string, baseFolderUri: string) {
 		let newScriptPath = uriToPath(baseFolderUri + "/" + libName + AventusExtension.Lib);
@@ -241,11 +240,19 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 		libName = libName.replace(/_|-([a-z])/g, (match, p1) => p1.toUpperCase());
 		let firstUpperName = libName.charAt(0).toUpperCase() + libName.slice(1);
 		let className = firstUpperName;
-		let defaultTs = `export class ${className} {${EOL}\t${EOL}}`
+		let defaultTs = `export class ${className} {${EOL}\t${EOL}}`;
+		let builds = ProjectManager.getInstance().getMatchingBuildsByUri(newScriptUri);
+		if (builds.length > 0) {
+			let namespace = builds[0].getNamespaceForUri(newScriptUri);
+			if (namespace != "") {
+				defaultTs = `namespace ${namespace}{${EOL}\t${defaultTs}${EOL}}`
+			}
+		}
+
 		writeFileSync(newScriptPath, defaultTs);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultTs);
 		FilesManager.getInstance().registerFile(textDocument);
-		ClientConnection.getInstance().sendNotification("aventus/openfile", textDocument.uri)
+		OpenFile.send(textDocument.uri);
 	}
 
 

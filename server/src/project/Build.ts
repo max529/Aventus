@@ -16,7 +16,10 @@ import { AventusDefinitionTsFile } from "../language-services/ts/definition/File
 import { AventusTsFile } from "../language-services/ts/File";
 import { AventusTsFileSelector } from '../language-services/ts/FileSelector';
 import { AventusTsLanguageService } from "../language-services/ts/LanguageService";
-import { getFolder, pathToUri } from "../tools";
+import { Compiled } from '../notification/Compiled';
+import { RegisterBuild } from '../notification/RegisterBuild';
+import { UnregisterBuild } from '../notification/UnregisterBuild';
+import { getFolder, pathToUri, uriToPath } from "../tools";
 import { ClassModel } from "../ts-file-parser";
 import { Project } from "./Project";
 
@@ -52,7 +55,7 @@ export class Build {
     public constructor(project: Project, buildConfig: AventusConfigBuild) {
         this.project = project;
         this.buildConfig = buildConfig;
-        if(buildConfig.includeBase){
+        if (buildConfig.includeBase) {
             buildConfig.includeOnBuild.splice(0, 0, "Aventus");
         }
         this.onNewFileUUID = FilesManager.getInstance().onNewFile(this.onNewFile.bind(this));
@@ -60,8 +63,7 @@ export class Build {
         this.scssLanguageService = new AventusSCSSLanguageService(this);
         this.htmlLanguageService = new AventusHTMLLanguageService(this);
 
-
-        ClientConnection.getInstance().sendNotification("aventus/registerBuild", [project.getConfigFile().path, buildConfig.name])
+        RegisterBuild.send(project.getConfigFile().path, buildConfig.name);
     }
     public async init() {
         await this.loadFiles();
@@ -72,6 +74,9 @@ export class Build {
     }
     public getComponentPrefix() {
         return this.buildConfig.componentPrefix;
+    }
+    public isFileInside(uri: string): boolean {
+        return uriToPath(uri).match(this.buildConfig.inputPathRegex) != null;
     }
 
     public enableBuild() {
@@ -184,7 +189,7 @@ export class Build {
         else if (existsSync(this.buildConfig.outputFile.replace(".js", ".def.avt"))) {
             unlinkSync(this.buildConfig.outputFile.replace(".js", ".def.avt"));
         }
-        ClientConnection.getInstance().sendNotification("aventus/compiled", this.name);
+        Compiled.send(this.name);
     }
     private buildCode(compiledCode: string[], compiledCodeNoNamespaceBefore: string[], compiledCodeNoNamespaceAfter: string[], classesName: string[]) {
         let finalTxt = '';
@@ -299,7 +304,7 @@ export class Build {
             if (previousIndex != -1) {
                 return previousIndex + 1;
             }
-            
+
             let insertIndex = 0;
             for (let dependanceName of currentDoc.compileResult.dependances) {
                 if (docUriByTypes[dependanceName]) {
@@ -459,6 +464,12 @@ export class Build {
         return this.definitionWebComponentByName[webcompName];
     }
 
+    public getNamespaceForUri(uri:string):string {
+        let result = "";
+
+        return result;
+    }
+
     public destroy() {
         FilesManager.getInstance().removeOnNewFile(this.onNewFileUUID);
         for (let uri in this.scssFiles) {
@@ -473,7 +484,7 @@ export class Build {
             this.tsFiles[uri].removeEvents();
             this.tsFiles[uri].file.removeOnDelete(this.onFileDeleteUUIDs[uri]);
         }
-        ClientConnection.getInstance().sendNotification("aventus/unregisterBuild", [this.project.getConfigFile().path, this.buildConfig.name])
+        UnregisterBuild.send(this.project.getConfigFile().path, this.buildConfig.name);
     }
 
 

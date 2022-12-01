@@ -118,6 +118,7 @@ export class AventusJSONLanguageService {
         // input
         for (let inputPath of build.inputPath) {
             let slash = "";
+            inputPath = inputPath.replace(/\\/g, '/');
             if (!inputPath.startsWith("/")) {
                 slash = "/";
             }
@@ -150,6 +151,7 @@ export class AventusJSONLanguageService {
             regexs = [];
             for (let noNamespacePath of build.outsideModulePath) {
                 let slash = "";
+                noNamespacePath = noNamespacePath.replace(/\\/g, '/');
                 if (!noNamespacePath.startsWith("/")) {
                     slash = "/";
                 }
@@ -215,7 +217,9 @@ export class AventusJSONLanguageService {
             includeBase: false,
             includeOnBuild: [],
             module: config.module,
-            componentPrefix: config.componentPrefix
+            componentPrefix: config.componentPrefix,
+            namespaceStrategy: 'manual',
+            namespaceRules: {}
         }
     }
 }

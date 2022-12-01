@@ -145,6 +145,15 @@ export class Project {
         }
         return undefined;
     }
+    public getMatchingBuildsByUri(uri: string): Build[] {
+        let result: Build[] = [];
+        for (let build of this.builds) {
+            if (build.isFileInside(uri)) {
+                result.push(build);
+            }
+        }
+        return result;
+    }
     public getStatic(name: string): Static | undefined {
         for (let _static of this.statics) {
             if (_static.name == name) {

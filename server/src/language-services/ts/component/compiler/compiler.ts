@@ -64,6 +64,7 @@ export class AventusWebcomponentCompiler {
         diagnostics: [],
         writeCompiled: false,
         missingViewElements: { position: -1, elements: {} },
+        componentName: '',
         result: {
             nameCompiled: [],
             nameDoc: [],
@@ -695,6 +696,7 @@ export class AventusWebcomponentCompiler {
         this.template = this.template.replace(regex, value + "");
     }
     private writeFileName() {
+        this.result.componentName = this.className;
         this.writeFileReplaceVar("classname", this.className)
         this.writeFileReplaceVar("parentClass", this.parentClassName);
         if (this.classInfo?.isAbstract) {
@@ -1546,7 +1548,7 @@ this.clearWatchHistory = () => {
                             }
                         }
                     }
-                    else if(field.inParent){
+                    else if (field.inParent) {
                         // TODO remove it when attribute added to export
                         variablesInViewDynamic += `get ${field.name} () {
                             return this.shadowRoot.querySelector('[_id="${id}"]');

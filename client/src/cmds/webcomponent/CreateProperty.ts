@@ -5,7 +5,7 @@ export class CreateProperty {
 	static cmd: string = "aventus.wc.create.property";
 
 	public static async middleware(args: any[]): Promise<any[]> {
-		let result: (string | number)[] = [];
+		let result: (string | number | boolean)[] = [];
 
 		if (window.activeTextEditor) {
 			let uri = "";
@@ -20,6 +20,12 @@ export class CreateProperty {
 				result.push(uri);
 				const name = await window.showInputBox({
 					title: "Provide a name for your Property",
+					async validateInput(value) {
+						if(!value.match(/^[_a-z1-9]+$/g)){
+							return 'A property must be with lowercase, number or _';
+						}
+						return null;
+					}
 				});
 				if (name) {
 					result.push(name);
@@ -28,6 +34,9 @@ export class CreateProperty {
 						canPickMany: false,
 					});
 					if (type !== undefined && type.detail !== undefined) {
+						QuickPick.reorder(QuickPick.attrType, type);
+						result.push(type.detail);
+
 						let toDisplay: BuildQuickPick[] = [];
 						toDisplay.push(new BuildQuickPick("Yes", ""));
 						toDisplay.push(new BuildQuickPick("No", ""));
@@ -36,12 +45,8 @@ export class CreateProperty {
 							canPickMany: false,
 						});
 						if (yesOrNo !== undefined) {
-							result.push(yesOrNo.label);
+							result.push(yesOrNo.label == "Yes");
 						}
-
-
-						QuickPick.reorder(QuickPick.attrType, type);
-						result.push(type.detail);
 
 						let activeEditor = window.activeTextEditor;
 						let document = activeEditor.document;

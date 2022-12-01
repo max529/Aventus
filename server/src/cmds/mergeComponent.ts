@@ -5,6 +5,8 @@ import { getPathFromCommandArguments, uriToPath } from '../tools';
 import { AventusExtension, AventusLanguageId } from '../definition';
 import { ClientConnection } from '../Connection';
 import { FilesManager } from '../files/FilesManager';
+import { CloseFile } from '../notification/CloseFile';
+import { OpenFile } from '../notification/OpenFile';
 
 export class MergeComponent {
 	static cmd: string = "aventus.component.merge";
@@ -53,21 +55,21 @@ export class MergeComponent {
 			if (scssDoc) {
 				unlinkSync(scssDoc.path);
 				FilesManager.getInstance().onClose(scssDoc.document);
-				ClientConnection.getInstance().sendNotification("aventus/closefile", scssDoc.uri);
+				CloseFile.send(scssDoc.uri);
 			}
 			if (jsDoc) {
 				unlinkSync(jsDoc.path);
 				FilesManager.getInstance().onClose(jsDoc.document);
-				ClientConnection.getInstance().sendNotification("aventus/closefile", jsDoc.uri);
+				CloseFile.send(jsDoc.uri);
 			}
 			if (htmlDoc) {
 				unlinkSync(htmlDoc.path);
 				FilesManager.getInstance().onClose(htmlDoc.document);
-				ClientConnection.getInstance().sendNotification("aventus/closefile", htmlDoc.uri);
+				CloseFile.send(htmlDoc.uri);
 			}
 
 			FilesManager.getInstance().registerFile(compDoc);
-			ClientConnection.getInstance().sendNotification("aventus/openfile", compDoc.uri);
+			OpenFile.send(compDoc.uri);
 		}
 	}
 }

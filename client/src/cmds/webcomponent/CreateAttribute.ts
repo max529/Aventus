@@ -22,8 +22,8 @@ export class CreateAttribute {
 				const name = await window.showInputBox({
 					title: "Provide a name for your Attribute",
 					async validateInput(value) {
-						if (value != value.toLowerCase()) {
-							return 'An attribute must be in lower case';
+						if(!value.match(/^[_a-z1-9]+$/g)){
+							return 'A property must be with lowercase, number or _';
 						}
 						return null;
 					},

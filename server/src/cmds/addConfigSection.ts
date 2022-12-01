@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { ClientConnection } from '../Connection';
 import { AventusConfig } from '../language-services/json/definition';
+import { OpenFile } from '../notification/OpenFile';
 import { uriToPath } from '../tools';
 
 
@@ -30,7 +31,7 @@ export class AddConfigSection {
 
 			config.build.push(newBuild);
 			writeFileSync(uriToPath(uri), JSON.stringify(config, null, 4))
-			ClientConnection.getInstance().sendNotification("aventus/openfile", uri)
+			OpenFile.send(uri);
 		}
 	}
 }

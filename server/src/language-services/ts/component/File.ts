@@ -105,6 +105,9 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             text: result
         };
     }
+    public getComponentName():string{
+        return this.compilationResult?.componentName || '';
+    }
 }
 
 interface AventusWebComponentSingleFileRegion<T extends AventusBaseFile> {

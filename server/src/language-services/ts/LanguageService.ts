@@ -676,7 +676,7 @@ const compilerOptionsRead: CompilerOptions = {
     noImplicitOverride: true,
     strictPropertyInitialization: true,
     noImplicitReturns: true,
-    
+
 };
 const compilerOptionsCompile: CompilerOptions = {
     allowNonTsExtensions: true,
@@ -865,6 +865,8 @@ function simplifyPath(importPathTxt, currentPath) {
         return importPathTxt;
     }
     let currentDir: string[] = [];
+    let mySep = sep;
+    console.log(mySep);
     if (sep === "/") {
         currentDir = decodeURIComponent(currentPath).replace("file://", "").split("/");
     }
@@ -872,14 +874,14 @@ function simplifyPath(importPathTxt, currentPath) {
         currentDir = decodeURIComponent(currentPath).replace("file:///", "").split("/");
     }
     currentDir.pop();
-    let currentDirPath = normalize(currentDir.join("/")).split("\\");
+    let currentDirPath = normalize(currentDir.join("/")).split(sep);
     let finalImportPath = normalize(currentDir.join("/") + "/" + importPathTxt);
     // TODO: use by WC but maybe we can remove it later
     // let finalImportPathComponent = finalImportPath.replace(AventusExtension.ComponentLogic, AventusExtension.Component);
     // if (wcMode.getDocumentByUri(pathToUri(finalImportPathComponent))) {
     //     finalImportPath = finalImportPathComponent;
     // }
-    let importPath = finalImportPath.split("\\");
+    let importPath = finalImportPath.split(sep);
     for (let i = 0; i < currentDirPath.length; i++) {
         if (importPath.length > i) {
             if (currentDirPath[i] == importPath[i]) {

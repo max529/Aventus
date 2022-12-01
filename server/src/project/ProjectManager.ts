@@ -1,6 +1,7 @@
 import { AventusExtension } from "../definition";
 import { AventusFile } from '../files/AventusFile';
 import { FilesManager } from '../files/FilesManager';
+import { Build } from './Build';
 import { Project } from "./Project";
 
 export class ProjectManager {
@@ -38,8 +39,20 @@ export class ProjectManager {
         return this.projects[uri];
     }
 
-    public destroyAll(){
-        for(let projectUri in this.projects){
+    public getMatchingBuildsByUri(uri: string): Build[] {
+        let result: Build[] = []
+        for (let projectUri in this.projects) {
+            let project = this.projects[projectUri];
+            let resultTemps = project.getMatchingBuildsByUri(uri);
+            for (let resultTemp of resultTemps) {
+                result.push(resultTemp);
+            }
+        }
+        return result;
+    }
+
+    public destroyAll() {
+        for (let projectUri in this.projects) {
             this.projects[projectUri].destroy()
         }
     }

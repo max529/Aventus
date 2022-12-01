@@ -5,6 +5,8 @@ import { ClientConnection } from '../Connection';
 import { AventusExtension, AventusLanguageId } from '../definition';
 import { FilesManager } from '../files/FilesManager';
 import { AventusWebComponentSingleFile } from '../language-services/ts/component/File';
+import { CloseFile } from '../notification/CloseFile';
+import { OpenFile } from '../notification/OpenFile';
 import { getPathFromCommandArguments, uriToPath } from '../tools';
 
 export class SplitComponent {
@@ -30,14 +32,14 @@ export class SplitComponent {
 
 				unlinkSync(wcDoc.path);
 				FilesManager.getInstance().onClose(wcDoc.document);
-				ClientConnection.getInstance().sendNotification("aventus/closefile", wcDoc.uri);
+				CloseFile.send(wcDoc.uri);
 
 
 
 				FilesManager.getInstance().registerFile(scssDoc);
 				FilesManager.getInstance().registerFile(htmlDoc);
 				FilesManager.getInstance().registerFile(tsDoc);
-				ClientConnection.getInstance().sendNotification("aventus/openfile", tsDoc.uri);
+				OpenFile.send(tsDoc.uri);
 			}
 		}
 	}

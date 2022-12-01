@@ -1,4 +1,4 @@
-class AvHelloWorld extends Aventus.WebComponent {
+class AvHelloWorld extends WebComponent {
     static get observedAttributes() {return ["hello_clicked", "word_clicked"].concat(super.observedAttributes).filter((v, i, a) => a.indexOf(v) === i);}
     get 'hello_clicked'() {
                     return Number(this.getAttribute('hello_clicked'));

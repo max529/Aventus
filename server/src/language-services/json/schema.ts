@@ -47,7 +47,14 @@ export const AventusConfigSchema = {
                             type: "string",
                         },
                     },
-                    "module": { type: "string" }
+                    "module": { type: "string" },
+                    "namespaceStrategy": {
+                        type: "string",
+                        enum: ["manual", "followFolders", "rules"]
+                    },
+                    "namespaceRules": {
+                        type: "object",
+                    }
                 },
                 required: ["name", "inputPath", "outputFile"],
                 additionalProperties: false

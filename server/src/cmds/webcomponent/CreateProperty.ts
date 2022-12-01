@@ -4,6 +4,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { AventusLanguageId } from '../../definition';
 import { InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
+import { AventusWebComponentLogicalFile } from '../../language-services/ts/component/File';
 import { EditFile } from '../../notification/EditFile';
 
 export class CreateProperty {
@@ -14,8 +15,8 @@ export class CreateProperty {
 			let uri = params.arguments[0];
 			let name: string = params.arguments[1];
 			let type: string = params.arguments[2];
-			let cb: boolean = params.arguments[4];
-			let position: number = params.arguments[5];
+			let cb: boolean = params.arguments[3];
+			let position: number = params.arguments[4];
 			this.run(uri, name, type, cb, position);
 		}
 	}
@@ -23,9 +24,20 @@ export class CreateProperty {
 	private async run(uri: string, name: string, type: string, needCb: boolean, position: number) {
 		let file = FilesManager.getInstance().getByUri(uri);
 		if (file) {
+			let builds = FilesManager.getInstance().getBuild(file.document);
+			let componentName = "";
+			if (builds.length > 0) {
+				let fileTs = builds[0].tsFiles[uri]
+				if (fileTs instanceof AventusWebComponentLogicalFile) {
+					componentName = fileTs.getComponentName();
+				}
+			}
+			if (componentName == "") {
+				return;
+			}
 			let cb = '';
 			if (needCb) {
-				cb = '((target: ) => {' + EOL + EOL + '})';
+				cb = '(target: ' + componentName + ') => {' + EOL + EOL + '}';
 			}
 			let newTxt = '@Property(' + cb + ')' + EOL + 'public ' + name + ':' + type + ';' + EOL;
 			let begin = file.content.slice(0, position);

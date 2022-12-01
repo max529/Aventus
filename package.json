@@ -275,25 +275,25 @@
 		"keybindings": [
 			{
 				"command": "aventus.wc.create.attribute",
-				"key": "ctrl+numpad1",
+				"key": "ctrl+k ctrl+numpad1",
 				"mac": "cmd+f1",
 				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
 			},
 			{
 				"command": "aventus.wc.create.property",
-				"key": "ctrl+numpad2",
+				"key": "ctrl+k ctrl+numpad2",
 				"mac": "cmd+f2",
 				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
 			},
 			{
 				"command": "aventus.wc.create.watch",
-				"key": "ctrl+numpad3",
+				"key": "ctrl+k ctrl+numpad3",
 				"mac": "cmd+f3",
 				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
 			},
 			{
 				"command": "aventus.wc.import.viewElement",
-				"key": "ctrl+numpad4",
+				"key": "ctrl+k ctrl+numpad4",
 				"mac": "cmd+f4",
 				"when": "editorTextFocus && resourceFilename =~ /^.*\\.(wcl|wc).avt/"
 			}

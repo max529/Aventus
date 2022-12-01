@@ -75,7 +75,9 @@ export interface AventusConfigBuild {
 	includeBase: boolean,
 	includeOnBuild: string[],
 	module: string,
-	componentPrefix: string
+	componentPrefix: string,
+	namespaceStrategy: 'manual' | 'followFolders' | 'rules'
+	namespaceRules: { [rule: string]: string }
 }
 export interface AventusConfigStatic {
 	name: string,
@@ -89,7 +91,7 @@ export interface AventusConfigStatic {
 export interface AventusConfig {
 	version: string,
 	componentPrefix: string
-	module:string;
+	module: string;
 	build: AventusConfigBuild[],
 	static: AventusConfigStatic[],
 	include: { definition: string, name: string, src?: string }[]

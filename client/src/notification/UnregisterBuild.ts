@@ -3,13 +3,13 @@ import { Singleton } from "../Singleton";
 export class UnregisterBuild {
     public static cmd: string = "aventus/unregisterBuild";
 
-    public static action(builds: [string, string]) {
-        let uriConfig = builds[0];
-        let buildName = builds[1];
-        if (Singleton.allBuilds[uriConfig]) {
-            let index = Singleton.allBuilds[uriConfig].indexOf(buildName);
+    public static action(params: { pathConfig: string, buildName: string }) {
+        let pathConfig = params.pathConfig;
+        let buildName = params.buildName;
+        if (Singleton.allBuilds[pathConfig]) {
+            let index = Singleton.allBuilds[pathConfig].indexOf(buildName);
             if (index != -1) {
-                Singleton.allBuilds[uriConfig].splice(index, 1);
+                Singleton.allBuilds[pathConfig].splice(index, 1);
             }
         }
     }
