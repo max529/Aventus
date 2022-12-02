@@ -534,7 +534,8 @@ function buildField(f: ts.PropertyDeclaration, path: string, module: Module): Fi
                 ts.SyntaxKind.OverrideKeyword,
                 ts.SyntaxKind.AbstractKeyword,
                 ts.SyntaxKind.PublicKeyword,
-                ts.SyntaxKind.Decorator
+                ts.SyntaxKind.Decorator,
+                ts.SyntaxKind.AsyncKeyword
             ]
             if (x.kind === ts.SyntaxKind.StaticKeyword) {
                 field.isStatic = true;

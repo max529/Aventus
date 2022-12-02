@@ -134,6 +134,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
     }
 }
 `;
+		defaultRAM = this.addNamespace(defaultRAM, newScriptUri);
 		writeFileSync(newScriptPath, defaultRAM);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultRAM);
 		FilesManager.getInstance().registerFile(textDocument);
@@ -180,6 +181,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 	//#endregion
 	
 }`
+			defaultTs = this.addNamespace(defaultTs, pathToUri(newScriptPath + AventusExtension.ComponentLogic));
 			writeFileSync(newScriptPath + AventusExtension.ComponentLogic, defaultTs);
 			let textDocumentTs: TextDocument = TextDocument.create(pathToUri(newScriptPath + AventusExtension.ComponentLogic), AventusLanguageId.TypeScript, 0, defaultTs);
 
@@ -213,6 +215,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 	}
 </style>
 `
+
 			writeFileSync(newScriptPath + AventusExtension.Component, defaultWc);
 			let textDocumentTs: TextDocument = TextDocument.create(pathToUri(newScriptPath + AventusExtension.Component), AventusLanguageId.WebComponent, 0, defaultWc);
 			FilesManager.getInstance().registerFile(textDocumentTs);
@@ -229,6 +232,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 		let firstUpperName = dataName.charAt(0).toUpperCase() + dataName.slice(1);
 		let className = firstUpperName;
 		let defaultTs = `export class ${className} implements Aventus.IData {${EOL}\tpublic id: number = 0;${EOL}}`
+		defaultTs = this.addNamespace(defaultTs, newScriptUri);
 		writeFileSync(newScriptPath, defaultTs);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultTs);
 		FilesManager.getInstance().registerFile(textDocument);
@@ -241,14 +245,7 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 		let firstUpperName = libName.charAt(0).toUpperCase() + libName.slice(1);
 		let className = firstUpperName;
 		let defaultTs = `export class ${className} {${EOL}\t${EOL}}`;
-		let builds = ProjectManager.getInstance().getMatchingBuildsByUri(newScriptUri);
-		if (builds.length > 0) {
-			let namespace = builds[0].getNamespaceForUri(newScriptUri);
-			if (namespace != "") {
-				defaultTs = `namespace ${namespace}{${EOL}\t${defaultTs}${EOL}}`
-			}
-		}
-
+		defaultTs = this.addNamespace(defaultTs, newScriptUri);
 		writeFileSync(newScriptPath, defaultTs);
 		let textDocument: TextDocument = TextDocument.create(newScriptUri, AventusLanguageId.TypeScript, 0, defaultTs);
 		FilesManager.getInstance().registerFile(textDocument);
@@ -258,6 +255,19 @@ export class ${objectName}Extension implements Aventus.RAMExtension {
 
 
 	//#region tools
+
+	private addNamespace(text: string, uri: string) {
+		let builds = ProjectManager.getInstance().getMatchingBuildsByUri(uri);
+		if (builds.length > 0) {
+			let namespace = builds[0].getNamespaceForUri(uri);
+			if (namespace != "") {
+				// add tab
+				text = "\t" + text.split('\n').join("\n\t");
+				text = `namespace ${namespace} {${EOL}${text}${EOL}}`
+			}
+		}
+		return text;
+	}
 	private getImportPath(fileSourcePath, fileToImportPath): string {
 		let currentDirPath = normalize(fileSourcePath).split("\\");
 		let importPath = normalize(fileToImportPath).split("\\");

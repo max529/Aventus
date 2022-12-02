@@ -1,11 +1,11 @@
 {
     "include": [],
+    "module": "Aventus",
+    "componentPrefix": "av",
     "build": [
         {
             "name": "base",
-            "version": "1.0.0",
             "module": "Aventus",
-            "componentPrefix": "av",
             "inputPath": [
                 "./component/",
                 "./data/",
@@ -16,11 +16,8 @@
                 "./attributes/",
                 "./extension/"
             ],
-            "compileOnSave": true,
-            "includeBase": false,
             "generateDefinition": true,
-            "outputFile": "../../lib/aventus.base.js",
-            "includeOnBuild": []
+            "outputFile": "../../lib/aventus.base.js"
         }
     ]
 }

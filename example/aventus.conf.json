@@ -1,17 +1,15 @@
 {
+    "componentPrefix": "av",
     "build": [
         {
-            "name": "Only Aventus script",
             "module": "AventusTest",
-            "componentPrefix": "av",
+            "name": "Only Aventus script",
             "inputPath": [],
             "outputFile": "./aventus.js",
             "includeBase": true
         },
         {
             "name": "Todo list",
-            "module": "AventusTest",
-            "componentPrefix": "av",
             "inputPath": [
                 "./Complexe/TodoList/"
             ],
@@ -19,8 +17,6 @@
         },
         {
             "name": "Web component - Hello world",
-            "module": "AventusTest",
-            "componentPrefix": "av",
             "inputPath": [
                 "./WebComponent/HelloWorld/"
             ],
@@ -28,8 +24,6 @@
         },
         {
             "name": "Web component - Select",
-            "module": "AventusTest",
-            "componentPrefix": "av",
             "inputPath": [
                 "./WebComponent/Select/"
             ],
@@ -37,8 +31,6 @@
         },
         {
             "name": "Web component - Scrollable",
-            "module": "AventusTest",
-            "componentPrefix": "av",
             "inputPath": [
                 "./WebComponent/Scroll/"
             ],

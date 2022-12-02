@@ -77,7 +77,8 @@ export interface AventusConfigBuild {
 	module: string,
 	componentPrefix: string,
 	namespaceStrategy: 'manual' | 'followFolders' | 'rules'
-	namespaceRules: { [rule: string]: string }
+	namespaceRules: { [namespace: string]: string[] }
+	namespaceRulesRegex: { [namespace: string]: RegExp }
 }
 export interface AventusConfigStatic {
 	name: string,

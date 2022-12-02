@@ -36,7 +36,8 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         if (!this.compilationResult) {
             this.onContentChange();
         }
-        if (this.compilationResult && this.compilationResult.diagnostics.length == 0) {
+        if (this.compilationResult) {
+            
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
                 docVisible: this.compilationResult.result.docVisible,

@@ -173,6 +173,38 @@ export class AventusJSONLanguageService {
             }
             build.outsideModulePathRegex = new RegExp(regexJoin);
         }
+
+        // namespace rules
+        if (build.namespaceStrategy == "rules") {
+            
+            for (let namespace in build.namespaceRules) {
+                regexs = [];
+                let rules = build.namespaceRules[namespace];
+                for (let rule of rules) {
+                    let slash = "";
+                    rule = rule.replace(/\\/g, '/');
+                    if (!rule.startsWith("/")) {
+                        slash = "/";
+                    }
+                    let splitedInput = rule.split("/");
+                    if (splitedInput[splitedInput.length - 1] == "" || splitedInput[splitedInput.length - 1] == "*") {
+                        splitedInput[splitedInput.length - 1] = "*"
+                    }
+                    else if (splitedInput[splitedInput.length - 1].indexOf(".") == -1) {
+                        // its a folder but without end slash
+                        splitedInput.push("*");
+                    }
+                    rule = splitedInput.join("/");
+                    let regTemp = normalize(uriToPath(baseDir) + slash + rule).replace(/\\/g, '\\/').replace("*", ".*");
+                    regexs.push("(^" + regTemp + "$)");
+                }
+                regexJoin = regexs.join("|");
+                if (regexJoin == "") {
+                    regexJoin = "(?!)";
+                }
+                build.namespaceRulesRegex[namespace] = new RegExp(regexJoin);
+            }
+        }
         return build;
     }
 
@@ -219,7 +251,8 @@ export class AventusJSONLanguageService {
             module: config.module,
             componentPrefix: config.componentPrefix,
             namespaceStrategy: 'manual',
-            namespaceRules: {}
+            namespaceRules: {},
+            namespaceRulesRegex: {}
         }
     }
 }

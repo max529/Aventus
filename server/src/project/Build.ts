@@ -332,8 +332,6 @@ export class Build {
     }
     //#endregion
 
-
-
     /**
      * Trigger when a new file is detected
      * @param file 
@@ -464,10 +462,23 @@ export class Build {
         return this.definitionWebComponentByName[webcompName];
     }
 
-    public getNamespaceForUri(uri:string):string {
-        let result = "";
-
-        return result;
+    public getNamespaceForUri(uri: string): string {
+        if (this.buildConfig.namespaceStrategy == 'manual') {
+            return "";
+        }
+        else if (this.buildConfig.namespaceStrategy == 'rules') {
+            let path = uriToPath(uri);
+            for (let namespace in this.buildConfig.namespaceRulesRegex) {
+                let regex = this.buildConfig.namespaceRulesRegex[namespace]
+                if (path.match(regex)) {
+                    return namespace;
+                }
+            }
+        }
+        else {
+            // TODO add follow pattern
+        }
+        return "";
     }
 
     public destroy() {
