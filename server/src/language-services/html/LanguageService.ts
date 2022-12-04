@@ -1,10 +1,12 @@
 import { getLanguageService, IAttributeData, ITagData, IValueData, LanguageService } from "vscode-html-languageservice";
-import { CompletionItemKind, CompletionList, Diagnostic, FormattingOptions, Hover, Position, Range, TextEdit } from "vscode-languageserver";
+import { CompletionItemKind, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { AventusLanguageId } from "../../definition";
 import { AventusFile } from '../../files/AventusFile';
 import { Build } from "../../project/Build";
 import { CustomTypeAttribute } from "../ts/component/compiler/def";
+import { AventusWebComponentLogicalFile } from '../ts/component/File';
 import { AventusDefinitionHTMLFile } from "../ts/definition/File";
+import { AventusHTMLFile } from './File';
 import { HTMLDoc } from "./helper/definition";
 
 
@@ -18,6 +20,7 @@ export class AventusHTMLLanguageService {
     private documentationInfo: HTMLDoc = {};
     private documentationInfoDef: { [key: string]: AventusDefinitionHTMLFile } = {};
     private internalDocumentation: { [key: string]: HTMLDoc } = {};
+    private internalDocumentationReverse: { [className: string]: AventusWebComponentLogicalFile } = {};
 
     public constructor(build: Build) {
         this.build = build;
@@ -92,7 +95,7 @@ export class AventusHTMLLanguageService {
         }
         return [];
     }
-    
+
     //#endregion
 
     //#region language service function
@@ -148,10 +151,38 @@ export class AventusHTMLLanguageService {
     public async format(file: AventusFile, range: Range, formatParams: FormattingOptions): Promise<TextEdit[]> {
         return this.languageService.format(file.document, range, formatParams);
     }
+    public async onDefinition(file: AventusHTMLFile, position: Position): Promise<Definition | null> {
+        let offset = file.file.document.offsetAt(position);
+        let node = this.languageService.parseHTMLDocument(file.file.document).findNodeAt(offset);
+        if (node.tag) {
+            let info = this.documentationInfo[node.tag];
+            if (info) {
+                // search local
+                let internalInfo = this.internalDocumentationReverse[info.class];
+                if (internalInfo) {
+                    let startPos = internalInfo.file.document.positionAt(0);
+                    let endPos = internalInfo.file.document.positionAt(0);
+                    return Location.create(internalInfo.file.uri, Range.create(startPos, endPos));
+                }
+                // search inside def
+                let defintionInfo = file.build.getWebComponentDefinition(info.class);
+                if (defintionInfo) {
+                    let defintionFile = file.build.getWebComponentDefinitionFile(info.class);
+                    if (defintionFile) {
+                        let startPos = defintionFile.file.document.positionAt(defintionInfo.nameStart);
+                        let endPos = defintionFile.file.document.positionAt(defintionInfo.nameEnd);
+                        return Location.create(defintionFile.file.uri, Range.create(startPos, endPos));
+                    }
+
+                }
+            }
+        }
+        return null;
+    }
     //#endregion
 
     //#region custom definition
-    private rebuildDefinition() {
+    public rebuildDefinition() {
         this.documentationInfo = {};
         for (let uri in this.documentationInfoDef) {
             let content = this.documentationInfoDef[uri].file.content;
@@ -205,11 +236,20 @@ export class AventusHTMLLanguageService {
         delete this.documentationInfoDef[defFile.file.uri];
         this.rebuildDefinition();
     }
-    public addInternalDefinition(uri: string, doc: HTMLDoc) {
+    public addInternalDefinition(uri: string, doc: HTMLDoc, fromFile: AventusWebComponentLogicalFile) {
         this.internalDocumentation[uri] = doc;
+        for (let tagName in doc) {
+            this.internalDocumentationReverse[doc[tagName].class] = fromFile;
+        }
         this.rebuildDefinition();
     }
     public removeInternalDefinition(uri: string) {
+        let oldDoc = this.internalDocumentation[uri];
+        if (oldDoc) {
+            for (let tagName in oldDoc) {
+                delete this.internalDocumentationReverse[oldDoc[tagName].class];
+            }
+        }
         delete this.internalDocumentation[uri];
         this.rebuildDefinition();
     }

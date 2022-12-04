@@ -2,6 +2,7 @@ import { CustomTypeAttribute } from "../../ts/component/compiler/def"
 
 export declare interface HTMLDoc {
 	[key: string]: {
+		class: string,
 		name: string,
 		description: string,
 		attributes: {

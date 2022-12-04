@@ -32,7 +32,7 @@ export abstract class AventusTsFile extends AventusBaseFile {
 
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
-        this.fileParsed = { namespaces: [], variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], imports: {}, _imports: [], name: file.path };
+        this.fileParsed = { namespaces: [], variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], _imports: [], name: file.path };
         if (this.mustBeAddedToLanguageService()) {
             this.tsLanguageService.addFile(this);
         }
@@ -162,6 +162,12 @@ export abstract class AventusTsFile extends AventusBaseFile {
     protected setCompileResult(compileResult: TsCompileResult) {
         let triggerRebuild = false;
         if (compileResult.src != this.compileResult.src) {
+            triggerRebuild = true;
+        }
+        else if (compileResult.docVisible != this.compileResult.docVisible) {
+            triggerRebuild = true;
+        }
+        else if (compileResult.docInvisible != this.compileResult.docInvisible) {
             triggerRebuild = true;
         }
         // if we write manually the filedoc, use it

@@ -7,11 +7,12 @@ import { AventusFile } from '../files/AventusFile';
 import { FilesManager } from '../files/FilesManager';
 import { FilesWatcher } from '../files/FilesWatcher';
 import { AventusHTMLFile } from "../language-services/html/File";
+import { HTMLDoc } from '../language-services/html/helper/definition';
 import { AventusHTMLLanguageService } from "../language-services/html/LanguageService";
 import { AventusConfigBuild } from "../language-services/json/definition";
 import { AventusSCSSFile } from "../language-services/scss/File";
 import { AventusSCSSLanguageService } from "../language-services/scss/LanguageService";
-import { AventusWebComponentSingleFile } from "../language-services/ts/component/File";
+import { AventusWebComponentLogicalFile, AventusWebComponentSingleFile } from "../language-services/ts/component/File";
 import { AventusDefinitionTsFile } from "../language-services/ts/definition/File";
 import { AventusTsFile } from "../language-services/ts/File";
 import { AventusTsFileSelector } from '../language-services/ts/FileSelector';
@@ -144,10 +145,30 @@ export class Build {
         let compiledCodeNoNamespaceBefore: string[] = [];
         let compiledCodeNoNamespaceAfter: string[] = [];
         let compiledCodeDocNoNamespace: string[] = [];
+        let htmlDoc: HTMLDoc = {};
         let classesName: string[] = [];
         let documents = this.buildOrderFiles();
         let uris: string[] = [];
         let moduleCodeStarted = false;
+        const _addHTMLDoc = (doc: AventusTsFile, inside: boolean) => {
+            if (doc instanceof AventusWebComponentLogicalFile) {
+                if (doc.compilationResult) {
+                    if (inside) {
+                        let docToAdd: HTMLDoc = JSON.parse(JSON.stringify(doc.compilationResult.result.htmlDoc));
+                        for (let compName in docToAdd) {
+                            docToAdd[compName].class = this.buildConfig.module + '.' + docToAdd[compName].class;
+                            htmlDoc[compName] = docToAdd[compName];
+                        }
+                    }
+                    else {
+                        htmlDoc = {
+                            ...htmlDoc,
+                            ...doc.compilationResult.result.htmlDoc
+                        }
+                    }
+                }
+            }
+        }
         for (let doc of documents) {
             uris.push(doc.file.uri);
             if (this.noNamespaceUri[doc.file.uri]) {
@@ -165,6 +186,7 @@ export class Build {
                 if (doc.compileResult.docInvisible != "") {
                     compiledCodeDocInvisible.push(doc.compileResult.docInvisible);
                 }
+                _addHTMLDoc(doc, false);
             }
             else {
                 moduleCodeStarted = true;
@@ -176,15 +198,17 @@ export class Build {
                 }
                 if (doc.compileResult.docVisible != "") {
                     compiledCodeDoc.push(doc.compileResult.docVisible);
+
                 }
                 if (doc.compileResult.docInvisible != "") {
                     compiledCodeDocInvisible.push(doc.compileResult.docInvisible);
                 }
+                _addHTMLDoc(doc, true);
             }
         }
         this.buildCode(compiledCode, compiledCodeNoNamespaceBefore, compiledCodeNoNamespaceAfter, classesName)
         if (this.buildConfig.generateDefinition) {
-            this.buildDocumentation(compiledCodeDoc, compiledCodeDocNoNamespace, compiledCodeDocInvisible)
+            this.buildDocumentation(compiledCodeDoc, compiledCodeDocNoNamespace, compiledCodeDocInvisible, htmlDoc)
         }
         else if (existsSync(this.buildConfig.outputFile.replace(".js", ".def.avt"))) {
             unlinkSync(this.buildConfig.outputFile.replace(".js", ".def.avt"));
@@ -244,7 +268,7 @@ export class Build {
         }
         writeFileSync(this.buildConfig.outputFile, finalTxt);
     }
-    private buildDocumentation(compiledCodeDoc: string[], compiledCodeDocNoNamespace: string[], compiledCodeDocInvisible: string[]) {
+    private buildDocumentation(compiledCodeDoc: string[], compiledCodeDocNoNamespace: string[], compiledCodeDocInvisible: string[], htmlDoc: HTMLDoc) {
         let finaltxt = "";
         finaltxt = "declare global {" + EOL;
         finaltxt += "\tdeclare namespace " + this.buildConfig.module + "{" + EOL;
@@ -260,7 +284,7 @@ export class Build {
         finaltxt += JSON.stringify(this.scssLanguageService.getInternalDocumentation()) + EOL;
         finaltxt += "// end region css //" + EOL;
         finaltxt += "// region html //" + EOL;
-        finaltxt += JSON.stringify(this.htmlLanguageService.getInternalDocumentation()) + EOL;
+        finaltxt += JSON.stringify(htmlDoc) + EOL;
         finaltxt += "// end region html //" + EOL;
 
         writeFileSync(this.buildConfig.outputFile.replace(".js", ".def.avt"), finaltxt);
@@ -460,6 +484,21 @@ export class Build {
     }
     public getWebComponentDefinition(webcompName: string): ClassModel | undefined {
         return this.definitionWebComponentByName[webcompName];
+    }
+    public getWebComponentDefinitionFile(webcompName: string): AventusTsFile | AventusDefinitionTsFile | undefined {
+        let definition = this.definitionWebComponentByName[webcompName];
+        if (definition) {
+            let uri = pathToUri(definition.filePath);
+            let tsFile = this.tsFiles[uri];
+            if (tsFile) {
+                return tsFile;
+            }
+            let tsDefFile = this.tsDefFiles[uri];
+            if (tsDefFile) {
+                return tsDefFile;
+            }
+        }
+        return undefined;
     }
 
     public getNamespaceForUri(uri: string): string {

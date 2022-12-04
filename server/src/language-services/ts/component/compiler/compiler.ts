@@ -77,6 +77,7 @@ export class AventusWebcomponentCompiler {
             scssDoc: {}
         }
     }
+    private fullClassName: string = '';
     //#endregion
 
     public constructor(logicalFile: AventusWebComponentLogicalFile, build: Build) {
@@ -114,8 +115,10 @@ export class AventusWebcomponentCompiler {
             this.classInfo = classInfo;
             let normalCompile = AventusTsLanguageService.compileTs(this.classInfo, this.logicalFile);
             this.result.result.dependances = normalCompile.dependances;
+            this.fullClassName = normalCompile.classDoc;
             this.result.result.nameCompiled.push(normalCompile.classScript);
             this.result.result.nameDoc.push(normalCompile.classDoc);
+            this.prepareHTMLDocObject();
             this.loadParent(this.jsonStructure);
             this.prepareViewRecu(this.jQuery._root);
             this.prepareOtherContent();
@@ -250,17 +253,21 @@ export class AventusWebcomponentCompiler {
         }
         this.getClassName(classInfo);
 
-        if (!classInfo.isAbstract) {
+        
+
+        return classInfo;
+    }
+    private prepareHTMLDocObject(){
+        if (this.classInfo && !this.classInfo.isAbstract) {
             this.htmlDoc = {
                 [this.tagName]: {
+                    class: this.fullClassName,
                     name: this.tagName,
-                    description: classInfo.documentation.join(EOL),
+                    description: this.classInfo.documentation.join(EOL),
                     attributes: {}
                 }
             };
         }
-
-        return classInfo;
     }
     private getClassName(classInfo: CompilerClassInfo) {
         let splittedName = classInfo.name.match(/[A-Z][a-z]+/g);

@@ -13,7 +13,10 @@ import { AventusWebcomponentCompiler } from "./compiler/compiler";
 import { CompileComponentResult } from "./compiler/def";
 
 export class AventusWebComponentLogicalFile extends AventusTsFile {
-    private compilationResult: CompileComponentResult | undefined;
+    private _compilationResult: CompileComponentResult | undefined;
+    public get compilationResult() {
+        return this._compilationResult;
+    }
     protected get extension(): string {
         return AventusExtension.ComponentLogic;
     }
@@ -24,10 +27,10 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     }
 
     protected async onValidate(): Promise<Diagnostic[]> {
-        this.compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
-        this.build.scssLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.scssDoc);
-        this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this.compilationResult.result.htmlDoc);
-        return this.compilationResult.diagnostics;
+        this._compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
+        this.build.scssLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.scssDoc);
+        this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.htmlDoc, this);
+        return this._compilationResult.diagnostics;
     }
     protected async onContentChange(): Promise<void> {
         this.refreshFileParsed();
@@ -37,7 +40,6 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             this.onContentChange();
         }
         if (this.compilationResult) {
-            
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
                 docVisible: this.compilationResult.result.docVisible,
@@ -106,7 +108,7 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
             text: result
         };
     }
-    public getComponentName():string{
+    public getComponentName(): string {
         return this.compilationResult?.componentName || '';
     }
 }

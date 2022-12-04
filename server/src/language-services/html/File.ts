@@ -58,7 +58,7 @@ export class AventusHTMLFile extends AventusBaseFile {
         return this.build.htmlLanguageService.doHover(document, position);
     }
     protected async onDefinition(document: AventusFile, position: Position): Promise<Definition | null> {
-        return null;
+        return this.build.htmlLanguageService.onDefinition(this, position);
     }
     protected async onFormatting(document: AventusFile, range: Range, options: FormattingOptions): Promise<TextEdit[]> {
         return this.build.htmlLanguageService.format(document, range, options);

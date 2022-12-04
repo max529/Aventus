@@ -569,7 +569,7 @@ export class AventusTsLanguageService {
 
 
         result.compiled = transpile(txt, compilerOptionsCompile);
-        let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname);
+        let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname, element);
 
         let namespaceTxt = element.namespace.name;
         if (namespaceTxt.length > 0 && element.isExported) {
@@ -590,7 +590,12 @@ export class AventusTsLanguageService {
             }
         }
         if (result.doc.length > 0) {
-            result.classDoc = namespaceTxt + element.name
+            if (namespaceTxt.length > 0) {
+                result.classDoc = namespaceTxt + '.' + element.name
+            }
+            else {
+                result.classDoc = element.name;
+            }
         }
 
         for (let decorator of element.decorators) {

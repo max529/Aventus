@@ -71,24 +71,22 @@ export function parseDocument(document: TextDocument): Module {
         if (savedModule[document.uri].version < document.version) {
             savedModule[document.uri] = {
                 version: document.version,
-                module: parseStruct(document.getText(), {}, uriToPath(document.uri))
+                module: parseStruct(document.getText(), uriToPath(document.uri))
             };
         }
     }
     else {
         savedModule[document.uri] = {
             version: document.version,
-            module: parseStruct(document.getText(), {}, uriToPath(document.uri))
+            module: parseStruct(document.getText(), uriToPath(document.uri))
         };
     }
     return savedModule[document.uri].module;
 }
-function parseStruct(content: string, modules: { [path: string]: Module }, mpth: string): Module {
+function parseStruct(content: string, mpth: string): Module {
 
     var mod = parse(content);
-    var module: Module = { namespaces: [], variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], imports: {}, _imports: [], name: mpth };
-    modules[mpth] = module;
-    var currentModule: string = "";
+    var module: Module = { namespaces: [], variables: [], functions: [], classes: [], aliases: [], enumDeclarations: [], _imports: [], name: mpth };
     const getNamespace = (pos: number): NamespaceDeclaration => {
         let biggestStart = -1;
         let result = {
@@ -248,7 +246,6 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
 
         if (x.kind === ts.SyntaxKind.ModuleDeclaration) {
             var cmod = <ts.ModuleDeclaration>x;
-            currentModule = cmod.name.text;
             if (cmod.body) {
                 let parentNamespace = getNamespace(cmod.getStart());
                 let _namespace = cmod.name.text;
@@ -269,27 +266,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             }
         }
 
-        if (x.kind === ts.SyntaxKind.ImportEqualsDeclaration) {
-            var imp = <ts.ImportEqualsDeclaration>x;
-            var namespace = imp.name.text;
-            if (namespace === "RamlWrapper") {
-                return;
-            }
 
-            var path = <ts.ExternalModuleReference>imp.moduleReference;
-
-            var literal = <ts.StringLiteral>path.expression;
-            var importPath = literal.text;
-            var absPath = resolve(dirname(mpth) + "/", importPath) + ".ts";
-            if (!existsSync(absPath)) {
-                throw new Error("Path " + importPath + " resolve to " + absPath + "do not exists");
-            }
-            if (!modules[absPath]) {
-                var cnt = readFileSync(absPath, 'utf8');
-                var mod = parseStruct(cnt, modules, absPath);
-            }
-            module.imports[namespace] = modules[absPath];
-        }
         if (x.kind === ts.SyntaxKind.TypeAliasDeclaration) {
             var u = <ts.TypeAliasDeclaration>x;
             if (u.name) {
@@ -403,6 +380,7 @@ function parseStruct(content: string, modules: { [path: string]: Module }, mpth:
             clazz.nameEnd = c.name?.getEnd() || 0;
             clazz.end = c.getEnd();
             clazz.content = content.substring(c.getStart(), c.getEnd());
+            clazz.filePath = mpth;
             const decorators = ts.canHaveDecorators(c) ? ts.getDecorators(c) : undefined;
             if (decorators) {
                 clazz.decorators = decorators.map((el: ts.Decorator) => buildDecorator(el.expression));

@@ -3,7 +3,6 @@ export interface Module {
     variables: { name: string, start: number, end: number }[];
     classes: ClassModel[];
     functions: FunctionDeclaration[];
-    imports: { [name: string]: Module };
     _imports: ImportNode[];
     aliases: AliasNode[];
     enumDeclarations: EnumDeclaration[];
@@ -179,6 +178,7 @@ export interface ValueConstraint extends Constraint {
 }
 
 export interface ClassModel {
+    filePath: string,
     documentation: string[];
     name: string;
     nameStart: number,
@@ -206,6 +206,7 @@ export interface ClassModel {
 }
 
 let DefaultClassModel: ClassModel = {
+    filePath: '',
     documentation: [],
     name: "",
     nameStart: 0,
@@ -241,6 +242,7 @@ export { DefaultClassModel }
 
 export function classDecl(name: string, isInteface: boolean): ClassModel {
     return {
+        filePath: '',
         documentation: [],
         name: name,
         nameStart: 0,

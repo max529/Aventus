@@ -6,6 +6,7 @@ import * as ts from "typescript";
 import * as tsm from "./tsASTMatchers";
 export * as tsm from "./tsASTMatchers";
 import { JSONTransformer } from "./jsonTransformer";
+import { AliasNode, ClassModel, Decorator, EnumDeclaration } from '..';
 
 
 
@@ -28,10 +29,19 @@ let typeToFullname: { [type: string]: string } = {};
 
 
 
-export function correctTypeInsideDefinition(content: string, types: { [type: string]: string }): string {
+export function correctTypeInsideDefinition(content: string, types: { [type: string]: string }, element: ClassModel | EnumDeclaration | AliasNode): string {
 	var mod = parse(content);
 	allChanges = [];
 	typeToFullname = types;
+	let fieldsDecorators: { [fieldName: string]: Decorator[] } = {};
+	let classDecorators: Decorator[] = []
+	if (element['fields']) {
+		let classModel = element as ClassModel;
+		classDecorators = classModel.decorators;
+		for (let field of classModel.fields) {
+			fieldsDecorators[field.name] = field.decorators
+		}
+	}
 
 	tsm.Matching.visit(mod, x => {
 		var isInterface = x.kind === ts.SyntaxKind.InterfaceDeclaration;
@@ -41,6 +51,11 @@ export function correctTypeInsideDefinition(content: string, types: { [type: str
 		}
 		var c: ts.ClassDeclaration = <ts.ClassDeclaration>x;
 		if (c) {
+			for(let decorator of classDecorators){
+				if(decorator.name != "Debugger"){
+					addChange("@"+decorator.name+"()\r\n", c.getStart(), c.getStart());
+				}
+			}
 			c.members.forEach(x => {
 				if (x.kind === ts.SyntaxKind.MethodDeclaration) {
 					var md = <ts.MethodDeclaration>x;
@@ -61,7 +76,15 @@ export function correctTypeInsideDefinition(content: string, types: { [type: str
 				var field: ts.PropertyDeclaration = fld.doMatch(x);
 				if (field && field.type) {
 					correctType(field.type);
+					if (fieldsDecorators[field.name.getText()]) {
+						let decorators = fieldsDecorators[field.name.getText()];
+						for (let decorator of decorators) {
+							addChange("@" + decorator.name + "()\r\n\t", field.getStart(), field.getStart());
+						}
+					}
 				}
+
+
 			});
 			if (c.typeParameters) {
 				c.typeParameters.forEach(x => {
@@ -165,14 +188,17 @@ export function parseArg(n: ts.Expression): any {
 }
 
 
+function addChange(text: string, start: number, end: number) {
+	allChanges.push({
+		start,
+		end,
+		value: text
+	})
+}
 
-function addChange(name: string, start: number, end: number) {
+function addChangeType(name: string, start: number, end: number) {
 	if (typeToFullname[name]) {
-		allChanges.push({
-			start,
-			end,
-			value: typeToFullname[name]
-		})
+		addChange(typeToFullname[name], start, end)
 	}
 }
 
@@ -181,7 +207,7 @@ function correctType(t: ts.TypeNode): void {
 		var tr: ts.TypeReferenceNode = <ts.TypeReferenceNode>t;
 		let parsedName = parseQualified(tr.typeName);
 		if (parsedName) {
-			addChange(parsedName, tr.getStart(), tr.getEnd());
+			addChangeType(parsedName, tr.getStart(), tr.getEnd());
 
 			if (tr.typeArguments) {
 				tr.typeArguments.forEach(x => {
@@ -205,7 +231,7 @@ function correctType(t: ts.TypeNode): void {
 		var tra = <ts.ExpressionWithTypeArguments>t;
 		let parsedName = parseQualified2(tra.expression);
 		if (parsedName) {
-			addChange(parsedName, tra.expression.getStart(), tra.expression.getEnd());
+			addChangeType(parsedName, tra.expression.getStart(), tra.expression.getEnd());
 			if (tra.typeArguments) {
 				tra.typeArguments.forEach(x => {
 					correctType(x);

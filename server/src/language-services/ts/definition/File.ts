@@ -328,11 +328,17 @@ export class AventusDefinitionHTMLFile extends AventusBaseFile {
         return [];
 
     }
+    constructor(file: AventusFile, build: Build) {
+        super(file, build);
+        this.build.htmlLanguageService.addDefinition(this);
+    }
     protected async onContentChange(): Promise<void> {
+        this.build.htmlLanguageService.rebuildDefinition();
     }
     protected async onSave() {
     }
     protected async onDelete() {
+        this.build.htmlLanguageService.removeDefinition(this);
     }
     protected async onCompletion(document: AventusFile, position: Position): Promise<CompletionList> {
         return { isIncomplete: false, items: [] };
