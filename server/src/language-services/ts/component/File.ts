@@ -26,19 +26,58 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
         this.refreshFileParsed();
     }
 
+    private waitingFct: { [version: string]: (() => void)[] } = {};
+    private version = '-1_-1_-1';
+    private isCompiling = false;
+    private runWebCompiler() {
+        return new Promise<void>((resolve) => {
+            let version = AventusWebcomponentCompiler.getVersion(this, this.build);
+            if(this.file.uri.endsWith("Code.wcl.avt")){
+                console.log("in");
+            }
+            let mergedVersion = version.ts + '_' + version.scss + '_' + version.html;
+            if (mergedVersion == this.version) {
+                resolve();
+            }
+            else {
+                if (!this.isCompiling) {
+                    this.isCompiling = true;
+                    this._compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
+                    this.build.scssLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.scssDoc);
+                    this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.htmlDoc, this);
+                    this.isCompiling = false;
+                    this.version = mergedVersion;
+                    if (this.waitingFct[mergedVersion]) {
+                        for (let fct of this.waitingFct[mergedVersion]) {
+                            fct();
+                        }
+                    }
+                    resolve();
+                }
+                else {
+                    if (!this.waitingFct[mergedVersion]) {
+                        this.waitingFct[mergedVersion] = [];
+                    }
+                    this.waitingFct[mergedVersion].push(() => {
+                        resolve();
+                    })
+
+                }
+            }
+        })
+
+    }
+
     protected async onValidate(): Promise<Diagnostic[]> {
-        this._compilationResult = new AventusWebcomponentCompiler(this, this.build).compile();
-        this.build.scssLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.scssDoc);
-        this.build.htmlLanguageService.addInternalDefinition(this.file.uri, this._compilationResult.result.htmlDoc, this);
-        return this._compilationResult.diagnostics;
+        await this.runWebCompiler();
+        return this.compilationResult?.diagnostics || [];
     }
     protected async onContentChange(): Promise<void> {
         this.refreshFileParsed();
+        await this.runWebCompiler();
     }
     protected async onSave() {
-        if (!this.compilationResult) {
-            this.onContentChange();
-        }
+        await this.runWebCompiler();
         if (this.compilationResult) {
             this.setCompileResult({
                 dependances: this.compilationResult.result.dependances,
@@ -174,36 +213,44 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
         this.regionView.file = result.html;
     }
     protected async onValidate(): Promise<Diagnostic[]> {
-        let result = this.splitDocument();
         let diagnostics: Diagnostic[] = [];
         let convertedRanges: Range[] = [];
 
-        const _convertSection = async (region: AventusWebComponentSingleFileRegion<AventusBaseFile>, languageId: string, newText: string) => {
-            let newDocument = TextDocument.create(this.file.uri, languageId, this.file.version, newText);
+        const _convertSection = async (region: AventusWebComponentSingleFileRegion<AventusBaseFile>) => {
             if (region.file) {
-                region.file.file.document = newDocument;
                 let errors = await (region.file.file as InternalAventusFile).validate();
+                let document = region.file.file.document;
                 for (let error of errors) {
                     error.source = AventusLanguageId.WebComponent;
                     if (convertedRanges.indexOf(error.range) == -1) {
                         convertedRanges.push(error.range);
-                        error.range.start = this.file.document.positionAt(newDocument.offsetAt(error.range.start) + region.start);
-                        error.range.end = this.file.document.positionAt(newDocument.offsetAt(error.range.end) + region.start);
+                        error.range.start = this.file.document.positionAt(document.offsetAt(error.range.start) + region.start);
+                        error.range.end = this.file.document.positionAt(document.offsetAt(error.range.end) + region.start);
                     }
                     diagnostics.push(error);
                 }
             }
         }
-        await _convertSection(this.regionStyle, AventusLanguageId.SCSS, result.cssText);
-        await _convertSection(this.regionView, AventusLanguageId.HTML, result.htmlText);
-        await _convertSection(this.regionLogic, AventusLanguageId.TypeScript, result.scriptText);
+        await _convertSection(this.regionStyle);
+        await _convertSection(this.regionView);
+        await _convertSection(this.regionLogic);
 
 
 
         return diagnostics;
     }
     protected async onContentChange(): Promise<void> {
-
+        let result = this.splitDocument();
+        const _convertSection = async (region: AventusWebComponentSingleFileRegion<AventusBaseFile>, languageId: string, newText: string) => {
+            let newDocument = TextDocument.create(this.file.uri, languageId, this.file.version, newText);
+            if (region.file) {
+                region.file.file.document = newDocument;
+                region.file.triggerContentChange();
+            }
+        }
+        await _convertSection(this.regionStyle, AventusLanguageId.SCSS, result.cssText);
+        await _convertSection(this.regionView, AventusLanguageId.HTML, result.htmlText);
+        await _convertSection(this.regionLogic, AventusLanguageId.TypeScript, result.scriptText);
     }
     protected async onSave() {
         this.build.disableBuild();

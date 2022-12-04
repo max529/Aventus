@@ -6,9 +6,11 @@ import { FilesManager } from '../../files/FilesManager';
 import { Build } from "../../project/Build";
 import { createErrorScssPos, getFolder, uriToPath } from "../../tools";
 import { AventusBaseFile } from "../BaseFile";
+import { AventusWebComponentLogicalFile } from '../ts/component/File';
 const nodeSass = require('sass');
 
 export class AventusSCSSFile extends AventusBaseFile {
+    public compiledVersion = -1;
     private usedBy: { [uri: string]: AventusSCSSFile } = {};
     private dependances: { [uri: string]: AventusSCSSFile } = {};
 
@@ -22,22 +24,20 @@ export class AventusSCSSFile extends AventusBaseFile {
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
         this.loadDependances();
+        this.compile(false);
     }
 
     protected async onValidate(): Promise<Diagnostic[]> {
-        this.loadDependances();
         this.diagnostics = await this.build.scssLanguageService.doValidation(this.file);
-        this.compileRoot();
+        this.loadDependances();
+
         return this.diagnostics;
     }
     protected async onContentChange(): Promise<void> {
 
     }
     protected async onSave() {
-        let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic))
-        if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
-            (jsFile as InternalAventusFile).triggerContentChange(jsFile.document);
-        }
+        this.compileRoot();
     }
     private compileRoot() {
         if (Object.values(this.usedBy).length == 0) {
@@ -51,56 +51,49 @@ export class AventusSCSSFile extends AventusBaseFile {
             }
         }
     }
-    private compile() {
+    private compile(triggerSave = true) {
         try {
-            let newCompiledTxt = "";
-            let hasError = false;
-            for (let diagnostic of this.diagnostics) {
-                if (diagnostic.severity == DiagnosticSeverity.Error) {
-                    hasError = true;
-                    break;
-                }
-            }
-            if (!hasError) {
-                let errorMsgTxt = "|error|";
-                const _loadContent = (file: AventusFile): string => {
-                    let textToSearch = file.content;
-                    //remove comment 
-                    textToSearch = textToSearch.replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '$1');
+            let newCompiledTxt = this.compiledTxt;
 
-                    let regex = /@import *?('|")(\S*?)('|");?/g;
-                    let arrMatch: RegExpExecArray | null = null;
-                    while (arrMatch = regex.exec(textToSearch)) {
-                        let importName = arrMatch[2];
-                        let fileDependance = this.resolvePath(importName, file.folderUri);
-                        if (fileDependance) {
-                            let nesteadContent = _loadContent(fileDependance);
-                            if (nesteadContent == errorMsgTxt) {
-                                return nesteadContent;
-                            }
-                            textToSearch = textToSearch.replace(arrMatch[0], nesteadContent);
+            let errorMsgTxt = "|error|";
+            const _loadContent = (file: AventusFile): string => {
+                let textToSearch = file.content;
+                //remove comment 
+                textToSearch = textToSearch.replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '$1');
+
+                let regex = /@import *?('|")(\S*?)('|");?/g;
+                let arrMatch: RegExpExecArray | null = null;
+                while (arrMatch = regex.exec(textToSearch)) {
+                    let importName = arrMatch[2];
+                    let fileDependance = this.resolvePath(importName, file.folderUri);
+                    if (fileDependance) {
+                        let nesteadContent = _loadContent(fileDependance);
+                        if (nesteadContent == errorMsgTxt) {
+                            return nesteadContent;
                         }
-                        else {
-                            return errorMsgTxt;
-                        }
+                        textToSearch = textToSearch.replace(arrMatch[0], nesteadContent);
                     }
-                    return textToSearch;
+                    else {
+                        return errorMsgTxt;
+                    }
                 }
-                let oneFileContent = _loadContent(this.file);
-                if (oneFileContent != "|error|") {
-                    let compiled = nodeSass.compileString(oneFileContent, {
-                        style: 'compressed'
-                    }).css.toString().trim();
-                    newCompiledTxt = compiled;
-                }
-
+                return textToSearch;
             }
+            let oneFileContent = _loadContent(this.file);
+            if (oneFileContent != "|error|") {
+                let compiled = nodeSass.compileString(oneFileContent, {
+                    style: 'compressed'
+                }).css.toString().trim();
+                newCompiledTxt = compiled;
+            }
+
 
             if (newCompiledTxt != this.compiledTxt) {
+                this.compiledVersion++;
                 this.compiledTxt = newCompiledTxt;
-                let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic))
-                if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
-                    (jsFile as InternalAventusFile).triggerContentChange(jsFile.document);
+                let tsFile = this.build.tsFiles[this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic)];
+                if (tsFile instanceof AventusWebComponentLogicalFile && triggerSave) {
+                    tsFile.triggerSave();
                 }
             }
         } catch (e) {
@@ -158,7 +151,6 @@ export class AventusSCSSFile extends AventusBaseFile {
         for (let dependanceUri in this.dependances) {
             this.removeDependance(dependanceUri);
         }
-        this.diagnostics = [];
         while (arrMatch = regex.exec(textToSearch)) {
             let importName = arrMatch[2];
             let fileDependance = this.resolvePath(importName, this.file.folderUri);

@@ -241,7 +241,7 @@ export class AventusDefinitionTsFile extends AventusTsFile {
         this.loadDefinitionInsideBuild();
         this.build.rebuildDefinitionWebComponent();
         //}
-        // TODO : Maybe this ll trigger an infinite loop
+        // TODO : Maybe this ll trigger an infinite loop => implents tree logic instead
         if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
             //this.build.build();
         }

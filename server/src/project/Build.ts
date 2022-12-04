@@ -110,12 +110,13 @@ export class Build {
         for (let uri in this.htmlFiles) {
             this.htmlFiles[uri].triggerSave();
         }
-        for (let uri in this.tsFiles) {
-            this.tsFiles[uri].triggerSave();
-        }
         for (let uri in this.wcFiles) {
             this.wcFiles[uri].triggerSave();
         }
+        for (let uri in this.tsFiles) {
+            this.tsFiles[uri].triggerSave();
+        }
+        
         this.allowBuild = true;
         this.build();
     }

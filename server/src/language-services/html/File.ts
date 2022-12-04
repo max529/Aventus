@@ -4,41 +4,41 @@ import { AventusFile, InternalAventusFile } from '../../files/AventusFile';
 import { FilesManager } from '../../files/FilesManager';
 import { Build } from '../../project/Build';
 import { AventusBaseFile } from "../BaseFile";
+import { AventusWebComponentLogicalFile } from '../ts/component/File';
 
 export class AventusHTMLFile extends AventusBaseFile {
 
-    private diagnostics: Diagnostic[] = [];
+    public compiledVersion = -1;
     private compiledTxt: string = "";
 
     public get compileResult() {
         return this.compiledTxt;
     }
+    constructor(file: AventusFile, build: Build) {
+        super(file, build);
+        this.compile(false);
+    }
 
     protected async onValidate(): Promise<Diagnostic[]> {
         let diagnostics = await this.build.htmlLanguageService.doValidation(this.file);
-        this.compile();
         return diagnostics;
     }
     protected async onContentChange(): Promise<void> {
-
     }
     protected async onSave() {
-        let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic))
-        if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
-            await (jsFile as InternalAventusFile).triggerSave(jsFile.document);
-        }
+        this.compile();
     }
-    private compile() {
+    private compile(triggerSave = true) {
         try {
             let newCompiledTxt = "";
-            if (this.diagnostics.length == 0) {
-                newCompiledTxt = this.file.content.replace(/<!--[\s\S]*?-->/g, '').trim();
-            }
+            newCompiledTxt = this.file.content.replace(/<!--[\s\S]*?-->/g, '').trim();
             if (newCompiledTxt != this.compiledTxt) {
+                this.compiledVersion++;
                 this.compiledTxt = newCompiledTxt;
-                let jsFile = FilesManager.getInstance().getByUri(this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic))
-                if (jsFile && jsFile.uri.endsWith(AventusExtension.ComponentLogic)) {
-                    (jsFile as InternalAventusFile).triggerContentChange(jsFile.document);
+                let tsFile = this.build.tsFiles[this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic)];
+                if (tsFile instanceof AventusWebComponentLogicalFile && triggerSave) {
+
+                    tsFile.triggerSave();
                 }
             }
         } catch (e) {

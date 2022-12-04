@@ -793,7 +793,6 @@ export function buildType(t: ts.TypeNode | undefined, path: string, module: Modu
         if (parsedName) {
             var res = basicType(parsedName, path);
 
-            // TODO valdiate how to implements this one with a namespace
             for (let _import of module._imports) {
                 if (_import.clauses.indexOf(res.typeName) != -1) {
                     res.modulePath = _import.absPathString;

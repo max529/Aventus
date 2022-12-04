@@ -208,24 +208,33 @@ export class AventusHTMLLanguageService {
             catch (e) { }
         }
 
-        this.customTagsData = [];
+        this.customTagsData = [{
+            name: 'block',
+            attributes: [{
+                name: "name"
+            }]
+        }];
+        let nameDone: string[] = [];
         for (let key in this.documentationInfo) {
             let current = this.documentationInfo[key];
-            let attrs: IAttributeData[] = []
-            let temp: ITagData = {
-                name: current.name,
-                description: current.description,
-                attributes: attrs
+            if (nameDone.indexOf(current.name) == -1) {
+                nameDone.push(current.name);
+                let attrs: IAttributeData[] = []
+                let temp: ITagData = {
+                    name: current.name,
+                    description: current.description,
+                    attributes: attrs
+                }
+                for (let attrName in current.attributes) {
+                    let currentAttr = current.attributes[attrName];
+                    attrs.push({
+                        name: currentAttr.name,
+                        description: currentAttr.description,
+                        values: currentAttr.values
+                    })
+                }
+                this.customTagsData.push(temp);
             }
-            for (let attrName in current.attributes) {
-                let currentAttr = current.attributes[attrName];
-                attrs.push({
-                    name: currentAttr.name,
-                    description: currentAttr.description,
-                    values: currentAttr.values
-                })
-            }
-            this.customTagsData.push(temp);
         }
     }
     public addDefinition(defFile: AventusDefinitionHTMLFile): void {

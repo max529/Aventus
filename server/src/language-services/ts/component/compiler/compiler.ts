@@ -19,11 +19,32 @@ import { EOL } from "os";
 import { HTMLDoc } from "../../../html/helper/definition";
 import { SCSSDoc } from "../../../scss/helper/CSSNode";
 import { AventusSCSSLanguageService } from "../../../scss/LanguageService";
-import { AventusTsFile } from '../../File';
 import { AventusFile } from '../../../../files/AventusFile';
 
 
 export class AventusWebcomponentCompiler {
+    public static getVersion(logicalFile: AventusWebComponentLogicalFile, build: Build) {
+        let version = {
+            ts: logicalFile.file.version,
+            scss: -1,
+            html: -1
+        }
+        let scssFile: AventusSCSSFile | undefined;
+        let htmlFile: AventusHTMLFile | undefined;
+        if (logicalFile.file.uri.endsWith(AventusExtension.Component)) {
+            scssFile = build.wcFiles[logicalFile.file.uri].style;
+            htmlFile = build.wcFiles[logicalFile.file.uri].view;
+        }
+        else {
+            scssFile = build.scssFiles[logicalFile.file.uri.replace(AventusExtension.ComponentLogic, AventusExtension.ComponentStyle)];
+            htmlFile = build.htmlFiles[logicalFile.file.uri.replace(AventusExtension.ComponentLogic, AventusExtension.ComponentView)];
+        }
+
+        if (scssFile) { version.scss = scssFile.compiledVersion; }
+        if (htmlFile) { version.html = htmlFile.compiledVersion; }
+        return version;
+    }
+
     private file: AventusFile;
     private logicalFile: AventusWebComponentLogicalFile;
     private jsTxt: string = "";
@@ -107,6 +128,7 @@ export class AventusWebcomponentCompiler {
         this.build = build;
         this.jsonStructure = logicalFile.fileParsed;
     }
+
 
     public compile(): CompileComponentResult {
         let classInfo = this.getClassInfo();
@@ -253,11 +275,11 @@ export class AventusWebcomponentCompiler {
         }
         this.getClassName(classInfo);
 
-        
+
 
         return classInfo;
     }
-    private prepareHTMLDocObject(){
+    private prepareHTMLDocObject() {
         if (this.classInfo && !this.classInfo.isAbstract) {
             this.htmlDoc = {
                 [this.tagName]: {
@@ -907,15 +929,8 @@ export class AventusWebcomponentCompiler {
                 views.push(field);
             }
             else if (field.propType == "Simple") {
-                // TODO : add attribute to export => hot fix to avoid this
-                if (this.variablesIdInView.hasOwnProperty(field.name) && field.inParent) {
-                    removeVarNameToCheck(field);
-                    views.push(field);
-                }
-                else {
-                    removeVarNameToCheck(field);
-                    simpleVariables.push(field);
-                }
+                removeVarNameToCheck(field);
+                simpleVariables.push(field);
             }
         }
 
@@ -1554,12 +1569,6 @@ this.clearWatchHistory = () => {
                                 variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
                             }
                         }
-                    }
-                    else if (field.inParent) {
-                        // TODO remove it when attribute added to export
-                        variablesInViewDynamic += `get ${field.name} () {
-                            return this.shadowRoot.querySelector('[_id="${id}"]');
-                        }`+ EOL
                     }
                     else {
                         this.result.diagnostics.push(createErrorTsPos(this.document, "You must add the decorator ViewElement", field.start, field.end));

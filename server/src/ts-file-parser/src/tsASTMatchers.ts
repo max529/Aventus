@@ -3,7 +3,6 @@ import * as ts from "typescript";
  * This module is designed to match simple patterns on Typescript AST Tree
  * it functionality mirrors jsASTMatchers which allows you to match on jsAST
  */
-//TODO RENAME TO MATCHERS
 export module Matching {
     export type Node = ts.Node;
     export type Expression = ts.Expression;

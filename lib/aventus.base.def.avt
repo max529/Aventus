@@ -21,10 +21,14 @@ interface DtScrollablePositions {    vertical: {        value: number;       
 interface AvHideableOptions {    canHide?: (target?: Element) => Promise<boolean>;    beforeHide?: () => Promise<void>;    afterHide?: () => Promise<void>;    noHideItems?: HTMLElement[];    container?: HTMLElement;}
 interface DebuggerConfig {    writeCompiled?: boolean;}interface DefaultComponent {    states?: States;    [key: string]: any;    getStateManagerName?(): string | undefined;    getClassName(): string;}abstract class WebComponent extends HTMLElement implements DefaultComponent {    static get observedAttributes(): {};    private _first;    private _isReady;    get isReady(): boolean;    private _translations;    private currentState;    private statesList;    private _components;    private __onChangeFct;    private getSlugFct;    private __watch;    private __watchActions;    private __prepareForCreate;    private __prepareForUpdate;    private __loopTemplate;    private __watchActionsCb;    getClassName(): string;    getNamespace(): string;    constructor();    private __prepareVariables;    private __prepareWatchesActions;    private __initWatches;    private __prepareForLoop;    private __getLangTranslations;    private __prepareTranslations;    private __setTranslations;    private __getStyle;    private __getHtml;    private __prepareTemplate;    private __createStates;    protected getDefaultStateCallbacks(): State;    private __getMaxId;    private __selectElementNeeded;    private __mapSelectedElement;    private __registerOnChange;    private __endConstructor;    private connectedCallback;    private __defaultValue;    private __upgradeAttributes;    private __listBoolProps;    private __upgradeProperty;    private __addEvents;    private __applyTranslations;    private __getTranslation;    getStateManagerName(): string | undefined;    private __subscribeState;    private attributeChangedCallback;    protected postCreation(): void;    private _unsubscribeState;}
 class AvScrollable extends WebComponent implements DefaultComponent {
-    disable_scroll: boolean;
-    zoom: number;
-    floating_scroll: boolean;
-    only_vertical: boolean;
+    @Property()
+	disable_scroll: boolean;
+    @Property()
+	zoom: number;
+    @Attribute()
+	floating_scroll: boolean;
+    @Attribute()
+	only_vertical: boolean;
     verticalScrollVisible: boolean;
     horizontalScrollVisible: boolean;
     observer: ResizeObserver;
@@ -35,15 +39,24 @@ class AvScrollable extends WebComponent implements DefaultComponent {
     content: DtScrollablePositions;
     scrollbar: DtScrollablePositions;
     refreshTimeout: number;
-    elToCalculate: HTMLDivElement;
-    contentZoom: HTMLDivElement;
-    contentHidder: HTMLDivElement;
-    contentWrapper: HTMLDivElement;
-    contentscroller: HTMLDivElement;
-    verticalScrollerContainer: HTMLDivElement;
-    verticalScroller: HTMLDivElement;
-    horizontalScrollerContainer: HTMLDivElement;
-    horizontalScroller: HTMLDivElement;
+    @ViewElement()
+	elToCalculate: HTMLDivElement;
+    @ViewElement()
+	contentZoom: HTMLDivElement;
+    @ViewElement()
+	contentHidder: HTMLDivElement;
+    @ViewElement()
+	contentWrapper: HTMLDivElement;
+    @ViewElement()
+	contentscroller: HTMLDivElement;
+    @ViewElement()
+	verticalScrollerContainer: HTMLDivElement;
+    @ViewElement()
+	verticalScroller: HTMLDivElement;
+    @ViewElement()
+	horizontalScrollerContainer: HTMLDivElement;
+    @ViewElement()
+	horizontalScroller: HTMLDivElement;
     private getVisibleBox;
     private changeZoom;
     private dimensionRefreshed;
@@ -71,7 +84,8 @@ class AvScrollable extends WebComponent implements DefaultComponent {
 }
 
 class AvRouterLink extends WebComponent implements DefaultComponent {
-    state: string;
+    @Attribute()
+	state: string;
     protected postCreation(): void;
 }
 
@@ -82,7 +96,8 @@ type AvRouteAsyncOption = {
 };
 abstract class AvRouter extends WebComponent implements DefaultComponent {
     private oldPage;
-    contentEl: HTMLDivElement;
+    @ViewElement()
+	contentEl: HTMLDivElement;
     private allRoutes;
     /**
      * Add all your routes inside this function (addRoute or addRouteAsync)
@@ -96,7 +111,8 @@ abstract class AvRouter extends WebComponent implements DefaultComponent {
 }
 
 abstract class AvPage extends WebComponent implements DefaultComponent {
-    show: boolean;
+    @Attribute()
+	show: boolean;
     abstract defineTitle(): string;
 }
 
@@ -130,20 +146,25 @@ abstract class AvFormElement<T> extends WebComponent implements DefaultComponent
     /**
      * If true, the element will be required
      */
-    required: boolean;
+    @Attribute()
+	required: boolean;
     /**
      * Name to use inside your form
      */
-    name: string;
+    @Attribute()
+	name: string;
     /**
      * If true, the element can be focusable
      */
-    focusable: boolean;
+    @Attribute()
+	focusable: boolean;
     /**
      * Value to use inside your component
      */
-    value: T;
-    protected errors: string[];
+    @Watch()
+	value: T;
+    @Watch()
+	protected errors: string[];
     protected postCreation(): void;
     abstract getDefaultValue(): T;
     onValueChanged(): void;
@@ -158,13 +179,17 @@ class AvForm extends WebComponent implements DefaultComponent {
     /**
     * Show/Hide the loading animation
     */
-    loading: boolean;
+    @Attribute()
+	loading: boolean;
     /**
      * Define method for your
      */
-    method: MethodType;
-    action: string;
-    use_event: boolean;
+    @Attribute()
+	method: MethodType;
+    @Attribute()
+	action: string;
+    @Attribute()
+	use_event: boolean;
     private fields;
     private submits;
     submit(): any;
@@ -188,15 +213,18 @@ class AvFor extends WebComponent implements DefaultComponent {
     /**
      * Name of item inside loop
      */
-    item: string;
+    @Attribute()
+	item: string;
     /**
      * Name of property to loop though
      */
-    in: string;
+    @Attribute()
+	in: string;
     /**
      * Name of your index
      */
-    index: string;
+    @Attribute()
+	index: string;
     private template;
     private parent;
     private parentIndex;
@@ -328,5 +356,5 @@ type MethodType = 'get' | 'post' | 'put';
 {"av-for":[],"av-form":[],"av-form-element":[],"av-hideable":[],"av-page":[],"av-router":[],"av-router-link":[],"av-scrollable":[{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"},{"name":"--scrollbar-content-overflow"},{"name":"--scrollbar-content-height"},{"name":"--scrollbar-content-width"},{"name":"--scrollbar-container-color"},{"name":"--scrollbar-color"},{"name":"--scrollbar-active-color"},{"name":"--scroller-width"},{"name":"--scroller-bottom"},{"name":"--scroller-right"},{"name":"--scroller-left"},{"name":"--scroller-top"},{"name":"--scroller-vertical-shadow"},{"name":"--scroller-horizontal-shadow"}]}
 // end region css //
 // region html //
-{"av-for":{"name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","type":"string","values":[]},"in":{"name":"in","description":"Name of property to loop though","type":"string","values":[]},"index":{"name":"index","description":"Name of your index","type":"string","values":[]}}},"av-form":{"name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","type":"boolean","values":[]},"method":{"name":"method","description":"Define method for your","type":"string","values":[{"name":"'get'","description":""},{"name":"'post'","description":""},{"name":"'put'","description":""}]},"action":{"name":"action","description":"","type":"string","values":[]},"use_event":{"name":"use_event","description":"","type":"boolean","values":[]}}},"av-hideable":{"name":"av-hideable","description":"","attributes":{}},"av-router-link":{"name":"av-router-link","description":"","attributes":{"state":{"name":"state","description":"","type":"string","values":[]}}},"av-scrollable":{"name":"av-scrollable","description":"","attributes":{"floating_scroll":{"name":"floating_scroll","description":"","type":"boolean","values":[]},"only_vertical":{"name":"only_vertical","description":"","type":"boolean","values":[]},"disable_scroll":{"name":"disable_scroll","description":"","type":"boolean","values":[]},"zoom":{"name":"zoom","description":"","type":"number","values":[]}}}}
+{"av-scrollable":{"class":"Aventus.AvScrollable","name":"av-scrollable","description":"","attributes":{"floating_scroll":{"name":"floating_scroll","description":"","type":"boolean","values":[]},"only_vertical":{"name":"only_vertical","description":"","type":"boolean","values":[]},"disable_scroll":{"name":"disable_scroll","description":"","type":"boolean","values":[]},"zoom":{"name":"zoom","description":"","type":"number","values":[]}}},"av-router-link":{"class":"Aventus.AvRouterLink","name":"av-router-link","description":"","attributes":{"state":{"name":"state","description":"","type":"string","values":[]}}},"av-hideable":{"class":"Aventus.AvHideable","name":"av-hideable","description":"","attributes":{}},"av-form":{"class":"Aventus.AvForm","name":"av-form","description":"","attributes":{"loading":{"name":"loading","description":"Show/Hide the loading animation","type":"boolean","values":[]},"method":{"name":"method","description":"Define method for your","type":"string","values":[{"name":"'get'","description":""},{"name":"'post'","description":""},{"name":"'put'","description":""}]},"action":{"name":"action","description":"","type":"string","values":[]},"use_event":{"name":"use_event","description":"","type":"boolean","values":[]}}},"av-for":{"class":"Aventus.AvFor","name":"av-for","description":"Generate a loop","attributes":{"item":{"name":"item","description":"Name of item inside loop","type":"string","values":[]},"in":{"name":"in","description":"Name of property to loop though","type":"string","values":[]},"index":{"name":"index","description":"Name of your index","type":"string","values":[]}}}}
 // end region html //
