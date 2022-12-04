@@ -35,9 +35,8 @@ export class AventusHTMLFile extends AventusBaseFile {
             if (newCompiledTxt != this.compiledTxt) {
                 this.compiledVersion++;
                 this.compiledTxt = newCompiledTxt;
-                let tsFile = this.build.tsFiles[this.file.uri.replace(AventusExtension.ComponentStyle, AventusExtension.ComponentLogic)];
+                let tsFile = this.build.tsFiles[this.file.uri.replace(AventusExtension.ComponentView, AventusExtension.ComponentLogic)];
                 if (tsFile instanceof AventusWebComponentLogicalFile && triggerSave) {
-
                     tsFile.triggerSave();
                 }
             }
