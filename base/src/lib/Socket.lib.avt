@@ -202,7 +202,7 @@ export class Socket {
             if(window.location.pathname == '/') {
                 this.nbClose++;
                 if(this.nbClose == 2) {
-                    window.location.href = '/login/logout';
+                    console.warn("Tried to reconnect " + this.nbClose + " times. Stopping");
                 }
                 else {
                     console.warn("try reopen socket ");
