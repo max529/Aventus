@@ -1,6 +1,6 @@
 import { ExecuteCommandParams } from "vscode-languageserver";
 import { AddConfigSection } from './addConfigSection';
-import { BuildProject } from "./BuildProject";
+import { BuildProject } from "./buildProject";
 import { Create } from "./create";
 import { MergeComponent } from "./mergeComponent";
 import { SplitComponent } from "./splitComponent";
