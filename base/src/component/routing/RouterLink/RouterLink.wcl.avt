@@ -12,6 +12,12 @@ export class AvRouterLink extends WebComponent implements DefaultComponent {
     //#region props
     @Attribute()
     public state: string = "";
+
+    /**
+     * If set define when active class is added otherwhise class active is added when state define is active
+     */
+    @Attribute()
+    public active_state: string = "";
     //#endregion
 
 
@@ -32,7 +38,11 @@ export class AvRouterLink extends WebComponent implements DefaultComponent {
 
     //#region methods
     protected override postCreation(): void {
-        StateManager.getInstance("navigation").subscribe(this.state, {
+        let activeState = this.state;
+        if(this.active_state) {
+            activeState = this.active_state;
+        }
+        StateManager.getInstance("navigation").subscribe(activeState, {
             active: () => {
                 this.classList.add("active");
             },
@@ -47,6 +57,6 @@ export class AvRouterLink extends WebComponent implements DefaultComponent {
             }
         });
     }
-	//#endregion
-	
+    //#endregion
+
 }

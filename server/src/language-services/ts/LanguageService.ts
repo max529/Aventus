@@ -870,8 +870,6 @@ function simplifyPath(importPathTxt, currentPath) {
         return importPathTxt;
     }
     let currentDir: string[] = [];
-    let mySep = sep;
-    console.log(mySep);
     if (sep === "/") {
         currentDir = decodeURIComponent(currentPath).replace("file://", "").split("/");
     }
