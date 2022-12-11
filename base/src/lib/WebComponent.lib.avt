@@ -41,7 +41,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
 
     public getClassName(): string {
         return this.constructor.name;
-    };
+    }
     public getNamespace(): string {
         return "Aventus";
     }

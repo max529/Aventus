@@ -1618,29 +1618,27 @@ this.clearWatchHistory = () => {
                 if (current.hasOwnProperty('prop')) {
                     //prop
                     let prop = current.prop as string;
-                    if (this.allFields[fieldName]) {
-                        let propType = this.allFields[fieldName].type?.typeName.toLowerCase();
-
-                        if (propType == TYPES.string || propType == TYPES.number || propType == TYPES.date || propType == TYPES.datetime) {
-                            stringToAdd += `if(${check.join("||")}){
-                                for(var i = 0;i<this._components[${componentId}].length;i++){
-                                    this._components[${componentId}][i].setAttribute("${prop.toLowerCase()}", ${current.value});
+                    let propType =  this.allFields[fieldName]?.type?.typeName.toLowerCase() || '';
+                    if (propType == TYPES.boolean) {
+                        stringToAdd += `if(${check.join("||")}){
+                            for(var i = 0;i<this._components[${componentId}].length;i++){
+                                if (this.${prop.toLowerCase()}) { 
+                                    this._components[${componentId}][i].setAttribute("${prop.toLowerCase()}", "true"); 
+                                } 
+                                else { 
+                                    this._components[${componentId}][i].removeAttribute("${prop.toLowerCase()}"); 
                                 }
-                            }`;
-                        }
-                        else if (propType == TYPES.boolean) {
-                            stringToAdd += `if(${check.join("||")}){
-                                for(var i = 0;i<this._components[${componentId}].length;i++){
-                                    if (this.${prop.toLowerCase()}) { 
-                                        this._components[${componentId}][i].setAttribute("${prop.toLowerCase()}", "true"); 
-                                    } 
-                                    else { 
-                                        this._components[${componentId}][i].removeAttribute("${prop.toLowerCase()}"); 
-                                    }
-                                }
-                            }`;
-                        }
+                            }
+                        }`;
                     }
+                    else {
+                        stringToAdd += `if(${check.join("||")}){
+                            for(var i = 0;i<this._components[${componentId}].length;i++){
+                                this._components[${componentId}][i].setAttribute("${prop.toLowerCase()}", ${current.value});
+                            }
+                        }`;
+                    }
+                    
                 } else {
                     //html
                     stringToAdd += `if(${check.join("||")}){
@@ -1657,12 +1655,16 @@ this.clearWatchHistory = () => {
             }
         }
 
+        let keyInit: string[] = [];
         for (var key in this.propertiesChanged) {
             if (this.propertiesChanged[key] !== "") {
                 let realKey = key.split(".")[0];
                 if (this.allFields[realKey]) {
                     if (!this.allFields[realKey].inParent || this.classInfo?.overrideView) {
-                        propertiesChangedTxt += `this.__onChangeFct['${realKey}'] = []` + EOL;
+                        if (keyInit.indexOf(realKey) == -1) {
+                            keyInit.push(realKey);
+                            propertiesChangedTxt += `this.__onChangeFct['${realKey}'] = []` + EOL;
+                        }
                     } else {
                         propertiesChangedTxt += `if (!this.__onChangeFct['${realKey}']) {\r\nthis.__onChangeFct['${realKey}'] = []${EOL}}` + EOL;
                     }
