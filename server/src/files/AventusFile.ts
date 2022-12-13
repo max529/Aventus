@@ -25,6 +25,7 @@ export interface AventusFile {
     content: string;
     folderUri: string;
     folderPath: string;
+    shortname:string;
 
     getBuild(): Build[]
     onGetBuild(cb: onGetBuildType): string;
@@ -94,6 +95,15 @@ export class InternalAventusFile implements AventusFile {
     }
     get folderPath() {
         return getFolder(this.path);
+    }
+    private _shortname:string = "";
+    get shortname(){
+        if(!this._shortname){
+            let splitted = this.uri.split("/");
+            this._shortname = splitted[splitted.length - 1] ;
+        }
+        return this._shortname;
+
     }
 
     //#region get build

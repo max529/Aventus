@@ -35,7 +35,6 @@ export abstract class AvFormElement<T> extends WebComponent implements DefaultCo
     value: T = this.getDefaultValue();
 
     @Watch((target: AvFormElement<T>) => {
-        console.log("Display errors");
         target.displayErrors();
     })
     protected errors: string[] = [];

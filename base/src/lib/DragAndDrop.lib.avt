@@ -16,6 +16,8 @@ export interface DragAndDropOptions {
         enable: boolean,
         /** The container where the shadow element will be added, default is body */
         container?: HTMLElement;
+        /** Remove shadow from tree */
+        removeOnStop?: boolean,
     };
     /** If set to false, the element will be considered as in the target if it touches it */
     strict?: boolean;
@@ -32,6 +34,8 @@ export interface DragAndDropOptions {
     getOffsetX?: () => number;
     /** Get offset Y in px related to element.offsetTarget */
     getOffsetY?: () => number;
+    /** Trigger on pointer down*/
+    onPointerDown?: (e: PointerEvent) => void;
     /** Trigger on drag start*/
     onStart?: (e: PointerEvent) => void;
     /** Trigger on moving  */
@@ -53,7 +57,8 @@ export class DragAndDrop {
         offsetDrag: number,
         shadow: {
             enable: boolean,
-            container: HTMLElement;
+            container: HTMLElement,
+            removeOnStop: boolean,
         },
         strict: boolean,
         targets: HTMLElement[],
@@ -63,6 +68,7 @@ export class DragAndDrop {
         getZoom: () => number;
         getOffsetX: () => number;
         getOffsetY: () => number;
+        onPointerDown: (e: PointerEvent) => void;
         onStart: (e: PointerEvent) => void;
         onMove: (e: PointerEvent, position: Coordinate) => void;
         onStop: (e: PointerEvent) => void;
@@ -85,7 +91,8 @@ export class DragAndDrop {
             offsetDrag: DragAndDrop.defaultOffsetDrag,
             shadow: {
                 enable: false,
-                container: document.body
+                container: document.body,
+                removeOnStop: true,
             },
             strict: false,
             targets: [],
@@ -95,6 +102,7 @@ export class DragAndDrop {
             getZoom: () => 1,
             getOffsetX: () => 0,
             getOffsetY: () => 0,
+            onPointerDown: (e: PointerEvent) => { },
             onStart: (e: PointerEvent) => { },
             onMove: (e: PointerEvent) => { },
             onStop: (e: PointerEvent) => { },
@@ -119,6 +127,13 @@ export class DragAndDrop {
             if(options.shadow.container !== void 0) {
                 this.options.shadow.container = options.shadow.container;
             }
+            else {
+                this.options.shadow.container = document.body;
+            }
+            if(options.shadow.removeOnStop !== void 0) {
+                this.options.shadow.removeOnStop = options.shadow.removeOnStop;
+            }
+
         }
     }
     private mergeFunctions(options: DragAndDropOptions) {
@@ -126,6 +141,7 @@ export class DragAndDrop {
         this.defaultMerge(options, "getZoom");
         this.defaultMerge(options, "getOffsetX");
         this.defaultMerge(options, "getOffsetY");
+        this.defaultMerge(options, "onPointerDown");
         this.defaultMerge(options, "onStart");
         this.defaultMerge(options, "onMove");
         this.defaultMerge(options, "onStop");
@@ -141,6 +157,7 @@ export class DragAndDrop {
     private init() {
         this.pressManager = new PressManager({
             element: this.options.elementTrigger,
+            onPressStart:this.onPressStart.bind(this),
             onDragStart: this.onDragStart.bind(this),
             onDrag: this.onDrag.bind(this),
             onDragEnd: this.onDragEnd.bind(this),
@@ -149,6 +166,9 @@ export class DragAndDrop {
     }
     private draggableElement: HTMLElement;
     private positionShadowRelativeToElement: Coordinate;
+    private onPressStart(e:PointerEvent){
+        this.options.onPointerDown(e);
+    }
     private onDragStart(e: PointerEvent) {
         this.draggableElement = this.options.element as HTMLElement;
         this.startCursorPosition = {
@@ -166,9 +186,12 @@ export class DragAndDrop {
                 x: this.startCursorPosition.x - posRelativeToContainer.x,
                 y: this.startCursorPosition.y - posRelativeToContainer.y
             };
-            this.draggableElement.style.position = "absolute";
-            this.draggableElement.style.top = posRelativeToContainer.y / this.options.getZoom() + 'px';
-            this.draggableElement.style.left = posRelativeToContainer.x / this.options.getZoom() + 'px';
+            if(this.options.applyDrag) {
+                this.draggableElement.style.position = "absolute";
+                this.draggableElement.style.top = posRelativeToContainer.y / this.options.getZoom() + 'px';
+                this.draggableElement.style.left = posRelativeToContainer.x / this.options.getZoom() + 'px';
+            }
+            
             this.options.shadow.container.appendChild(this.draggableElement);
         }
         this.options.onStart(e);
@@ -182,8 +205,8 @@ export class DragAndDrop {
         if(this.options.shadow.enable) {
             // TODO check if this.options.getOffsetX is right in this context
             diff = {
-                x: e.pageX - (this.positionShadowRelativeToElement.x / this.options.getZoom()) + this.options.getOffsetX(),
-                y: e.pageY - (this.positionShadowRelativeToElement.y / this.options.getZoom()) + this.options.getOffsetY(),
+                x: e.pageX - (this.positionShadowRelativeToElement.x / zoom) + this.options.getOffsetX(),
+                y: e.pageY - (this.positionShadowRelativeToElement.y / zoom) + this.options.getOffsetY(),
             };
         }
         else {
@@ -197,12 +220,14 @@ export class DragAndDrop {
     }
     private onDragEnd(e: PointerEvent) {
         let targets = this.getMatchingTargets();
-        if(this.options.shadow.enable) {
+        if(this.options.shadow.enable && this.options.shadow.removeOnStop) {
             this.draggableElement.parentNode?.removeChild(this.draggableElement);
         }
         if(targets.length > 0) {
             this.options.onDrop(this.draggableElement, targets);
         }
+
+        this.options.onStop(e);
     }
     private setPosition(position: Coordinate): Coordinate {
         if(this.options.usePercent) {
@@ -267,9 +292,14 @@ export class DragAndDrop {
         return matchingTargets;
     }
 
+    public getElementDrag(): HTMLElement {
+        return this.draggableElement;
+    }
 
     public setTargets(targets: HTMLElement[]) {
         this.options.targets = targets;
     }
-
+    public destroy() {
+        this.pressManager.destroy();
+    }
 }

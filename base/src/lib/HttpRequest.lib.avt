@@ -16,7 +16,7 @@ export interface HttpRequestOptions {
 export class DefaultHttpRequestOptions implements HttpRequestOptions {
     url: string = "";
     method: HttpRequestMethod = HttpRequestMethod.GET;
-    
+
 }
 
 
@@ -80,11 +80,9 @@ export class HttpRequest {
         this.url = options.url;
     }
 
-    async send() {
+    async send(): Promise<Response> {
         let result = await fetch(this.url, this.options);
-        if(result.ok) {
-            
-        }
+        return result;
     }
 
     public static get(url: string): Promise<any> {
@@ -114,4 +112,5 @@ export class HttpRequest {
             }
         });
     }
+
 }

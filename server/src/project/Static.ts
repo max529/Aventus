@@ -11,6 +11,7 @@ export class Static {
     private staticConfig: AventusConfigStatic;
 
     private watcher: FSWatcher | undefined;
+    private isReady: boolean = false;
 
     public get name() {
         return this.staticConfig.name;
@@ -21,89 +22,89 @@ export class Static {
         this.staticConfig = staticConfig;
 
         this.registerWatcher();
+        this.isReady = true;
+        this.export();
     }
-    public export(){
-        const foundAll = (dir) => {
-            var result: string[] = [];
-            var recu = (dir) => {
-                let content = readdirSync(dir);
-                content.forEach(name => {
-                    let completePath = dir + '/' + name;
-                    if (lstatSync(completePath).isDirectory()) {
-                        // If it is another directory
-                        let files = recu(completePath);
-                        if (files.length > 0) {
-                            result.concat(files);
+    public export() {
+        if (this.isReady) {
+            const foundAll = (dir) => {
+                var result: string[] = [];
+                var recu = (dir) => {
+                    let content = readdirSync(dir);
+                    content.forEach(name => {
+                        let completePath = dir + '/' + name;
+                        if (lstatSync(completePath).isDirectory()) {
+                            // If it is another directory
+                            let files = recu(completePath);
+                            if (files.length > 0) {
+                                result.concat(files);
+                            }
+                        } else {
+                            result.push(completePath);
                         }
-                    } else {
-                        result.push(completePath);
-                    }
-                });
+                    });
+                    return result;
+                }
+                result = recu(dir);
                 return result;
             }
-            result = recu(dir);
-            return result;
-        }
-        const recuCheckColor = (el, name) => {
-            for (var key in el.attribs) {
-                if (el.attribs[key].startsWith('#')) {
-                    var color = el.attribs[key];
-                    if (this.staticConfig.colorsMap && this.staticConfig.colorsMap[color]) {
-                        el.attribs['class-' + key] = this.staticConfig.colorsMap[color];
-                    } else {
-                        //console.error('unknow color ' + color + ' in file ' + name);
+            const recuCheckColor = (el, name) => {
+                for (var key in el.attribs) {
+                    if (el.attribs[key].startsWith('#')) {
+                        var color = el.attribs[key];
+                        if (this.staticConfig.colorsMap && this.staticConfig.colorsMap[color]) {
+                            el.attribs['class-' + key] = this.staticConfig.colorsMap[color];
+                        } else {
+                            //console.error('unknow color ' + color + ' in file ' + name);
+                        }
+                    }
+                }
+                if (el.children) {
+                    for (var i = 0; i < el.children.length; i++) {
+                        recuCheckColor(el.children[i], name);
                     }
                 }
             }
-            if (el.children) {
-                for (var i = 0; i < el.children.length; i++) {
-                    recuCheckColor(el.children[i], name);
-                }
-            }
-        }
-        const copyFile = (pathFile, pathOut) => {
-            pathOut = normalize(pathOut);
-            let splitted = pathOut.split(sep);
-            let filename = splitted.pop();
-            let folder = splitted.join(sep);
+            const copyFile = (pathFile, pathOut) => {
+                pathOut = normalize(pathOut);
+                let splitted = pathOut.split(sep);
+                let filename = splitted.pop();
+                let folder = splitted.join(sep);
 
-
-            if (filename.endsWith(".scss")) {
-                if (!filename.startsWith("_")) {
-                    if (!existsSync(folder)) {
-                        mkdirSync(folder, { recursive: true });
-                    }
-                    let style = nodeSass.compile(pathFile, {
-                        style: 'compressed',
-                    }).css.toString().trim();
-                    writeFileSync(pathOut.replace(".scss", ".css"), style);
-                }
-            }
-            else if (filename.endsWith(".svg")) {
-                let ctx = readFileSync(pathFile, 'utf8');
-                let $ = cheerio.load(ctx);
-                if (this.staticConfig.colorsMap) {
-                    recuCheckColor($._root, pathFile);
-                }
-                let result = $('body').html();
-                if (result == null) {
-                    result = "";
-                }
-                writeFileSync(pathOut, result);
-            }
-            else {
                 if (!existsSync(folder)) {
                     mkdirSync(folder, { recursive: true });
                 }
-                copyFileSync(pathFile, pathOut)
+                if (filename.endsWith(".scss")) {
+                    if (!filename.startsWith("_")) {
+                        let style = nodeSass.compile(pathFile, {
+                            style: 'compressed',
+                        }).css.toString().trim();
+                        writeFileSync(pathOut.replace(".scss", ".css"), style);
+                    }
+                }
+                else if (filename.endsWith(".svg")) {
+                    let ctx = readFileSync(pathFile, 'utf8');
+                    let $ = cheerio.load(ctx);
+                    if (this.staticConfig.colorsMap) {
+                        recuCheckColor($._root, pathFile);
+                    }
+                    let result = $('body').html();
+                    if (result == null) {
+                        result = "";
+                    }
+                    writeFileSync(pathOut, result);
+                }
+                else {
+                    copyFileSync(pathFile, pathOut)
+                }
             }
+            let staticFiles = foundAll(this.staticConfig.inputPathFolder);
+            staticFiles.forEach(filePath => {
+                filePath = filePath.replace(/\\/g, '/');
+                let resultPath = filePath.replace(this.staticConfig.inputPathFolder, this.staticConfig.outputPathFolder)
+                copyFile(filePath, resultPath);
+            })
         }
-        let staticFiles = foundAll(this.staticConfig.inputPathFolder);
-        staticFiles.forEach(filePath => {
-            filePath = filePath.replace(/\\/g, '/');
-            let resultPath = filePath.replace(this.staticConfig.inputPathFolder, this.staticConfig.outputPathFolder)
-            copyFile(filePath, resultPath);
-        })
     }
     public registerWatcher() {
         if (this.staticConfig.hasOwnProperty("exportOnChange") && !this.staticConfig.exportOnChange) {
@@ -117,7 +118,7 @@ export class Static {
                 stabilityThreshold: 100,
                 pollInterval: 100
             },
-
+            ignoreInitial: true,
         });
         this.watcher.on('add', (path) => {
             this.export();
@@ -132,7 +133,7 @@ export class Static {
     }
 
     public destroy() {
-        if(this.watcher){
+        if (this.watcher) {
             this.watcher.close();
         }
     }

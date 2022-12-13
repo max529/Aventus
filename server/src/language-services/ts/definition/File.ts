@@ -196,12 +196,12 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     }
     public constructor(file: AventusFile, build: Build) {
         super(file, build);
-        //if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
-        this.refreshFileParsed(false);
-        this.loadDefinitionInsideBuild();
-        this.build.tsDefFiles[this.file.uri] = this;
-        this.build.rebuildDefinitionWebComponent();
-        //}
+        if (this.file.uri.replace(AventusExtension.Definition, ".js") != this.build.getOutputUri()) {
+            this.refreshFileParsed(false);
+            this.loadDefinitionInsideBuild();
+            this.build.tsDefFiles[this.file.uri] = this;
+            this.build.rebuildDefinitionWebComponent();
+        }
     }
 
 

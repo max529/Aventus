@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension } from "../../../../definition";
 import { Build } from "../../../../project/Build";
 import { createErrorTs, createErrorTsPos, createErrorTsSection, pathToUri } from "../../../../tools";
-import { AliasNode, BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType } from "../../../../ts-file-parser";
+import { AliasNode, BasicType, ClassModel, DefaultClassModel, EnumDeclaration, FieldModel, Module, TypeKind, TypeModel, UnionType, ImportNode } from "../../../../ts-file-parser";
 import { getAlias } from "../../../../ts-file-parser/src/tsStructureParser";
 import { AventusHTMLFile } from "../../../html/File";
 import { AventusSCSSFile } from "../../../scss/File";
@@ -141,7 +141,7 @@ export class AventusWebcomponentCompiler {
             this.result.result.nameCompiled.push(normalCompile.classScript);
             this.result.result.nameDoc.push(normalCompile.classDoc);
             this.prepareHTMLDocObject();
-            this.loadParent(this.jsonStructure);
+            this.loadParent(this.classInfo, this.jsonStructure._imports);
             this.prepareViewRecu(this.jQuery._root);
             this.prepareOtherContent();
             this.writeFile();
@@ -292,7 +292,7 @@ export class AventusWebcomponentCompiler {
         }
     }
     private getClassName(classInfo: CompilerClassInfo) {
-        let splittedName = classInfo.name.match(/[A-Z][a-z]+/g);
+        let splittedName = classInfo.name.match(/([A-Z][a-z]+)|([0-9]+)/g);
         if (splittedName) {
             let componentPrefix = this.build.getComponentPrefix();
             if (componentPrefix.length > 0 && splittedName[0].toLowerCase() != componentPrefix.toLowerCase()) {
@@ -317,52 +317,57 @@ export class AventusWebcomponentCompiler {
         }
     }
 
-    private loadParent(jsonStruct: Module, isFirst: boolean = true) {
-        if (jsonStruct.classes.length > 0) {
-            let fields = this.loadFields(jsonStruct.classes[0], isFirst);
-            this.allFields = {
-                ...this.allFields,
-                ...fields
+    private loadParent(classInfo: ClassModel, _imports: ImportNode[], isFirst: boolean = true) {
+
+
+        let fields = this.loadFields(classInfo, isFirst);
+        this.allFields = {
+            ...this.allFields,
+            ...fields
+        }
+
+
+        if (classInfo.extends.length > 0 && classInfo.extends[0].typeName != "WebComponent" && classInfo.extends[0].typeName != "Aventus.WebComponent") {
+            // search parent inside local import
+            let nameToUse = classInfo.extends[0].typeName;
+            if (classInfo.extends[0].typeKind == TypeKind.BASIC) {
+                let namespace = (classInfo.extends[0] as BasicType).nameSpace;
+                if (namespace) { namespace += '.' }
+                nameToUse = namespace + (classInfo.extends[0] as BasicType).basicName;
             }
+            for (let importTemp of _imports) {
+                for (let name of importTemp.clauses) {
 
-            if (jsonStruct.classes[0].extends.length > 0 && jsonStruct.classes[0].extends[0].typeName != "WebComponent" && jsonStruct.classes[0].extends[0].typeName != "Aventus.WebComponent") {
-                // search parent inside local import
-                let nameToUse = jsonStruct.classes[0].extends[0].typeName;
-                if (jsonStruct.classes[0].extends[0].typeKind == TypeKind.BASIC) {
-                    let namespace = (jsonStruct.classes[0].extends[0] as BasicType).nameSpace;
-                    if (namespace) { namespace += '.' }
-                    nameToUse = namespace + (jsonStruct.classes[0].extends[0] as BasicType).basicName;
-                }
-                for (let importTemp of jsonStruct._imports) {
-                    for (let name of importTemp.clauses) {
-
-                        if (name == nameToUse) {
-                            let newPath = importTemp.absPathString.replace(/\\/g, "/");
-                            let newUri = pathToUri(newPath);
-                            let parentScript = this.build.tsFiles[newUri];
-                            if (parentScript) {
-                                this.loadParent(parentScript.fileParsed, false);
+                    if (name == nameToUse) {
+                        let newPath = importTemp.absPathString.replace(/\\/g, "/");
+                        let newUri = pathToUri(newPath);
+                        let parentScript = this.build.tsFiles[newUri];
+                        if (parentScript) {
+                            for (let classInParent of parentScript.fileParsed.classes) {
+                                if (classInParent.name == name) {
+                                    this.loadParent(classInParent, parentScript.fileParsed._imports, false);
+                                }
                             }
-                            return;
                         }
+                        return;
                     }
                 }
-                // search parent inside definition file
-                let classInfoInDef = this.build.getWebComponentDefinition(nameToUse);
-                if (classInfoInDef) {
-                    let fields = this.loadFields(classInfoInDef, false);
-                    this.allFields = {
-                        ...this.allFields,
-                        ...fields
-                    }
-                    return;
+            }
+            // search parent inside definition file
+            let classInfoInDef = this.build.getWebComponentDefinition(nameToUse);
+            if (classInfoInDef) {
+                let fields = this.loadFields(classInfoInDef, false);
+                this.allFields = {
+                    ...this.allFields,
+                    ...fields
                 }
-                if (this.classInfo) {
-                    this.result.diagnostics.push(createErrorTsPos(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName, this.classInfo.nameStart, this.classInfo.nameEnd));
-                }
-                else {
-                    this.result.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + jsonStruct.classes[0].extends[0].typeName));
-                }
+                return;
+            }
+            if (this.classInfo) {
+                this.result.diagnostics.push(createErrorTsPos(this.document, "can't found the path for parent " + classInfo.extends[0].typeName, this.classInfo.nameStart, this.classInfo.nameEnd));
+            }
+            else {
+                this.result.diagnostics.push(createErrorTs(this.document, "can't found the path for parent " + classInfo.extends[0].typeName));
             }
         }
     }
@@ -732,7 +737,7 @@ export class AventusWebcomponentCompiler {
             this.writeFileReplaceVar("definition", "")
         }
         else {
-            this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");")
+            this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");Aventus.WebComponent.registerDefinition(" + this.className + ");")
         }
     }
     private writeFileTemplateHtml() {
@@ -777,6 +782,11 @@ export class AventusWebcomponentCompiler {
                 newHtml = newHtml.replace(parentInfo.slots[blockName], info.blocks[blockName]);
             }
             info.html = newHtml;
+            for(let slotName in parentInfo.slots){
+                if(!info.slots[slotName]) {
+                    info.slots[slotName] = parentInfo.slots[slotName]
+                }
+            }
             `;
         }
         this.writeFileReplaceVar("overrideView", overrideViewFct);
@@ -1268,7 +1278,7 @@ export class AventusWebcomponentCompiler {
         }
 
         if (defaultValue.length > 0) {
-            defaultValue = `__defaultValue() { super.__defaultValue(); ${defaultValue} }`
+            defaultValue = `__defaultValueAttr() { super.__defaultValueAttr(); ${defaultValue} }`
         }
         this.writeFileReplaceVar("defaultValueAttr", defaultValue);
         this.writeFileReplaceVar("getterSetterAttr", getterSetter);
@@ -1429,7 +1439,7 @@ export class AventusWebcomponentCompiler {
         }
 
         if (defaultValue.length > 0) {
-            defaultValue = `__defaultValue() { super.__defaultValue(); ${defaultValue} }`
+            defaultValue = `__defaultValueProp() { super.__defaultValueProp(); ${defaultValue} }`
         }
         this.writeFileReplaceVar("defaultValueProp", defaultValue);
         this.writeFileReplaceVar("getterSetterProp", getterSetter);

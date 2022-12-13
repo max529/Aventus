@@ -14,6 +14,24 @@ export interface DefaultComponent {
 }
 
 export abstract class WebComponent extends HTMLElement implements DefaultComponent {
+    private static __allDefinitions: (new () => WebComponent)[] = [];
+    public static lastDefinition:number = 0;
+    private static registerDefinition(def: new () => WebComponent) {
+        WebComponent.lastDefinition = Date.now()
+        WebComponent.__allDefinitions.push(def);
+    }
+    static getAllClassesOf<T>(type: typeof WebComponent): (new () => WebComponent)[] {
+        let result: (new () => WebComponent)[] = [];
+        for(let def of WebComponent.__allDefinitions) {
+            if(def.prototype instanceof type) {
+                result.push(def);
+            }
+        }
+        return result;
+    }
+    static getAllDefinitions(): (new () => WebComponent)[] {
+        return WebComponent.__allDefinitions;
+    }
     static get observedAttributes() {
         return [];
     }
@@ -167,7 +185,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private __endConstructor() { }
 
     private connectedCallback() {
-        this.__defaultValue();
+        this.__defaultValueAttr();
+        this.__defaultValueProp();
         this.__upgradeAttributes();
         this.__addEvents();
 
@@ -182,7 +201,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
             });
         }
     }
-    private __defaultValue() { }
+    private __defaultValueAttr() { }
+    private __defaultValueProp() { }
     private __upgradeAttributes() { }
     private __listBoolProps() {
         return [];
