@@ -737,7 +737,12 @@ export class AventusWebcomponentCompiler {
             this.writeFileReplaceVar("definition", "")
         }
         else {
-            this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");Aventus.WebComponent.registerDefinition(" + this.className + ");")
+            if (this.build.isCoreBuild) {
+                this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");WebComponent.registerDefinition(" + this.className + ");")
+            }
+            else {
+                this.writeFileReplaceVar("definition", "window.customElements.define('" + this.tagName + "', " + this.className + ");Aventus.WebComponent.registerDefinition(" + this.className + ");")
+            }
         }
     }
     private writeFileTemplateHtml() {

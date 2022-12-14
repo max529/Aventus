@@ -221,6 +221,10 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
             });
         });
     }
+    protected override async afterCreateItem(item: R, fromList: boolean): Promise<R> {
+        this.publish('created', item);
+        return item;
+    }
     //#endregion
     //#region update
     public override async update(item: U | R, cbError?: (response: any) => void): Promise<R> {
@@ -267,6 +271,10 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
             });
         });
     }
+    protected override async afterUpdateItem(item: R, fromList: boolean): Promise<R> {
+        this.publish('updated', item);
+        return item;
+    }
 
     //#endregion
     //#region delete
@@ -308,6 +316,9 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                 }
             });
         });
+    }
+    protected override async afterDeleteItem(item: R, fromList: boolean): Promise<void> {
+        this.publish('deleted', item);
     }
     //#endregion
 
@@ -393,13 +404,13 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
     protected addSocketFunction<B extends new (...args: any[]) => IDataConstraint<U>>(Base: B) {
         let that = this;
         return class ActionClass extends Base implements ISocketData<U> {
-            public async update(newData: KeysObject<U> = {}) {
+            public async update(newData: KeysObject<U> = {}): Promise<this> {
                 let id = that.getId(this);
                 let oldData = that.records[id];
                 if(oldData) {
                     let mergedData = Object.assign(oldData, newData);
-                    let result = await this.update(mergedData);
-                    return result;
+                    let result = await that.update(mergedData);
+                    return <this><any>result;
                 }
                 return undefined;
             }
@@ -468,6 +479,9 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
 
     private publish(type: 'created' | 'updated' | 'deleted', data: R) {
         [...this.subscribers[type]].forEach(callback => callback(data));
+        if(this.recordsSubscribers[this.getId(data)]){
+            [...this.recordsSubscribers[this.getId(data)][type]].forEach(callback => callback(data));
+        }
     }
     public subscribe(type: 'created' | 'updated' | 'deleted', cb: (item: R) => void) {
         this.subscribers[type].push(cb);

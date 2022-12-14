@@ -117,6 +117,9 @@ export class DragAndDrop {
         if(options.elementTrigger === void 0) {
             this.options.elementTrigger = this.options.element;
         }
+        else {
+            this.options.elementTrigger = options.elementTrigger;
+        }
         this.defaultMerge(options, "applyDrag");
         this.defaultMerge(options, "offsetDrag");
         this.defaultMerge(options, "strict");
@@ -157,7 +160,7 @@ export class DragAndDrop {
     private init() {
         this.pressManager = new PressManager({
             element: this.options.elementTrigger,
-            onPressStart:this.onPressStart.bind(this),
+            onPressStart: this.onPressStart.bind(this),
             onDragStart: this.onDragStart.bind(this),
             onDrag: this.onDrag.bind(this),
             onDragEnd: this.onDragEnd.bind(this),
@@ -166,7 +169,7 @@ export class DragAndDrop {
     }
     private draggableElement: HTMLElement;
     private positionShadowRelativeToElement: Coordinate;
-    private onPressStart(e:PointerEvent){
+    private onPressStart(e: PointerEvent) {
         this.options.onPointerDown(e);
     }
     private onDragStart(e: PointerEvent) {
@@ -191,7 +194,7 @@ export class DragAndDrop {
                 this.draggableElement.style.top = posRelativeToContainer.y / this.options.getZoom() + 'px';
                 this.draggableElement.style.left = posRelativeToContainer.x / this.options.getZoom() + 'px';
             }
-            
+
             this.options.shadow.container.appendChild(this.draggableElement);
         }
         this.options.onStart(e);

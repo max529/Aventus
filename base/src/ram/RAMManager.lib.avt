@@ -53,10 +53,10 @@ export abstract class RAMManager<U extends IDataConstraint<U>> implements IRAMMa
         return await this._create(item, false);
     }
     private async _create(item: U, fromList: boolean): Promise<U | undefined> {
-        let key = this.getId(item);
         try {
+            item = await this.beforeCreateItem(item, fromList);
+            let key = this.getId(item);
             if(key) {
-                item = await this.beforeCreateItem(item, fromList);
                 this.records[key] = item;
                 this.records[key] = await this.afterCreateItem(item, fromList);
                 return this.records[key];

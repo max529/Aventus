@@ -263,7 +263,16 @@ export class Socket {
             const hours = (now.getHours()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
             const minutes = (now.getMinutes()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
             const seconds = (now.getSeconds()).toLocaleString(undefined, { minimumIntegerDigits: 2 });
-            console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, JSON.parse(JSON.stringify(message)));
+            if(message instanceof Object) {
+                let cloneMessage = JSON.parse(JSON.stringify(message));
+                if(cloneMessage.data && typeof cloneMessage.data == 'string') {
+                    cloneMessage.data = JSON.parse(cloneMessage.data);
+                }
+                console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, cloneMessage);
+            }
+            else {
+                console.log(`[WEBSOCKET] [${hours}:${minutes}:${seconds}]: `, message);
+            }
         }
     }
 }

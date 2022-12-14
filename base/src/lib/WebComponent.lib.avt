@@ -197,7 +197,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
                 this.__subscribeState();
                 this.postCreation();
                 this._isReady = true;
-                this.dispatchEvent(new CustomEvent('ready'));
+                this.dispatchEvent(new CustomEvent('postCreationDone'));
             });
         }
     }
