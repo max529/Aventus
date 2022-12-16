@@ -579,13 +579,14 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
 }
 
 function buildParameter(f: ts.ParameterDeclaration, content: any, path: string, module: Module): ParameterModel {
-
     var text = content.substring(f.getStart(), f.getEnd());
+    let defaultValue = f.initializer?.getText();
     return {
         name: f.name["text"],
         start: f.getStart(),
         end: f.getEnd(),
         text: text,
+        defaultValue: defaultValue,
         type: buildType(<ts.TypeNode>f.type, path, module)
     };
 }
@@ -712,7 +713,7 @@ export function parseArg(n: ts.Expression): any {
         try {
             return JSONTransformer.toValidateView(obj);
         } catch (e) {
-            //throw new Error(`Can't parse string "${obj.getFullText()}" to json`);
+            console.log(`Can't parse string "${obj.getFullText()}"`);
         }
         return {};
     }

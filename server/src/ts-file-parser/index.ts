@@ -161,6 +161,7 @@ export interface ParameterModel {
     end: number;
     name: string;
     text: string;
+    defaultValue: string | undefined;
     type: TypeModel | undefined;
 }
 

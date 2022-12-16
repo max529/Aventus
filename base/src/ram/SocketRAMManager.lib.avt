@@ -117,7 +117,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
     }
     private initSocket() {
         let createdRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.socketActions.created,
+            channel: this.socketRoutes.created.request,
             callback: response => {
                 if(response.data) {
                     for(let obj of response.data) {
@@ -134,7 +134,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
         Socket.getInstance(this._getSocketName()).addRoute(createdRoute);
 
         let updatedRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.socketActions.updated,
+            channel: this.socketRoutes.updated.request,
             callback: response => {
                 if(response.data) {
                     for(let newData of response.data) {
@@ -156,7 +156,7 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
         Socket.getInstance(this._getSocketName()).addRoute(updatedRoute);
 
         let deletedRoute: SocketRAMManagerRouteNotPlanned<U> = {
-            channel: this.socketActions.deleted,
+            channel: this.socketRoutes.deleted.request,
             callback: response => {
                 if(response.data) {
                     for(let data of response.data) {

@@ -10,6 +10,7 @@ export class JSONTransformer {
 
     public static toValidateView( obj: any ): any {
         var self;
+        let text = obj.getFullText()
         eval("self = " + obj.getFullText());
         return self;
     }

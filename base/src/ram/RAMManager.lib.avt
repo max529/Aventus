@@ -134,19 +134,25 @@ export abstract class RAMManager<U extends IDataConstraint<U>> implements IRAMMa
     }
 
     protected updateDataInRAM(newData: U | {}) {
-        let dataInRAM = this.records[this.getId(newData)];
-        let oldKeys: { [key: string]: string; } = {};
-        for(let key in dataInRAM) {
-            oldKeys[key] = key;
+        let item = this.records[this.getId(newData)];
+        let oldKeys: { [prop: string]: string; } = {};
+        let props = Object.getOwnPropertyNames(item);
+        for(let prop of props) {
+            let propInfo = Object.getOwnPropertyDescriptor(item, prop);
+            if(propInfo.writable) {
+                oldKeys[prop] = prop;
+            }
         }
 
         for(const [key, value] of Object.entries(newData)) {
-            dataInRAM[key] = value;
-            delete oldKeys[key];
+            if(oldKeys[key]) {
+                item[key] = value;
+                delete oldKeys[key];
+            }
         }
 
         for(let keyMissing of Object.keys(oldKeys)) {
-            delete dataInRAM[keyMissing];
+            item[keyMissing] = null;
         }
     }
     //#endregion

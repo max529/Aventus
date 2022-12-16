@@ -99,6 +99,19 @@ export class AventusWebcomponentCompiler {
         }
     }
     private fullClassName: string = '';
+
+    private pressEventMap = {
+        ['@press']: "onPress",
+        ['@press-start']: "onPressStart",
+        ['@press-stop']: "onPressEnd",
+        ['@longpress']: "onLongPress",
+        ['@longpress-delay']: "delayLongPress",
+        ['@dblpress']: "onDblPress",
+        ['@dblpress-delay']: "delayDblPress",
+        ['@drag']: "onDrag",
+        ['@drag-start']: "onDragStart",
+        ['@drag-end']: "onDragEnd",
+    };
     //#endregion
 
     public constructor(logicalFile: AventusWebComponentLogicalFile, build: Build) {
@@ -504,14 +517,7 @@ export class AventusWebcomponentCompiler {
         return idTxt;
     }
     private prepareViewCheckAttribute(el: cheerio.Element) {
-        let pressEventMap = {
-            ['@press']: "onPress",
-            ['@longpress']: "onLongPress",
-            ['@drag']: "onDrag",
-            ['@press-stop']: "onStop",
-            ['@press-start']: "onStart",
-            ['@longpress-delay']: "delay",
-        };
+
         for (let key in el.attribs) {
             if (key === "@element") {
                 let _id = this.prepareViewGetId(el);
@@ -534,14 +540,14 @@ export class AventusWebcomponentCompiler {
                 }
                 this.jQuery(el).removeAttr(key);
             }
-            else if (pressEventMap.hasOwnProperty(key)) {
+            else if (this.pressEventMap.hasOwnProperty(key)) {
                 let value = el.attribs[key];
                 let _id = this.prepareViewGetId(el);
                 if (!this.pressEvents.hasOwnProperty(_id)) {
                     this.pressEvents[_id] = {};
                 }
                 let pressEvent = this.pressEvents[_id];
-                pressEvent[pressEventMap[key]] = value;
+                pressEvent[this.pressEventMap[key]] = value;
             }
             else if (key.startsWith("@")) {
                 let _id = this.prepareViewGetId(el);
@@ -1057,6 +1063,7 @@ export class AventusWebcomponentCompiler {
         this.writeFileReplaceVar('variables', variablesSimple);
     }
     private writeFileFieldsStates(field: CustomFieldModel) {
+        // TODO cahnge this to add attribute over function @StateActive("your state") @StateInactive() @StateChange() must return bool for last
         if (field.valueConstraint) {
             let states = field.valueConstraint.value;
             let fctStateTxt = "";
@@ -1725,7 +1732,11 @@ this.clearWatchHistory = () => {
                         }
                         let args: string[] = [];
                         for (let arg of method.arguments) {
-                            args.push(arg.name);
+                            let argVal = arg.name;
+                            if (arg.defaultValue !== undefined) {
+                                argVal += " = " + arg.defaultValue;
+                            }
+                            args.push(argVal);
                         }
                         methodsTxt += methodFinal + " " + method.name + "(" + args.join(",") + "){" + methodTxt + "}" + EOL;
                     }
@@ -1750,43 +1761,40 @@ this.clearWatchHistory = () => {
         }
         for (let key in this.pressEvents) {
             let current = this.pressEvents[key];
-            let onPressTxt = "";
-            let onLongPressTxt = "";
-            let onPressStopTxt = "";
-            let delayTxt = "";
-            if (current.hasOwnProperty("onPress")) {
-                onPressTxt += `"onPress": (e, pressInstance) => {
-                        this.${current["onPress"]}(e, pressInstance);
-                     },`;
+            let otherText = "";
+
+            let fcts = [
+                this.pressEventMap['@dblpress'],
+                this.pressEventMap['@drag'],
+                this.pressEventMap['@drag-end'],
+                this.pressEventMap['@drag-start'],
+                this.pressEventMap['@longpress'],
+                this.pressEventMap['@press'],
+                this.pressEventMap['@press-start'],
+                this.pressEventMap['@press-stop'],
+            ];
+            let props = [
+                this.pressEventMap['@dblpress-delay'],
+                this.pressEventMap['@longpress-delay'],
+            ]
+            for (let fct of fcts) {
+                if (current.hasOwnProperty(fct)) {
+                    otherText += `"${fct}": (e, pressInstance) => {
+                            this.${current[fct]}(e, pressInstance);
+                         },\r\n`;
+                }
             }
-            if (current.hasOwnProperty("onLongPress")) {
-                onLongPressTxt += `"onLongPress": (e, pressInstance) => {
-                        this.${current["onLongPress"]}(e, pressInstance);
-                     },`;
-            }
-            if (current.hasOwnProperty("onStop")) {
-                onPressStopTxt = `"onStop": (e, pressInstance) => {
-                        this.${current["onStop"]}(e, pressInstance);
-                    },`;
-            }
-            if (current.hasOwnProperty("onStart")) {
-                onPressStopTxt = `"onStart": (e, pressInstance) => {
-                        this.${current["onStart"]}(e, pressInstance);
-                    },`;
-            }
-            if (current.hasOwnProperty("delay")) {
-                delayTxt = `"delay": ${current["delay"]},`;
+            for (let prop of props) {
+                if (current.hasOwnProperty(prop)) {
+                    otherText += `"${prop}": ${current[prop]},\r\n`;
+                }
             }
 
 
             eventsMapped += `
                 new Aventus.PressManager({
                     "element": this._components['${key}'],
-                    ${onPressTxt}
-                    ${onLongPressTxt}
-                    ${onPressStopTxt}
-                    ${delayTxt}
-                });
+                    ${otherText}});
                 `
         }
         if (eventsMapped.length > 0) {
