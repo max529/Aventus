@@ -7,7 +7,7 @@ export class CreateWatch {
 	public static async middleware(args: any[]): Promise<any[]> {
 		let result: string[] = [];
 		if (args.length > 0) {
-			let uri = "file://" + args[0].path.replace(":", "%3A");
+			let uri = args[0].toString();
 			result.push(uri);
 
 			const name = await window.showInputBox({

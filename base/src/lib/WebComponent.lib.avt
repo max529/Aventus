@@ -75,9 +75,9 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         this.__prepareTranslations();
         this.__prepareWatchesActions();
         this.__initWatches();
+        this.__prepareTemplate();
         this.__defaultValueAttr();
         this.__defaultValueProp();
-        this.__prepareTemplate();
         this.__selectElementNeeded();
         this.__registerOnChange();
         this.__createStates();
@@ -134,6 +134,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         </style>${this.__getHtml().html}`;
         let shadowRoot = this.attachShadow({ mode: 'open' });
         shadowRoot.appendChild(tmpl.content.cloneNode(true));
+        customElements.upgrade(this);
     }
     //#endregion
 

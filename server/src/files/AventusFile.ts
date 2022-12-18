@@ -4,6 +4,7 @@ import { v4 as randomUUID } from 'uuid';
 import { getFolder, uriToPath } from '../tools';
 import { ClientConnection } from '../Connection';
 import { Build } from '../project/Build';
+import { AventusLanguageId } from '../definition';
 
 export type onValidateType = (document: AventusFile) => Promise<Diagnostic[]>;
 export type onContentChangeType = (document: AventusFile) => Promise<void>;
@@ -25,7 +26,7 @@ export interface AventusFile {
     content: string;
     folderUri: string;
     folderPath: string;
-    shortname:string;
+    shortname: string;
 
     getBuild(): Build[]
     onGetBuild(cb: onGetBuildType): string;
@@ -96,11 +97,11 @@ export class InternalAventusFile implements AventusFile {
     get folderPath() {
         return getFolder(this.path);
     }
-    private _shortname:string = "";
-    get shortname(){
-        if(!this._shortname){
+    private _shortname: string = "";
+    get shortname() {
+        if (!this._shortname) {
             let splitted = this.uri.split("/");
-            this._shortname = splitted[splitted.length - 1] ;
+            this._shortname = splitted[splitted.length - 1];
         }
         return this._shortname;
 
@@ -113,8 +114,8 @@ export class InternalAventusFile implements AventusFile {
         let result: Build[] = [];
         for (let uuid in this.onGetBuildCb) {
             let builds = this.onGetBuildCb[uuid]();
-            for(let build of builds){
-                if(result.indexOf(build) == -1){
+            for (let build of builds) {
+                if (result.indexOf(build) == -1) {
                     result.push(build);
                 }
             }
@@ -136,7 +137,7 @@ export class InternalAventusFile implements AventusFile {
     }
     //#endregion
 
-    //#region content change
+    //#region validate
 
     private onValidateCb: { [uuid: string]: onValidateType } = {};
     public async validate(sendDiagnostics: boolean = true): Promise<Diagnostic[]> {
@@ -204,6 +205,20 @@ export class InternalAventusFile implements AventusFile {
         delete this.onContentChangeCb[uuid];
     }
 
+    //#endregion
+
+    //#region apply edit
+    public applyTextEdits(transformations: TextEdit[]) {
+        let content = this.document.getText();
+        transformations.sort((a, b) => this.document.offsetAt(b.range.end) - this.document.offsetAt(a.range.end)); // order from end file to start file
+        for (let transformation of transformations) {
+            let start = this.document.offsetAt(transformation.range.start);
+            let end = this.document.offsetAt(transformation.range.end);
+            content = content.slice(0, start) + transformation.newText + content.slice(end, content.length);
+        }
+        let newDocument = TextDocument.create(this.uri, AventusLanguageId.TypeScript, this.version + 1, content);
+        this.triggerContentChange(newDocument);
+    }
     //#endregion
 
     //#region save

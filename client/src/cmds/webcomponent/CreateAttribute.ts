@@ -10,7 +10,7 @@ export class CreateAttribute {
 		if (window.activeTextEditor) {
 			let uri = "";
 			if (args.length > 0) {
-				uri = "file://" + args[0].path.replace(":", "%3A");
+				uri = args[0].toString();
 			}
 			else {
 				// use command with key binding
@@ -22,7 +22,7 @@ export class CreateAttribute {
 				const name = await window.showInputBox({
 					title: "Provide a name for your Attribute",
 					async validateInput(value) {
-						if(!value.match(/^[_a-z1-9]+$/g)){
+						if (!value.match(/^[_a-z1-9]+$/g)) {
 							return 'A property must be with lowercase, number or _';
 						}
 						return null;

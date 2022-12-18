@@ -22,6 +22,7 @@ export class CreateAttribute {
 	private async run(uri: string, name: string, type: string, position: number) {
 		let file = FilesManager.getInstance().getByUri(uri);
 		if (file) {
+			let oldEnd = file.document.positionAt(file.content.length);
 			let newTxt = '@Attribute()' + EOL + 'public ' + name + ':' + type + ';' + EOL;
 			let begin = file.content.slice(0, position);
 			let end = file.content.slice(position + 1, file.content.length);
@@ -32,19 +33,29 @@ export class CreateAttribute {
 				insertSpaces: true,
 				tabSize: 4
 			});
-			let result: TextEdit[][] = [];
-			result.push([
-				{
-					newText: newTxt,
-					range: {
-						start: file.document.positionAt(position),
-						end: file.document.positionAt(position)
-					}
-				}
-			])
-			result.push(textEdits);
+			await (file as InternalAventusFile).applyTextEdits(textEdits);
 
-			EditFile.send(uri, result)
+			// TODO check if make sense
+			let result: TextEdit[] = [{
+				newText: file.content,
+				range: {
+					start: file.document.positionAt(0),
+					end: oldEnd
+				}
+			}];
+
+			// let result: TextEdit[][] = [];
+			// result.push([
+			// 	{
+			// 		newText: newTxt,
+			// 		range: {
+			// 			start: file.document.positionAt(position),
+			// 			end: file.document.positionAt(position)
+			// 		}
+			// 	}
+			// ])
+			// result.push(textEdits);
+			EditFile.send(uri, [result])
 
 		}
 	}

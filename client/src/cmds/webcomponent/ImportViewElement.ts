@@ -8,7 +8,7 @@ export class ImportViewElement {
 		if (window.activeTextEditor) {
 			let uri = "";
 			if (args.length > 0) {
-				uri = "file://" + args[0].path.replace(":", "%3A");
+				uri = args[0].toString();
 			}
 			else {
 				// use command with key binding

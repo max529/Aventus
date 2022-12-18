@@ -23,6 +23,12 @@ declare global {
      * Signal that this variable is a link to your shadowroot
      */
     function ViewElement(config?: ViewElementConfig);
+    function StateActive(stateName: string, managerName?: string);
+    function DefaultStateActive(managerName?: string);
+    function StateInactive(stateName: string, managerName?: string);
+    function DefaultStateInactive(managerName?: string);
+    function StateChange(stateName: string, managerName?: string);
+
     /**
      * Clear parent view and use yours 
      */

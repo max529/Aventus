@@ -564,12 +564,9 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
                 method.isPrivate = true;
             } else if (x.kind === ts.SyntaxKind.ProtectedKeyword) {
                 method.isPrivate = true;
-            } else if (x.kind === ts.SyntaxKind.OverrideKeyword) {
-
-            }
-            else if (x.kind === ts.SyntaxKind.PublicKeyword) {
-
-            }
+            } else if (x.kind === ts.SyntaxKind.OverrideKeyword) {}
+            else if (x.kind === ts.SyntaxKind.PublicKeyword) {}
+            else if (x.kind === ts.SyntaxKind.Decorator) {}
             else {
                 throw new Error("Unknown token method modifiers " + x.kind);
             }

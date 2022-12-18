@@ -197,18 +197,23 @@ export class AventusTsLanguageService {
 
 
     public doValidation(file: AventusFile): Diagnostic[] {
-        let result: Diagnostic[] = [];
-        const syntaxDiagnostics: DiagnosticTs[] = this.languageService.getSyntacticDiagnostics(file.uri);
-        const semanticDiagnostics: DiagnosticTs[] = this.languageService.getSemanticDiagnostics(file.uri);
-        result = syntaxDiagnostics.concat(semanticDiagnostics).map((diag: DiagnosticTs): Diagnostic => {
-            return {
-                range: convertRange(file.document, diag),
-                severity: DiagnosticSeverity.Error,
-                source: AventusLanguageId.TypeScript,
-                message: flattenDiagnosticMessageText(diag.messageText, '\n'),
-            };
-        });
-        return result;
+        try {
+            let result: Diagnostic[] = [];
+            const syntaxDiagnostics: DiagnosticTs[] = this.languageService.getSyntacticDiagnostics(file.uri);
+            const semanticDiagnostics: DiagnosticTs[] = this.languageService.getSemanticDiagnostics(file.uri);
+            result = syntaxDiagnostics.concat(semanticDiagnostics).map((diag: DiagnosticTs): Diagnostic => {
+                return {
+                    range: convertRange(file.document, diag),
+                    severity: DiagnosticSeverity.Error,
+                    source: AventusLanguageId.TypeScript,
+                    message: flattenDiagnosticMessageText(diag.messageText, '\n'),
+                };
+            });
+            return result;
+        } catch (e) {
+            console.error(e);
+        }
+        return [];
     }
 
     public async doComplete(file: AventusFile, position: Position): Promise<CompletionList> {
@@ -258,250 +263,278 @@ export class AventusTsLanguageService {
     }
 
     public async doResolve(item: CompletionItem): Promise<CompletionItem> {
-        if (item.data) {
-            let tsFile = this.build.tsFiles[item.data.uri];
-            if (tsFile != null) {
-                let myData = {
-                    languageId: item.data.languageIdJs,
-                    offset: item.data.offset,
-                    uri: item.data.uri
-                }
-                delete item.data.languageId;
-                delete item.data.offset;
-                delete item.data.uri;
-                if (Object.keys(item.data).length == 0) {
-                    item.data = undefined
-                }
+        try {
+            if (item.data) {
+                let tsFile = this.build.tsFiles[item.data.uri];
+                if (tsFile != null) {
+                    let myData = {
+                        languageId: item.data.languageIdJs,
+                        offset: item.data.offset,
+                        uri: item.data.uri
+                    }
+                    delete item.data.languageId;
+                    delete item.data.offset;
+                    delete item.data.uri;
+                    if (Object.keys(item.data).length == 0) {
+                        item.data = undefined
+                    }
 
-                let details = this.languageService.getCompletionEntryDetails(
-                    myData.uri,
-                    myData.offset,
-                    item.label,
-                    {},
-                    tsFile.file.content,
-                    completionOptions,
-                    item.data);
+                    let details = this.languageService.getCompletionEntryDetails(
+                        myData.uri,
+                        myData.offset,
+                        item.label,
+                        {},
+                        tsFile.file.content,
+                        completionOptions,
+                        item.data);
 
-                if (details) {
-                    item.detail = displayPartsToString(details.displayParts);
-                    item.documentation = displayPartsToString(details.documentation);
-                    item.additionalTextEdits = [];
-                    if (details.codeActions) {
-                        for (let i = 0; i < details.codeActions.length; i++) {
-                            for (let change of details.codeActions[i].changes) {
-                                for (let txtChange of change.textChanges) {
-                                    txtChange.newText = txtChange.newText.replace(/'/g, '"');
-                                    let newImport = /"(.*)"/g.exec(txtChange.newText);
-                                    if (newImport && newImport.length > 1) {
-                                        let finalPath = simplifyPath(newImport[1], tsFile.file.uri);
-                                        item.detail += "\r\nimport from " + finalPath;
-                                        txtChange.newText = txtChange.newText.replace(newImport[1], finalPath);
+                    if (details) {
+                        item.detail = displayPartsToString(details.displayParts);
+                        item.documentation = displayPartsToString(details.documentation);
+                        item.additionalTextEdits = [];
+                        if (details.codeActions) {
+                            for (let i = 0; i < details.codeActions.length; i++) {
+                                for (let change of details.codeActions[i].changes) {
+                                    for (let txtChange of change.textChanges) {
+                                        txtChange.newText = txtChange.newText.replace(/'/g, '"');
+                                        let newImport = /"(.*)"/g.exec(txtChange.newText);
+                                        if (newImport && newImport.length > 1) {
+                                            let finalPath = simplifyPath(newImport[1], tsFile.file.uri);
+                                            item.detail += "\r\nimport from " + finalPath;
+                                            txtChange.newText = txtChange.newText.replace(newImport[1], finalPath);
+                                        }
+
+                                        item.additionalTextEdits.push({
+                                            newText: txtChange.newText,
+                                            range: convertRange(tsFile.file.document, txtChange.span)
+                                        });
                                     }
-
-                                    item.additionalTextEdits.push({
-                                        newText: txtChange.newText,
-                                        range: convertRange(tsFile.file.document, txtChange.span)
-                                    });
                                 }
                             }
                         }
+                        delete item.data;
                     }
-                    delete item.data;
                 }
             }
+        } catch (e) {
+            console.error(e);
         }
         return item;
     }
 
+
     public async doHover(file: AventusFile, position: Position): Promise<Hover | null> {
-        let info = this.languageService.getQuickInfoAtPosition(file.uri, file.document.offsetAt(position));
-        if (info) {
-            let textDoc: string[] = []
-            if (info.documentation) {
-                for (let doc of info.documentation) {
-                    textDoc.push(doc.text);
+        try {
+            let info = this.languageService.getQuickInfoAtPosition(file.uri, file.document.offsetAt(position));
+            if (info) {
+                let textDoc: string[] = []
+                if (info.documentation) {
+                    for (let doc of info.documentation) {
+                        textDoc.push(doc.text);
+                    }
                 }
+                const contents = displayPartsToString(info.displayParts);
+                return {
+                    range: convertRange(file.document, info.textSpan),
+                    contents: [contents, textDoc.join(EOL)].join(EOL)
+                };
             }
-            const contents = displayPartsToString(info.displayParts);
-            return {
-                range: convertRange(file.document, info.textSpan),
-                contents: [contents, textDoc.join(EOL)].join(EOL)
-            };
+        } catch (e) {
+            console.error(e);
         }
         return null;
     }
 
     public async findDefinition(file: AventusFile, position: Position): Promise<Definition | null> {
-        let definition = this.languageService.getDefinitionAtPosition(file.uri, file.document.offsetAt(position));
-        if (definition && definition.length > 0) {
-            let d = definition[0];
-            if (d.fileName.endsWith(".avt.ts")) {
-                d.fileName = d.fileName.replace(".avt.ts", ".avt");
+        try {
+            let definition = this.languageService.getDefinitionAtPosition(file.uri, file.document.offsetAt(position));
+            if (definition && definition.length > 0) {
+                let d = definition[0];
+                if (d.fileName.endsWith(".avt.ts")) {
+                    d.fileName = d.fileName.replace(".avt.ts", ".avt");
+                }
+                let realDoc = this.filesLoaded[d.fileName];
+                if (realDoc) {
+                    return {
+                        uri: realDoc.file.uri,
+                        range: convertRange(realDoc.file.document, d.textSpan)
+                    };
+                }
             }
-            let realDoc = this.filesLoaded[d.fileName];
-            if (realDoc) {
-                return {
-                    uri: realDoc.file.uri,
-                    range: convertRange(realDoc.file.document, d.textSpan)
-                };
-            }
+        } catch (e) {
+            console.error(e);
         }
         return null;
     }
     public async format(file: AventusFile, range: Range, formatParams: FormattingOptions): Promise<TextEdit[]> {
-        let document = file.document;
-        let start = document.offsetAt(range.start);
-        let end = document.offsetAt(range.end);
-        let lastLineRange: null | Range = null;
-        if (range.end.line > range.start.line && (range.end.character === 0 || isWhitespaceOnly(document.getText().substr(end - range.end.character, range.end.character)))) {
-            end -= range.end.character;
-            lastLineRange = Range.create(Position.create(range.end.line, 0), range.end);
-        }
-        let options = { ...formatingOptions };
+        try {
+            let document = file.document;
+            let start = document.offsetAt(range.start);
+            let end = document.offsetAt(range.end);
+            let lastLineRange: null | Range = null;
+            if (range.end.line > range.start.line && (range.end.character === 0 || isWhitespaceOnly(document.getText().substr(end - range.end.character, range.end.character)))) {
+                end -= range.end.character;
+                lastLineRange = Range.create(Position.create(range.end.line, 0), range.end);
+            }
+            let options = { ...formatingOptions };
 
-        let edits = this.languageServiceNamespace.getFormattingEditsForRange(document.uri, start, end, options);
-        if (edits) {
-            let result: TextEdit[] = [];
-            for (let edit of edits) {
-                if (edit.span.start >= start && edit.span.start + edit.span.length <= end) {
+            let edits = this.languageServiceNamespace.getFormattingEditsForRange(document.uri, start, end, options);
+            if (edits) {
+                let result: TextEdit[] = [];
+                for (let edit of edits) {
+                    if (edit.span.start >= start && edit.span.start + edit.span.length <= end) {
+                        result.push({
+                            range: convertRange(document, edit.span),
+                            newText: edit.newText
+                        });
+                    }
+                }
+                if (lastLineRange) {
                     result.push({
-                        range: convertRange(document, edit.span),
-                        newText: edit.newText
+                        range: lastLineRange,
+                        newText: generateIndent(0, formatParams)
                     });
                 }
+                return result;
             }
-            if (lastLineRange) {
-                result.push({
-                    range: lastLineRange,
-                    newText: generateIndent(0, formatParams)
-                });
-            }
-            return result;
+        } catch (e) {
+            console.error(e);
         }
         return [];
     }
     public async doCodeAction(file: AventusFile, range: Range): Promise<CodeAction[]> {
-        let document = file.document;
         let result: CodeAction[] = [];
-        const syntaxDiagnostics: DiagnosticTs[] = this.languageService.getSyntacticDiagnostics(document.uri);
-        const semanticDiagnostics: DiagnosticTs[] = this.languageService.getSemanticDiagnostics(document.uri);
-        let codes: number[] = [];
-        for (let diag of syntaxDiagnostics) {
-            codes.push(diag.code)
-        }
-        for (let diag of semanticDiagnostics) {
-            codes.push(diag.code)
-        }
-        let actions: readonly CodeFixAction[] = [];
         try {
-            actions = this.languageService.getCodeFixesAtPosition(document.uri, document.offsetAt(range.start), document.offsetAt(range.end), codes, formatingOptions, completionOptions);
+            let document = file.document;
+            const syntaxDiagnostics: DiagnosticTs[] = this.languageService.getSyntacticDiagnostics(document.uri);
+            const semanticDiagnostics: DiagnosticTs[] = this.languageService.getSemanticDiagnostics(document.uri);
+            let codes: number[] = [];
+            for (let diag of syntaxDiagnostics) {
+                codes.push(diag.code)
+            }
+            for (let diag of semanticDiagnostics) {
+                codes.push(diag.code)
+            }
+            let actions: readonly CodeFixAction[] = [];
+            try {
+                actions = this.languageService.getCodeFixesAtPosition(document.uri, document.offsetAt(range.start), document.offsetAt(range.end), codes, formatingOptions, completionOptions);
+            } catch (e) {
+
+            }
+            for (let action of actions) {
+                let changes: TextEdit[] = [];
+                let workspaceEdit: WorkspaceEdit = {
+                    changes: {
+                        [document.uri]: changes
+                    }
+                }
+                for (let change of action.changes) {
+                    for (let textChange of change.textChanges) {
+                        if (action.description.startsWith("Add import from")) {
+                            textChange.newText = textChange.newText.replace(/'/g, '"');
+                            let newImport = /"(.*)"/g.exec(textChange.newText);
+                            if (newImport && newImport.length > 1) {
+                                let finalPath = simplifyPath(newImport[1], document.uri);
+                                action.description = "Add import from " + finalPath;
+                                textChange.newText = textChange.newText.replace(newImport[1], finalPath);
+                            }
+                        }
+                        else if (action.fixName === "fixClassDoesntImplementInheritedAbstractMember") {
+                            let index = getSectionStart(file, "methods")
+                            if (index != -1) {
+                                textChange.span.start = index;
+                            }
+                        }
+                        changes.push({
+                            newText: textChange.newText,
+                            range: convertRange(document, textChange.span),
+                        })
+                    }
+                }
+
+                result.push({
+                    title: action.description,
+                    // command:action.commands,
+                    edit: workspaceEdit,
+                })
+            }
         } catch (e) {
-
-        }
-        for (let action of actions) {
-            let changes: TextEdit[] = [];
-            let workspaceEdit: WorkspaceEdit = {
-                changes: {
-                    [document.uri]: changes
-                }
-            }
-            for (let change of action.changes) {
-                for (let textChange of change.textChanges) {
-                    if (action.description.startsWith("Add import from")) {
-                        textChange.newText = textChange.newText.replace(/'/g, '"');
-                        let newImport = /"(.*)"/g.exec(textChange.newText);
-                        if (newImport && newImport.length > 1) {
-                            let finalPath = simplifyPath(newImport[1], document.uri);
-                            action.description = "Add import from " + finalPath;
-                            textChange.newText = textChange.newText.replace(newImport[1], finalPath);
-                        }
-                    }
-                    else if (action.fixName === "fixClassDoesntImplementInheritedAbstractMember") {
-                        let index = getSectionStart(file, "methods")
-                        if (index != -1) {
-                            textChange.span.start = index;
-                        }
-                    }
-                    changes.push({
-                        newText: textChange.newText,
-                        range: convertRange(document, textChange.span),
-                    })
-                }
-            }
-
-            result.push({
-                title: action.description,
-                // command:action.commands,
-                edit: workspaceEdit,
-            })
+            console.error(e);
         }
         return result;
     }
 
     public async onReferences(file: AventusFile, position: Position): Promise<Location[]> {
-        let offset = file.document.offsetAt(position);
         let result: Location[] = []
-        let referencedSymbols = this.languageService.findReferences(file.uri, offset);
-        if (referencedSymbols) {
-            for (let referencedSymbol of referencedSymbols) {
-                for (let reference of referencedSymbol.references) {
-                    if (this.filesLoaded[reference.fileName]) {
-                        let startPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start)
-                        let endPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start + reference.textSpan.length)
-                        result.push(Location.create(reference.fileName, {
-                            start: startPos,
-                            end: endPos
-                        }));
+        try {
+            let offset = file.document.offsetAt(position);
+            let referencedSymbols = this.languageService.findReferences(file.uri, offset);
+            if (referencedSymbols) {
+                for (let referencedSymbol of referencedSymbols) {
+                    for (let reference of referencedSymbol.references) {
+                        if (this.filesLoaded[reference.fileName]) {
+                            let startPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start)
+                            let endPos = this.filesLoaded[reference.fileName].file.document.positionAt(reference.textSpan.start + reference.textSpan.length)
+                            result.push(Location.create(reference.fileName, {
+                                start: startPos,
+                                end: endPos
+                            }));
+                        }
                     }
                 }
             }
+        } catch (e) {
+            console.error(e);
         }
         return result;
     }
 
     public async onCodeLens(file: AventusFile): Promise<CodeLens[]> {
         let result: CodeLens[] = []
-        if (this.filesLoaded[file.uri]) {
-            let _createCodeLens = async (instances: ClassModel[] | EnumDeclaration[] | AliasNode[]) => {
-                for (let instance of instances) {
-                    let startPos = file.document.positionAt(instance.start)
-                    let refs = await this.onReferences(file, startPos);
-                    let title = refs.length > 1 ? refs.length + ' references' : refs.length + ' reference';
-                    result.push({
-                        range: {
-                            start: startPos,
-                            end: startPos,
-                        },
-                        command: {
-                            title: title,
-                            command: refs.length ? 'editor.action.showReferences' : '',
-                            arguments: [file.uri, startPos, refs]
-                        }
-                    });
+        try {
+            if (this.filesLoaded[file.uri]) {
+                let _createCodeLens = async (instances: ClassModel[] | EnumDeclaration[] | AliasNode[]) => {
+                    for (let instance of instances) {
+                        let startPos = file.document.positionAt(instance.start)
+                        let refs = await this.onReferences(file, startPos);
+                        let title = refs.length > 1 ? refs.length + ' references' : refs.length + ' reference';
+                        result.push({
+                            range: {
+                                start: startPos,
+                                end: startPos,
+                            },
+                            command: {
+                                title: title,
+                                command: refs.length ? 'editor.action.showReferences' : '',
+                                arguments: [file.uri, startPos, refs]
+                            }
+                        });
+                    }
                 }
+                await _createCodeLens(this.filesLoaded[file.uri].fileParsed.classes);
+                await _createCodeLens(this.filesLoaded[file.uri].fileParsed.enumDeclarations);
+                await _createCodeLens(this.filesLoaded[file.uri].fileParsed.aliases);
+
             }
-            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.classes);
-            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.enumDeclarations);
-            await _createCodeLens(this.filesLoaded[file.uri].fileParsed.aliases);
 
+            let propSection = getSectionStart(file, 'props');
+            if (propSection != -1) {
+                let position = file.document.positionAt(propSection)
+                result.push({
+                    range: {
+                        start: position,
+                        end: position,
+                    },
+                    command: {
+                        title: "Add property | attribute",
+                        command: 'editor.action.showReferences',
+                        arguments: [file.uri]
+                    }
+                })
+            }
+        } catch (e) {
+            console.error(e);
         }
-
-        let propSection = getSectionStart(file, 'props');
-        if (propSection != -1) {
-            let position = file.document.positionAt(propSection)
-            result.push({
-                range: {
-                    start: position,
-                    end: position,
-                },
-                command: {
-                    title: "Add property | attribute",
-                    command: 'editor.action.showReferences',
-                    arguments: [file.uri]
-                }
-            })
-        }
-
         return result;
     }
 
@@ -536,127 +569,135 @@ export class AventusTsLanguageService {
             classDoc: "",
             debugTxt: ""
         }
-        // prepare info
-        let typeToFullname: { [type: string]: string } = {};
-        const struct = file.fileParsed;
-        for (let _import of struct._imports) {
-            let key = pathToUri(_import.absPathString);
-            let importedFile = file.build.tsFiles[key];
-            if (importedFile) {
-                for (let _class of importedFile.fileParsed.classes) {
-                    if (_class.namespace.name != "") {
-                        typeToFullname[_class.name] = _class.namespace.name + '.' + _class.name;
-                    }
-                }
-            }
-        }
-        for (let extend of element.extends) {
-            let nameToUse = extend.typeName
-            if (extend.typeKind == TypeKind.BASIC) {
-                nameToUse = (extend as BasicType).basicName;
-            }
-            if (typeToFullname[nameToUse]) {
-                nameToUse = typeToFullname[nameToUse]
-            }
-            if (result.dependances.indexOf(nameToUse) == -1) {
-                result.dependances.push(nameToUse);
-            }
-        }
-
-        // prepare content
-        let txt = this.removeComments(this.removeDecoratorFromClassContent(element));
-        txt = this.replaceFirstExport(txt);
-
-
-        result.compiled = transpile(txt, compilerOptionsCompile);
-        let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname, element);
-
-        let namespaceTxt = element.namespace.name;
-        if (namespaceTxt.length > 0 && element.isExported) {
-            if (doc.length > 0) {
-                result.doc = "namespace " + namespaceTxt + " {\r\n" + doc + "}\r\n";
-            }
-        }
-        else {
-            result.doc = doc;
-        }
-
-        if (result.compiled.length > 0) {
-            if (namespaceTxt.length > 0) {
-                result.classScript = namespaceTxt + '.' + element.name
-            }
-            else {
-                result.classScript = element.name;
-            }
-        }
-        if (result.doc.length > 0) {
-            if (namespaceTxt.length > 0) {
-                result.classDoc = namespaceTxt + '.' + element.name
-            }
-            else {
-                result.classDoc = element.name;
-            }
-        }
-
-        for (let decorator of element.decorators) {
-            if (decorator.name == "Debugger") {
-                if (decorator.arguments.length > 0) {
-                    for (let arg of decorator.arguments) {
-                        if (arg.writeCompiled) {
-                            result.debugTxt = result.compiled
+        try {
+            // prepare info
+            let typeToFullname: { [type: string]: string } = {};
+            const struct = file.fileParsed;
+            for (let _import of struct._imports) {
+                let key = pathToUri(_import.absPathString);
+                let importedFile = file.build.tsFiles[key];
+                if (importedFile) {
+                    for (let _class of importedFile.fileParsed.classes) {
+                        if (_class.namespace.name != "") {
+                            typeToFullname[_class.name] = _class.namespace.name + '.' + _class.name;
                         }
                     }
                 }
             }
-        }
+            for (let extend of element.extends) {
+                let nameToUse = extend.typeName
+                if (extend.typeKind == TypeKind.BASIC) {
+                    nameToUse = (extend as BasicType).basicName;
+                }
+                if (typeToFullname[nameToUse]) {
+                    nameToUse = typeToFullname[nameToUse]
+                }
+                if (result.dependances.indexOf(nameToUse) == -1) {
+                    result.dependances.push(nameToUse);
+                }
+            }
 
+            // prepare content
+            let txt = this.removeComments(this.removeDecoratorFromClassContent(element));
+            txt = this.replaceFirstExport(txt);
+
+
+            result.compiled = transpile(txt, compilerOptionsCompile);
+            let doc = correctTypeInsideDefinition(this.compileDocTs(txt), typeToFullname, element);
+
+            let namespaceTxt = element.namespace.name;
+            if (namespaceTxt.length > 0 && element.isExported) {
+                if (doc.length > 0) {
+                    result.doc = "namespace " + namespaceTxt + " {\r\n" + doc + "}\r\n";
+                }
+            }
+            else {
+                result.doc = doc;
+            }
+
+            if (result.compiled.length > 0) {
+                if (namespaceTxt.length > 0) {
+                    result.classScript = namespaceTxt + '.' + element.name
+                }
+                else {
+                    result.classScript = element.name;
+                }
+            }
+            if (result.doc.length > 0) {
+                if (namespaceTxt.length > 0) {
+                    result.classDoc = namespaceTxt + '.' + element.name
+                }
+                else {
+                    result.classDoc = element.name;
+                }
+            }
+
+            for (let decorator of element.decorators) {
+                if (decorator.name == "Debugger") {
+                    if (decorator.arguments.length > 0) {
+                        for (let arg of decorator.arguments) {
+                            if (arg.writeCompiled) {
+                                result.debugTxt = result.compiled
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
         return result;
     }
 
-    public static compileDocTs(txt: string) {
-        const host: LanguageServiceHost = {
-            getCompilationSettings: () => {
-                return {
-                    allowJs: true,
-                    declaration: true
-                }
-            },
-            getScriptFileNames: () => ["temp.js"],
-            getScriptKind: (fileName) => {
-                return ScriptKind.TS;
-            },
-            getScriptVersion: (fileName: string) => {
-                return '1';
-            },
-            getScriptSnapshot: (fileName: string) => {
-                let text = txt;
-                return {
-                    getText: (start, end) => text?.substring(start, end) || '',
-                    getLength: () => text?.length || 0,
-                    getChangeRange: () => undefined
-                };
-            },
-            getCurrentDirectory: () => '',
-            getDefaultLibFileName: (_options: CompilerOptions) => '',
-            readFile: (path: string, _encoding?: string | undefined): string | undefined => {
-                return txt;
-            },
-            fileExists: (path: string): boolean => {
-                return true;
-            },
-            directoryExists: (path: string): boolean => {
-                // typescript tries to first find libraries in node_modules/@types and node_modules/@typescript
-                // there's no node_modules in our setup
-                if (path.startsWith('node_modules')) {
-                    return false;
-                }
-                return true;
+    public static compileDocTs(txt: string): string {
+        try {
+            const host: LanguageServiceHost = {
+                getCompilationSettings: () => {
+                    return {
+                        allowJs: true,
+                        declaration: true
+                    }
+                },
+                getScriptFileNames: () => ["temp.js"],
+                getScriptKind: (fileName) => {
+                    return ScriptKind.TS;
+                },
+                getScriptVersion: (fileName: string) => {
+                    return '1';
+                },
+                getScriptSnapshot: (fileName: string) => {
+                    let text = txt;
+                    return {
+                        getText: (start, end) => text?.substring(start, end) || '',
+                        getLength: () => text?.length || 0,
+                        getChangeRange: () => undefined
+                    };
+                },
+                getCurrentDirectory: () => '',
+                getDefaultLibFileName: (_options: CompilerOptions) => '',
+                readFile: (path: string, _encoding?: string | undefined): string | undefined => {
+                    return txt;
+                },
+                fileExists: (path: string): boolean => {
+                    return true;
+                },
+                directoryExists: (path: string): boolean => {
+                    // typescript tries to first find libraries in node_modules/@types and node_modules/@typescript
+                    // there's no node_modules in our setup
+                    if (path.startsWith('node_modules')) {
+                        return false;
+                    }
+                    return true;
 
-            },
+                },
 
-        };
-        let ls: LanguageService = createLanguageService(host);
-        return ls.getEmitOutput("temp.js", true, true).outputFiles[0].text.replace(/^declare /g, '');
+            };
+            let ls: LanguageService = createLanguageService(host);
+            return ls.getEmitOutput("temp.js", true, true).outputFiles[0].text.replace(/^declare /g, '');
+        } catch (e) {
+            console.error(e);
+        }
+        return "";
     }
     public static getCompilerOptionsCompile(): CompilerOptions {
         return compilerOptionsCompile;
