@@ -1,6 +1,6 @@
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { EOL } from 'os';
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens, WorkspaceEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { AventusExtension, AventusLanguageId } from "../../../definition";
 import { AventusFile, InternalAventusFile } from '../../../files/AventusFile';
@@ -125,6 +125,9 @@ export class AventusWebComponentLogicalFile extends AventusTsFile {
     }
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return this.tsLanguageService.onCodeLens(document);
+    }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return this.tsLanguageService.onRename(document, position, newName);
     }
 
     public getMissingVariablesInfo(): { start: number, text: string } {
@@ -480,6 +483,9 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
     }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return null;
+    }
 
 
     private getDocuments() {
@@ -582,6 +588,5 @@ export class AventusWebComponentSingleFile extends AventusTsFile {
 
         return resultTxt;
     }
-
 
 }

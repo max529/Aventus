@@ -1,5 +1,5 @@
 import { EOL } from 'os';
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens, WorkspaceEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ClientConnection } from '../../../Connection';
 import { AventusExtension, AventusLanguageId } from "../../../definition";
@@ -176,6 +176,9 @@ export class AventusDefinitionFile extends AventusTsFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
     }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return null;
+    }
 
     private transformPosition(fileFrom: AventusBaseFile, positionFrom: Position, fileTo: AventusBaseFile, offset: number): Position {
         let currentOffset = fileFrom.file.document.offsetAt(positionFrom);
@@ -277,6 +280,9 @@ export class AventusDefinitionTsFile extends AventusTsFile {
     protected async onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return [];
     }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return null;
+    }
 }
 export class AventusDefinitionSCSSFile extends AventusBaseFile {
 
@@ -322,6 +328,9 @@ export class AventusDefinitionSCSSFile extends AventusBaseFile {
     protected onGetBuild(): Build[] {
         return [this.build]
     }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return null;
+    }
 }
 export class AventusDefinitionHTMLFile extends AventusBaseFile {
     protected async onValidate(): Promise<Diagnostic[]> {
@@ -366,5 +375,8 @@ export class AventusDefinitionHTMLFile extends AventusBaseFile {
     }
     protected onGetBuild(): Build[] {
         return [this.build]
+    }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return null;
     }
 }

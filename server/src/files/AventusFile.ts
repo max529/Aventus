@@ -1,5 +1,5 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver";
 import { v4 as randomUUID } from 'uuid';
 import { getFolder, uriToPath } from '../tools';
 import { ClientConnection } from '../Connection';
@@ -16,6 +16,7 @@ export type onFormattingType = (document: AventusFile, range: Range, options: Fo
 export type onCodeActionType = (document: AventusFile, range: Range) => Promise<CodeAction[]>;
 export type onReferencesType = (document: AventusFile, position: Position) => Promise<Location[]>;
 export type onCodeLensType = (document: AventusFile) => Promise<CodeLens[]>;
+export type onRenameType = (document: AventusFile, position: Position, newName: string) => Promise<WorkspaceEdit | null>;
 export type onGetBuildType = () => Build[];
 
 export interface AventusFile {
@@ -68,6 +69,9 @@ export interface AventusFile {
 
     onCodeLens(cb: onCodeLensType): string;
     removeOnCodeLens(uuid: string): void;
+
+    onRename(cb: onRenameType): string;
+    removeOnRename(uuid: string): void;
 }
 export class InternalAventusFile implements AventusFile {
     public document: TextDocument;
@@ -545,4 +549,34 @@ export class InternalAventusFile implements AventusFile {
     }
     //#endregion
 
+    //#region onRename
+    private onRenameCb: { [uuid: string]: onRenameType } = {};
+
+    public async getRename(position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        let proms: Promise<WorkspaceEdit | null>[] = [];
+        for (let uuid in this.onRenameCb) {
+            proms.push(this.onRenameCb[uuid](this, position, newName));
+        }
+        let promsResult = await Promise.all(proms);
+        for (let promResult of promsResult) {
+            if(promResult) {
+                return promResult
+            }            
+        }
+        return null;
+    }
+
+    public onRename(cb: onRenameType): string {
+        let uuid = randomUUID();
+        while (this.onRenameCb[uuid] != undefined) {
+            uuid = randomUUID();
+        }
+        this.onRenameCb[uuid] = cb;
+        return uuid;
+    }
+
+    public removeOnRename(uuid: string): void {
+        delete this.onRenameCb[uuid];
+    }
+    //#endregion
 }

@@ -1,4 +1,4 @@
-import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, Diagnostic, FormattingOptions, Hover, Location, Position, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver";
 import { AventusFile, InternalAventusFile } from '../files/AventusFile';
 import { Build } from "../project/Build";
 
@@ -37,6 +37,7 @@ export abstract class AventusBaseFile {
         onReferences: '',
         onCodeLens: '',
         onGetBuild: '',
+        onRename: ''
     }
     private addEvents(): void {
         this.uuidEvents.onContentChange = this.file.onContentChange(this.onContentChange.bind(this));
@@ -52,6 +53,7 @@ export abstract class AventusBaseFile {
         this.uuidEvents.onReferences = this.file.onReferences(this.onReferences.bind(this));
         this.uuidEvents.onCodeLens = this.file.onCodeLens(this.onCodeLens.bind(this));
         this.uuidEvents.onGetBuild = this.file.onGetBuild(this.onGetBuild.bind(this));
+        this.uuidEvents.onRename = this.file.onRename(this.onRename.bind(this));
     }
     public removeEvents(): void {
         this.file.removeOnContentChange(this.uuidEvents.onContentChange);
@@ -67,6 +69,7 @@ export abstract class AventusBaseFile {
         this.file.removeOnReferences(this.uuidEvents.onReferences);
         this.file.removeOnCodeLens(this.uuidEvents.onCodeLens);
         this.file.removeOnGetBuild(this.uuidEvents.onGetBuild);
+        this.file.removeOnRename(this.uuidEvents.onRename);
 
     }
 
@@ -102,6 +105,7 @@ export abstract class AventusBaseFile {
     protected abstract onCodeAction(document: AventusFile, range: Range): Promise<CodeAction[]>;
     protected abstract onReferences(document: AventusFile, position: Position): Promise<Location[]>;
     protected abstract onCodeLens(document: AventusFile): Promise<CodeLens[]>;
+    protected abstract onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null>;
     protected abstract onGetBuild(): Build[];
 
 

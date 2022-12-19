@@ -1,3 +1,4 @@
+import { end } from 'cheerio/lib/api/traversing';
 import { EOL } from 'os';
 import { normalize, sep } from 'path';
 import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ReferencedSymbol, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
@@ -536,6 +537,41 @@ export class AventusTsLanguageService {
             console.error(e);
         }
         return result;
+    }
+    public async onRename(file: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        let offset: number = file.document.offsetAt(position);
+        let renameInfo: ts.RenameInfo = this.languageService.getRenameInfo(file.uri, offset)
+        if(!renameInfo.canRename) {
+            return null;
+        }
+        let renameLocations = this.languageService.findRenameLocations(file.uri, offset, false, false);
+        if(!renameLocations) {
+            return null;
+        }
+        let res:WorkspaceEdit = {
+            changes: {
+
+            }
+        };
+        if(res.changes) {
+            for(let renameLocation of renameLocations) {
+                let file = this.filesLoaded[renameLocation.fileName];
+                if(file) {
+                    if(!res.changes[renameLocation.fileName]) {
+                        res.changes[renameLocation.fileName] = []
+                    }
+                    let textEdit: TextEdit = {
+                        newText: newName,
+                        range: {
+                            start: this.filesLoaded[renameLocation.fileName].file.document.positionAt(renameLocation.textSpan.start),
+                            end: this.filesLoaded[renameLocation.fileName].file.document.positionAt(renameLocation.textSpan.start + renameLocation.textSpan.length)
+                        }
+                    }
+                    res.changes[renameLocation.fileName].push(textEdit);
+                }
+            }
+        }
+        return res;
     }
 
 

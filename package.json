@@ -330,7 +330,7 @@
 	"dependencies": {
 		"@types/estree": "^1.0.0",
 		"@types/luxon": "^2.3.2",
-		"@types/node": "16.x",
+		"@types/node": "^18.11.17",
 		"babel-minify": "^0.5.2",
 		"cheerio": "^1.0.0-rc.11",
 		"chokidar": "^3.5.3",

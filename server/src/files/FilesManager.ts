@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { Hover } from 'vscode-languageclient';
-import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, FormattingOptions, Location, Position, Range, TextEdit } from 'vscode-languageserver';
+import { CodeAction, CodeLens, CompletionItem, CompletionList, Definition, FormattingOptions, Location, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ClientConnection } from '../Connection';
 import { AventusExtension, AventusLanguageId } from '../definition';
@@ -151,6 +151,14 @@ export class FilesManager {
         }
         return this.files[document.uri].getCodeLens();
     }
+
+    public async onRename(document: TextDocument, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        if (!this.files[document.uri]) {
+            return null 
+        }
+        return this.files[document.uri].getRename(position, newName)
+    }
+
     public getBuild(document: TextDocument): Build[] {
         if (!this.files[document.uri]) {
             return [];

@@ -56,7 +56,8 @@ ClientConnection.getInstance().connection?.onInitialize((_params: InitializePara
             },
             codeLensProvider: {
                 resolveProvider: true,
-            }
+            },
+            renameProvider: true
         }
     };
 })
@@ -128,7 +129,14 @@ ClientConnection.getInstance().connection?.onReferences(async (params, token, wo
         return await FilesManager.getInstance().onReferences(document, params.position);
     }
     return null;
-})
+});
+ClientConnection.getInstance().connection?.onRenameRequest(async (params, token, workDoneProgress) => {
+    const document = documents.get(params.textDocument.uri);
+    if (document && isAllowed(document)) {
+        return await FilesManager.getInstance().onRename(document, params.position, params.newName);
+    }
+    return null;
+});
 
 // not on document
 ClientConnection.getInstance().connection?.onExecuteCommand(async (params) => {

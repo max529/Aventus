@@ -1,4 +1,4 @@
-import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens } from "vscode-languageserver";
+import { Position, CompletionList, CompletionItem, Hover, Definition, Range, FormattingOptions, TextEdit, CodeAction, Diagnostic, Location, CodeLens, WorkspaceEdit } from "vscode-languageserver";
 import { AventusExtension } from "../../../definition";
 import { AventusFile } from '../../../files/AventusFile';
 import { Build } from '../../../project/Build';
@@ -58,5 +58,8 @@ export class AventusRamFile extends AventusTsFile {
     }
     protected onCodeLens(document: AventusFile): Promise<CodeLens[]> {
         return this.tsLanguageService.onCodeLens(document);
+    }
+    protected async onRename(document: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
+        return this.tsLanguageService.onRename(document, position, newName);
     }
 }
