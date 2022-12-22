@@ -15,7 +15,7 @@ interface HttpRequestOptions {    url: string;    method?: HttpRequestMethod;
 interface DragAndDropOptions {    applyDrag?: boolean;    element: HTMLElement;    elementTrigger?: HTMLElement;    offsetDrag?: number;    shadow?: {        enable: boolean;        container?: HTMLElement;        removeOnStop?: boolean;    };    strict?: boolean;    targets?: HTMLElement[];    usePercent?: boolean;    isDragEnable?: () => boolean;    getZoom?: () => number;    getOffsetX?: () => number;    getOffsetY?: () => number;    onPointerDown?: (e: PointerEvent) => void;    onStart?: (e: PointerEvent) => void;    onMove?: (e: PointerEvent, position: Coordinate) => void;    onStop?: (e: PointerEvent) => void;    onDrop?: (element: HTMLElement, targets: HTMLElement[]) => void;}class DragAndDrop {    static defaultOffsetDrag: number;    private pressManager;    private options;    private startCursorPosition;    private startElementPosition;    constructor(options: DragAndDropOptions);    private getDefaultOptions;    private mergeProperties;    private mergeFunctions;    private defaultMerge;    private init;    private draggableElement;    private positionShadowRelativeToElement;    private onPressStart;    private onDragStart;    private onDrag;    private onDragEnd;    private setPosition;    private getMatchingTargets;    getElementDrag(): HTMLElement;    setTargets(targets: HTMLElement[]): void;    destroy(): void;}
 interface AnimationOptions {    animate?: Function;    stopped?: Function;    fps?: number;}class AnimationManager {    static FPS_DEFAULT: number;    private options;    private nextFrame;    private fpsInterval;    private continueAnimation;    constructor(options: AnimationOptions);    private animate;    /**     * Start the of animation     */    start(): void;    /**     * Stop the animation     */    stop(): void;    /**     * Get the FPS     *     * @returns {number}     */    getFPS(): number;    /**     * Set the FPS     *     * @param fps     */    setFPS(fps: number): void;    /**     * Get the animation status (true if animation is running)     *     * @returns {boolean}     */    isStarted(): boolean;}
 enum WatchAction {    SET = 0,    CREATED = 1,    UPDATED = 2,    DELETED = 3}
-interface IData {}interface IDataConstraint<U> extends IData {}interface CSharpData extends IData {    $type: string;}
+interface IData {}interface IDataConstraint<U> extends IData {}interface ICSharpData extends IData {    $type: string;}abstract class Data implements IData {    toJSON(): {};}abstract class CSharpData extends Data implements ICSharpData, IData {    abstract get $type(): string;    toJSON(): any;}
 class Coordinate implements IData {    x: number;    y: number;}
 interface DtScrollablePositions {    vertical: {        value: number;        max: number;    };    horizontal: {        value: number;        max: number;    };}
 interface AvHideableOptions {    canHide?: (target?: Element) => Promise<boolean>;    beforeHide?: () => Promise<void>;    afterHide?: () => Promise<void>;    noHideItems?: HTMLElement[];    container?: HTMLElement;}
@@ -307,12 +307,6 @@ class AvFor extends WebComponent implements DefaultComponent {
 
     interface Date {
         clone: () => Date;
-    }
-
-
-    interface Array<T> {
-        unique: () => Array<T>;
-        last:() => T; 
     }
 
 interface ViewElementConfig {    useLive?: boolean;}

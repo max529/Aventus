@@ -76,8 +76,6 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         this.__prepareWatchesActions();
         this.__initWatches();
         this.__prepareTemplate();
-        this.__defaultValueAttr();
-        this.__defaultValueProp();
         this.__selectElementNeeded();
         this.__registerOnChange();
         this.__createStates();
@@ -188,6 +186,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private __endConstructor() { }
 
     private connectedCallback() {
+        this.__defaultValueAttr();
+        this.__defaultValueProp();
         this.__upgradeAttributes();
         this.__addEvents();
 

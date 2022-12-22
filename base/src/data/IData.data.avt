@@ -1,9 +1,31 @@
 export interface IData {
 
 }
-export interface IDataConstraint<U> extends IData{
+export interface IDataConstraint<U> extends IData {
 
 }
-export interface CSharpData extends IData {
+export interface ICSharpData extends IData {
     $type: string;
+}
+
+export abstract class Data implements IData {
+    toJSON() {
+        let result = {};
+        let props = Object.getOwnPropertyNames(this);
+        for(let prop of props) {
+            let propInfo = Object.getOwnPropertyDescriptor(this, prop);
+            if(propInfo.writable) {
+                result[prop] = this[prop];
+            }
+        }
+        return result;
+    }
+}
+export abstract class CSharpData extends Data implements ICSharpData, IData {
+    abstract get $type(): string;
+    override toJSON() {
+        let result = super.toJSON();
+        let type = {$type:this.$type};
+        return {...type, ...result};
+    }
 }

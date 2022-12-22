@@ -1,9 +1,0 @@
-Array.prototype.unique = function(){
-    return [...new Set(this)]   
-}
-Array.prototype.last = function () {
-    if (this.length == 0) {
-        return null;
-    }
-    return this[this.length - 1];
-}

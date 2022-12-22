@@ -116,7 +116,9 @@ export class Socket {
             if(data) {
                 message.data = data;
                 this.log(message);
-                message.data = JSON.stringify(data);
+                if(typeof data != 'string') {
+                    message.data = JSON.stringify(data);
+                }
             } else {
                 this.log(message);
             }
