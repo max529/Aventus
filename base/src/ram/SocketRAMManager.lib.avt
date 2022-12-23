@@ -408,8 +408,8 @@ export abstract class SocketRAMManager<U extends IDataConstraint<U>, R extends S
                 let id = that.getId(this);
                 let oldData = that.records[id];
                 if(oldData) {
-                    let mergedData = Object.assign(oldData, newData);
-                    let result = await that.update(mergedData);
+                    that.mergeObject(oldData, newData);
+                    let result = await that.update(oldData);
                     return <this><any>result;
                 }
                 return undefined;

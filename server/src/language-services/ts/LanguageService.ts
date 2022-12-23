@@ -1,7 +1,7 @@
 import { end } from 'cheerio/lib/api/traversing';
 import { EOL } from 'os';
 import { normalize, sep } from 'path';
-import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ReferencedSymbol, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
+import { CodeFixAction, CompilerOptions, CompletionInfo, createLanguageService, Diagnostic as DiagnosticTs, displayPartsToString, Extension, flattenDiagnosticMessageText, FormatCodeSettings, GetCompletionsAtPositionOptions, IndentStyle, JsxEmit, LanguageService, LanguageServiceHost, ModuleDetectionKind, ModuleResolutionKind, ReferencedSymbol, RenameInfo, ResolvedModule, ResolvedModuleFull, resolveModuleName, ScriptKind, ScriptTarget, SemicolonPreference, transpile, WithMetadata } from 'typescript';
 import { CodeAction, CodeLens, CompletionItem, CompletionItemKind, CompletionList, Definition, Diagnostic, DiagnosticSeverity, FormattingOptions, Hover, Location, Position, Range, TextEdit, WorkspaceEdit } from 'vscode-languageserver';
 import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../files/AventusFile';
@@ -540,7 +540,7 @@ export class AventusTsLanguageService {
     }
     public async onRename(file: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
         let offset: number = file.document.offsetAt(position);
-        let renameInfo: ts.RenameInfo = this.languageService.getRenameInfo(file.uri, offset)
+        let renameInfo: RenameInfo = this.languageService.getRenameInfo(file.uri, offset)
         if(!renameInfo.canRename) {
             return null;
         }
