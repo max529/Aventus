@@ -14,14 +14,20 @@ export class Socket {
     }
 
     init(options: SocketOptions = {}) {
-        if(!options.port) {
-            options.port = parseInt(window.location.port);
-        }
+
         if(!options.ip) {
             options.ip = window.location.hostname;
         }
         if(!options.hasOwnProperty('useHttps')) {
             options.useHttps = window.location.protocol == "https:";
+        }
+        if(!options.port) {
+            if(window.location.port) {
+                options.port = parseInt(window.location.port);
+            }
+            else {
+                options.port = options.useHttps ? 443 : 80;
+            }
         }
         if(!options.routes) {
             options.routes = {};
