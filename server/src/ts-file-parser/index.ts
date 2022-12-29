@@ -147,13 +147,15 @@ export interface MethodModel {
     start: number;
     end: number;
     name: string;
-    text: string;
+    content: string;
     returnType: TypeModel | undefined;
     arguments: ParameterModel[];
     isAbstract: Boolean,
     isStatic: Boolean,
     isAsync: Boolean,
     isPrivate: Boolean,
+    documentation: string[];
+    decorators: Decorator[];
 }
 
 export interface ParameterModel {

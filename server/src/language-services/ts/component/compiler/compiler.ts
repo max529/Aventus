@@ -389,14 +389,6 @@ export class AventusWebcomponentCompiler {
         let result: { [key: string]: CustomFieldModel } = {};
         for (let field of classInfo.fields) {
             let found = false;
-            if (field.name == "states") {
-                result[field.name] = {
-                    ...field,
-                    propType: 'State',
-                    inParent: !isBase,
-                }
-                found = true;
-            }
             for (let decorator of field.decorators) {
                 if (decorator.name == "Attribute") {
                     result[field.name] = {
@@ -914,12 +906,7 @@ export class AventusWebcomponentCompiler {
                 removeVarNameToCheck(field);
                 continue;
             }
-            if (field.propType == "State") {
-                // only one by file
-                this.writeFileFieldsStates(field);
-                continue;
-            }
-            else if (field.propType == "Attribute") {
+            if (field.propType == "Attribute") {
                 attributes.push(field);
                 continue;
             }
@@ -961,8 +948,7 @@ export class AventusWebcomponentCompiler {
         this.writeFileFieldsWatch(watches);
         this.writeFileFieldsView(views);
 
-        // to prevent $states$ if no states are used
-        this.writeFileReplaceVar("states", '')
+
 
 
         this.writeFileUpdateTemplate();
@@ -1062,89 +1048,7 @@ export class AventusWebcomponentCompiler {
         }
         this.writeFileReplaceVar('variables', variablesSimple);
     }
-    private writeFileFieldsStates(field: CustomFieldModel) {
-        // TODO cahnge this to add attribute over function @StateActive("your state") @StateInactive() @StateChange() must return bool for last
-        if (field.valueConstraint) {
-            let states = field.valueConstraint.value;
-            let fctStateTxt = "";
-            let slugGenerator = "";
-            let defineStateName = "";
-            for (var key in states) {
-                if (key == "stateManagerName") {
-                    defineStateName = "__getStateManagerName(){retrun \"" + states[key] + "\";}" + EOL
-                }
-                else {
-                    var activeFct = "";
-                    if (states[key].active) {
-                        activeFct = this.transpileMethod(states[key].active.toString(), ["state"]);
-                        activeFct = activeFct.replace(/this/g, "that2");
-                    }
-                    var inactiveFct = "";
-                    if (states[key].inactive) {
-                        inactiveFct = this.transpileMethod(states[key].inactive.toString(), ["currentState", "nextState"]);
-                        inactiveFct = inactiveFct.replace(/this/g, "that2");
-                    }
-                    var askChange = "true;";
-                    if (states[key].askChange) {
-                        askChange = this.transpileMethod(states[key].askChange.toString(), ["currentState", "nextState"]);
-                        askChange = askChange.replace(/this/g, "that2");
-                    }
 
-                    var route = '"' + key + '"';
-                    let slugId = 0;
-                    if (key.endsWith("*")) {
-                        if (states[key].getSlug) {
-                            slugId++;
-                            var getSlugFct = states[key].getSlug.toString().trim();
-                            getSlugFct = getSlugFct.replace("getSlug()", "() => ");
-                            slugGenerator += `this.getSlugFct["getSlug${slugId}"] = ${getSlugFct}`;
-                            route = '"' + key.replace("*", "") + '"+this.getSlugFct["getSlug' + slugId + '"]()';
-                        }
-                    }
-                    if (route != '"default"') {
-                        fctStateTxt += `
-                    this.statesList[${route}] = {
-                        active(state){
-                            if(that2.currentState == "default"){
-                                that2.statesList["default"].inactive();
-                            }
-                            that2.currentState = state;
-                            ${activeFct}
-                        },
-                        inactive(currentState, nextState){
-                            ${inactiveFct}
-
-                            if(Object.keys(that2.statesList).indexOf(nextState) == -1){
-                                that2.currentState = "default";
-                                that2.statesList["default"].active();
-                            }
-                        },
-                        askChange(currentState, nextState){
-                            return ${askChange}
-                        }
-                    };`+ EOL
-                    }
-                    else {
-                        fctStateTxt += `
-                    this.statesList[${route}] = {
-                        active(state){
-                            ${activeFct}
-                        },
-                        inactive(currentState, nextState){
-                            ${inactiveFct}
-                        }
-                    };`+ EOL
-                    }
-                }
-            }
-
-            let statesTxt = defineStateName + slugGenerator + EOL + fctStateTxt;
-            if (statesTxt.length > 0) {
-                statesTxt = `__createStates() { super.__createStates(); let that2 = this; ${statesTxt} }`
-            }
-            this.writeFileReplaceVar("states", statesTxt)
-        }
-    }
     private writeFileFieldsAttribute(fields: CustomFieldModel[]) {
         let defaultValue = "";
         let getterSetter = "";
@@ -1704,47 +1608,93 @@ this.clearWatchHistory = () => {
     //#endregion
 
     private writeFileMethods() {
+        let tempStateList: {
+            [statePattern: string]: {
+                [managerName: string]: {
+                    active: string[],
+                    inactive: string[],
+                    askChange: string[],
+                };
+            };
+        } = {}
+        let stateDecorators = {
+            "StateActive": "active",
+            "StateInactive": "inactive",
+            "StateChange": "askChange",
+        }
         let methodsTxt = "";
+        let defaultStateTxt = "";
         if (this.classInfo) {
+            let fullTxt = ""
             for (let method of this.classInfo.methods) {
-                if (!method.isAbstract) {
-                    //remove comment 
-                    method.text = method.text.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
-                    // remove manual type
-                    let regexRemoveType = new RegExp(method.name + "\\(.*?\\)(:( *){((\\s|\\S)*?)})", "g")
-                    let matchType = regexRemoveType.exec(method.text);
-                    if (matchType) {
-                        method.text = method.text.replace(matchType[1], "");
-                    }
-
-                    let regexMethod = /\).*?{((\s|\S)*)}/g;
-                    let match = regexMethod.exec(method.text)
-                    if (match) {
-                        let methodTxt = transpile(match[1], AventusTsLanguageService.getCompilerOptionsCompile()).trim();
-                        // methodTxt = minify(methodTxt, { mangle: false }).code;
-
-                        let methodFinal = "";
-                        if (method.isStatic) {
-                            methodFinal += "static ";
-                        }
-                        if (method.isAsync) {
-                            methodFinal += "async ";
-                        }
-                        let args: string[] = [];
-                        for (let arg of method.arguments) {
-                            let argVal = arg.name;
-                            if (arg.defaultValue !== undefined) {
-                                argVal += " = " + arg.defaultValue;
+                fullTxt += AventusTsLanguageService.removeDecoratorFromContent(method) + EOL;
+                for (let decorator of method.decorators) {
+                    if (stateDecorators[decorator.name]) {
+                        if (decorator.arguments.length > 0) {
+                            let statePattern = decorator.arguments[0];
+                            let managerName = decorator.arguments.length > 1 ? decorator.arguments[1] : "";
+                            if (!tempStateList[statePattern]) {
+                                tempStateList[statePattern] = {};
                             }
-                            args.push(argVal);
+                            if (!tempStateList[statePattern][managerName]) {
+                                tempStateList[statePattern][managerName] = {
+                                    active: [],
+                                    inactive: [],
+                                    askChange: []
+                                }
+                            }
+                            tempStateList[statePattern][managerName][stateDecorators[decorator.name]].push(method.name);
                         }
-                        methodsTxt += methodFinal + " " + method.name + "(" + args.join(",") + "){" + methodTxt + "}" + EOL;
                     }
-
+                    else if (decorator.name == "DefaultStateActive") {
+                        defaultStateTxt += `this.__defaultActiveState.push(this.${method.name});`
+                    }
+                    else if (decorator.name == "DefaultStateInactive") {
+                        defaultStateTxt += `this.__defaultInactiveState.push(this.${method.name});`
+                    }
                 }
+            }
+            let fullClassFct = `class MyCompilationClassAventus {${fullTxt}}`;
+            let fctCompiled = transpile(fullClassFct, AventusTsLanguageService.getCompilerOptionsCompile());
+            let matchContent = /\{((\s|\S)*)\}/gm.exec(fctCompiled);
+            if (matchContent) {
+                methodsTxt = matchContent[1].trim();
             }
         }
         this.writeFileReplaceVar("methods", methodsTxt);
+
+        let statesTxt = "";
+        for (let statePattern in tempStateList) {
+            for (let managerName in tempStateList[statePattern]) {
+                let currentAction = tempStateList[statePattern][managerName];
+                statesTxt += `this.__createStatesList(\`${statePattern}\`, \`${managerName}\`);`;
+                if (currentAction.active.length > 0) {
+                    let fctTxt = "";
+                    for (let fctName of currentAction.active) {
+                        fctTxt += "that." + fctName + "(state, slugs);"
+                    }
+                    statesTxt += `this.__statesList[\`${statePattern}\`][\`${managerName}\`].active.push((state, slugs) => { that.__inactiveDefaultState(); ${fctTxt}});` + EOL;
+                }
+                if (currentAction.inactive.length > 0) {
+                    let fctTxt = "";
+                    for (let fctName of currentAction.inactive) {
+                        fctTxt += "that." + fctName + "(state, nextState, slugs);"
+                    }
+                    statesTxt += `this.__statesList[\`${statePattern}\`][\`${managerName}\`].inactive.push((state, nextState, slugs) => { ${fctTxt}that.__activeDefaultState(nextState, \`${managerName}\`);});` + EOL;
+                }
+                if (currentAction.askChange.length > 0) {
+                    let fctTxt = "";
+                    for (let fctName of currentAction.askChange) {
+                        fctTxt += "if(!await that." + fctName + "(state, nextState, slugs)){return false;}" + EOL;
+                    }
+                    statesTxt += `this.__statesList[\`${statePattern}\`][\`${managerName}\`].askChange.push(async (state, nextState, slugs) => { ${fctTxt} return true;});` + EOL;
+                }
+            }
+        }
+        if (statesTxt.length > 0 || defaultStateTxt.length > 0) {
+            statesTxt = `__createStates() { super.__createStates(); let that = this; ${defaultStateTxt} ${statesTxt} }`
+        }
+        this.writeFileReplaceVar("states", statesTxt)
     }
     private writeFileEvents() {
         let eventsMapped = "";

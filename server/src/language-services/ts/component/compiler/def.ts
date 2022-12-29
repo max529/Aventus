@@ -22,7 +22,7 @@ export interface CompileComponentResult {
 	}
 }
 
-declare type FieldType = 'Attribute' | 'Property' | 'Watch' | 'State' | 'ViewElement' | 'Simple';
+declare type FieldType = 'Attribute' | 'Property' | 'Watch' | 'ViewElement' | 'Simple';
 export interface CustomFieldModel extends FieldModel {
 	propType: FieldType,
 	inParent: boolean,

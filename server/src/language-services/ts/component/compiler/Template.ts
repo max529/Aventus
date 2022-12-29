@@ -48,9 +48,6 @@ export function AventusWebcomponentTemplate (){
     getClassName() {
         return "$classname$";
     }
-    getNamespace(){
-        return namespace;
-    }
 
     $defaultValueAttr$
     $defaultValueProp$

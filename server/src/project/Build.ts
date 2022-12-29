@@ -116,7 +116,7 @@ export class Build {
         for (let uri in this.tsFiles) {
             this.tsFiles[uri].triggerSave();
         }
-        
+
         this.allowBuild = true;
         this.build();
     }
@@ -231,7 +231,7 @@ export class Build {
 
             finalTxt += '(' + baseName + '||(' + baseName + ' = {}));' + EOL
         }
-        finalTxt += "(function (" + splittedNames[0] + ") {\r\n var namespace = '" + moduleName + "';\r\n"
+        finalTxt += "(function (" + splittedNames[0] + ") {" + EOL;
 
         finalTxt += compiledCode.join(EOL) + EOL;
         finalTxt = finalTxt.trim() + EOL;

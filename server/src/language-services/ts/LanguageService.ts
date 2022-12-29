@@ -7,7 +7,7 @@ import { AventusExtension, AventusLanguageId } from '../../definition';
 import { AventusFile } from '../../files/AventusFile';
 import { Build } from '../../project/Build';
 import { convertRange, pathToUri } from '../../tools';
-import { AliasNode, BasicType, ClassModel, EnumDeclaration, TypeKind } from '../../ts-file-parser';
+import { AliasNode, BasicType, ClassModel, EnumDeclaration, MethodModel, TypeKind } from '../../ts-file-parser';
 import { correctTypeInsideDefinition } from '../../ts-file-parser/src/tsDefinitionParser';
 import { AventusTsFile } from './File';
 import { loadLibrary } from './libLoader';
@@ -541,23 +541,23 @@ export class AventusTsLanguageService {
     public async onRename(file: AventusFile, position: Position, newName: string): Promise<WorkspaceEdit | null> {
         let offset: number = file.document.offsetAt(position);
         let renameInfo: RenameInfo = this.languageService.getRenameInfo(file.uri, offset)
-        if(!renameInfo.canRename) {
+        if (!renameInfo.canRename) {
             return null;
         }
         let renameLocations = this.languageService.findRenameLocations(file.uri, offset, false, false);
-        if(!renameLocations) {
+        if (!renameLocations) {
             return null;
         }
-        let res:WorkspaceEdit = {
+        let res: WorkspaceEdit = {
             changes: {
 
             }
         };
-        if(res.changes) {
-            for(let renameLocation of renameLocations) {
+        if (res.changes) {
+            for (let renameLocation of renameLocations) {
                 let file = this.filesLoaded[renameLocation.fileName];
-                if(file) {
-                    if(!res.changes[renameLocation.fileName]) {
+                if (file) {
+                    if (!res.changes[renameLocation.fileName]) {
                         res.changes[renameLocation.fileName] = []
                     }
                     let textEdit: TextEdit = {
@@ -585,7 +585,7 @@ export class AventusTsLanguageService {
         })
         return txt;
     }
-    private static removeDecoratorFromClassContent(cls: ClassModel | EnumDeclaration | AliasNode) {
+    public static removeDecoratorFromContent(cls: ClassModel | EnumDeclaration | AliasNode | MethodModel) {
         let classContent = cls.content.trim();
         cls.decorators.forEach(decorator => {
             classContent = classContent.replace(new RegExp("@" + decorator.name + "\\s*(\\([^)]*\\))?", "g"), "");
@@ -634,7 +634,7 @@ export class AventusTsLanguageService {
             }
 
             // prepare content
-            let txt = this.removeComments(this.removeDecoratorFromClassContent(element));
+            let txt = this.removeComments(this.removeDecoratorFromContent(element));
             txt = this.replaceFirstExport(txt);
 
 

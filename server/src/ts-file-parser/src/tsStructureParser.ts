@@ -538,18 +538,26 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
     md.parameters.forEach(x => {
         params.push(buildParameter(x, content, path, module));
     });
-
+    let jsDocTxt: string[] = [];
+    if (md['jsDoc']) {
+        for (let jsDoc of md['jsDoc']) {
+            jsDocTxt.push(jsDoc.comment);
+        }
+    }
+    const decorators = ts.canHaveDecorators(md) ? ts.getDecorators(md) : undefined;
     var method: MethodModel = {
         returnType: buildType(md.type, path, module),
         name: aliasName,
         start: md.getStart(),
         end: md.getEnd(),
-        text: text,
+        content: text,
         arguments: params,
         isAbstract: false,
         isStatic: false,
         isAsync: false,
-        isPrivate: false
+        isPrivate: false,
+        documentation: jsDocTxt,
+        decorators: (decorators) ? decorators.map((el: ts.Decorator) => buildDecorator(el.expression)) : [],
     };
 
     if (md.modifiers) {
@@ -564,9 +572,9 @@ function buildMethod(md: ts.MethodDeclaration, content: any, path: string, modul
                 method.isPrivate = true;
             } else if (x.kind === ts.SyntaxKind.ProtectedKeyword) {
                 method.isPrivate = true;
-            } else if (x.kind === ts.SyntaxKind.OverrideKeyword) {}
-            else if (x.kind === ts.SyntaxKind.PublicKeyword) {}
-            else if (x.kind === ts.SyntaxKind.Decorator) {}
+            } else if (x.kind === ts.SyntaxKind.OverrideKeyword) { }
+            else if (x.kind === ts.SyntaxKind.PublicKeyword) { }
+            else if (x.kind === ts.SyntaxKind.Decorator) { }
             else {
                 throw new Error("Unknown token method modifiers " + x.kind);
             }
