@@ -8,13 +8,20 @@ export abstract class AvPage extends WebComponent implements DefaultComponent {
 
 
     //#region props
-    @Attribute()
+    @Property((target: AvPage) => {
+        if(target.show) {
+            target.onShow();
+        }
+        else {
+            target.onHide();
+        }
+    })
     public show: boolean;
     //#endregion
 
 
     //#region variables
-    
+
     //#endregion
 
 
@@ -30,6 +37,9 @@ export abstract class AvPage extends WebComponent implements DefaultComponent {
 
     //#region methods
     public abstract defineTitle(): string;
-	//#endregion
-	
+
+    public abstract onShow();
+    public abstract onHide();
+    //#endregion
+
 }

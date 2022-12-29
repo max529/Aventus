@@ -1,0 +1,15 @@
+import { StateManager } from "./StateManager.lib.avt";
+
+export class State {
+    public static async activate(stateName: string, manager?: StateManager): Promise<boolean> {
+        return await new State().activate(stateName, manager);
+    }
+    public name: string;
+    public async activate(stateName: string, manager?: StateManager): Promise<boolean> {
+        if(!manager) {
+            manager = StateManager.getInstance();
+        }
+        this.name = stateName;
+        return await manager.setActiveState(this);
+    }
+}

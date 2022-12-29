@@ -10,7 +10,8 @@
                 "./component/",
                 "./data/",
                 "./lib/",
-                "./ram/"
+                "./ram/",
+                "./states/"
             ],
             "outsideModulePath": [
                 "./attributes/",

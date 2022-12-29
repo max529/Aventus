@@ -1,5 +1,0 @@
-import { IData } from "../data/IData.data.avt";
-
-interface AvAttributes extends IData {
-    
-}

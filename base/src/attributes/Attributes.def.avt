@@ -1,4 +1,5 @@
 declare global {
+    type Constructor<T> = Function & { prototype: T; };
     /**
      * Add an attribute inside on your component
      */
@@ -23,18 +24,19 @@ declare global {
      * Signal that this variable is a link to your shadowroot
      */
     function ViewElement(config?: ViewElementConfig);
-    function StateActive(stateName: string, managerName?: string);
+
+    function StateActive(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, slugs: StateSlug) => void)>) => void;
     function DefaultStateActive(managerName?: string);
-    function StateInactive(stateName: string, managerName?: string);
+    function StateInactive(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, nextState: State, slugs: StateSlug) => void)>) => void;
     function DefaultStateInactive(managerName?: string);
-    function StateChange(stateName: string, managerName?: string);
+    function StateChange(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, nextState: State, slugs: StateSlug) => boolean | Promise<boolean>)>) => void;
 
     /**
      * Clear parent view and use yours 
      */
-    function OverrideView(config?: OverrideViewConfig);
+    function OverrideView(config?: OverrideViewConfig): (<T extends Constructor<Aventus.WebComponent>> (constructor: T) => T);
     /**
      * Add debbuger action function for your component
      */
-    function Debugger(config: DebuggerConfig);
+    function Debugger(config: DebuggerConfig): (constructor: Function) => void;
 }

@@ -1,6 +1,7 @@
-import { StateManager } from "../../../lib/StateManager.lib.avt";
+import { StateManager } from "../../../states/StateManager.lib.avt";
 import { PressManager } from "../../../lib/PressManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
+import { State } from "../../../states/State.lib.avt";
 
 export class AvRouterLink extends WebComponent implements DefaultComponent {
 
@@ -53,7 +54,7 @@ export class AvRouterLink extends WebComponent implements DefaultComponent {
         new PressManager({
             element: this,
             onPress: () => {
-                StateManager.getInstance("navigation").setActiveState(this.state);
+                State.activate(this.state, StateManager.getInstance("navigation"))
             }
         });
     }

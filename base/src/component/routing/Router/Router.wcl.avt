@@ -1,7 +1,8 @@
 import { ResourceLoader } from "../../../lib/ResourceLoader.lib.avt";
-import { StateManager } from "../../../lib/StateManager.lib.avt";
+import { StateManager } from "../../../states/StateManager.lib.avt";
 import { DefaultComponent, WebComponent } from "../../../lib/WebComponent.lib.avt";
 import { AvPage } from "../Page/Page.wcl.avt";
+import { State } from "../../../states/State.lib.avt";
 
 export type AvRouteAsyncOption = {
     route: string,
@@ -65,7 +66,6 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
             }
         } catch(e) {
             console.log(e);
-            debugger;
         }
     }
     private initRoute(path: string) {
@@ -80,7 +80,7 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
                         await ResourceLoader.loadInHead(options.scriptUrl);
                     }
 
-                    let constructor = options.render();//.bind(window[namespace])();
+                    let constructor = options.render();
                     element = new constructor;
                     this.contentEl.appendChild(element);
                 }
@@ -89,8 +89,8 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
                 }
                 element.show = true;
                 this.oldPage = element;
-                if(window.location.pathname != currentState) {
-                    let newUrl = window.location.origin + currentState;
+                if(window.location.pathname != currentState.name) {
+                    let newUrl = window.location.origin + currentState.name;
                     document.title = element.defineTitle();
                     window.history.pushState({}, element.defineTitle(), newUrl);
                 }
@@ -100,15 +100,15 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
     protected override postCreation(): void {
         this.register();
         if(window.localStorage.getItem("navigation_url")) {
-            StateManager.getInstance("navigation").setActiveState(window.localStorage.getItem("navigation_url"));
+            State.activate(window.localStorage.getItem("navigation_url"), StateManager.getInstance("navigation"));
             window.localStorage.removeItem("navigation_url");
         }
         else {
-            StateManager.getInstance("navigation").setActiveState(window.location.pathname);
+            State.activate(window.location.pathname, StateManager.getInstance("navigation"));
         }
         window.onpopstate = (e) => {
-            if(window.location.pathname != StateManager.getInstance("navigation").getActiveState()) {
-                StateManager.getInstance("navigation").setActiveState(window.location.pathname);
+            if(window.location.pathname != StateManager.getInstance("navigation").getActiveState().name) {
+                State.activate(window.location.pathname, StateManager.getInstance("navigation"));
             }
         };
     }

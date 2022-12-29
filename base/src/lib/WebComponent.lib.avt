@@ -1,5 +1,6 @@
+import { StateManager, StateSlug } from "../states/StateManager.lib.avt";
 import { WatchAction } from "../data/WatchAction.data.avt";
-import { State, StateManager, States } from "./StateManager.lib.avt";
+import { State } from "../states/State.lib.avt";
 
 
 export interface DebuggerConfig {
@@ -7,17 +8,14 @@ export interface DebuggerConfig {
 }
 
 export interface DefaultComponent {
-    states?: States;
     [key: string]: any; // index signature to remove error
-    getStateManagerName?(): string | undefined;
-    getClassName(): string;
 }
 
 export abstract class WebComponent extends HTMLElement implements DefaultComponent {
     private static __allDefinitions: (new () => WebComponent)[] = [];
-    public static lastDefinition:number = 0;
+    public static lastDefinition: number = 0;
     private static registerDefinition(def: new () => WebComponent) {
-        WebComponent.lastDefinition = Date.now()
+        WebComponent.lastDefinition = Date.now();
         WebComponent.__allDefinitions.push(def);
     }
     static getAllClassesOf<T>(type: typeof WebComponent): (new () => WebComponent)[] {
@@ -43,12 +41,10 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     }
 
     private _translations: { [key: string]: { [key: string]: string; }; };
-    private currentState: string = "";
-    private statesList: States;
+
 
     private _components: { [key: string]: HTMLBaseElement[]; };
     private __onChangeFct: { [key: string]: ((path: string) => void)[]; } = {};
-    private getSlugFct: { [key: string]: () => string; };
 
     private __watch: any;
     private __watchActions: {} = {};
@@ -57,12 +53,23 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     private __loopTemplate: { [key: string]: () => string; } = {};
     private __watchActionsCb: { [key: string]: (type: WatchAction, path: string, element: any) => void; } = {};
 
+    private __isDefaultState: boolean = true;
+    private __defaultActiveState: (() => void)[] = [];
+    private __defaultInactiveState: (() => void)[] = [];
+    private __statesList: {
+        [statePattern: string]: {
+            [managerName: string]: {
+                active: ((state: State, slugs: StateSlug) => void)[],
+                inactive: ((state: State, nextState: State, slugs: StateSlug) => void)[],
+                askChange: ((state: State, nextState: State, slugs: StateSlug) => Promise<boolean>)[],
+            };
+        };
+    } = {};
+
     public getClassName(): string {
         return this.constructor.name;
     };
-    public getNamespace(): string {
-        return "Aventus";
-    }
+
 
     constructor() {
         super();
@@ -136,20 +143,8 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
     }
     //#endregion
 
-    private __createStates() {
-        this.currentState = "default";
-        this.statesList = {
-            "default": this.getDefaultStateCallbacks()
-        };
-        this.getSlugFct = {};
-    }
 
-    protected getDefaultStateCallbacks(): State {
-        return {
-            active: () => { },
-            inactive: () => { }
-        };
-    }
+
 
     //#region select element
 
@@ -251,22 +246,54 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
         return key;
     }
 
-    public getStateManagerName(): string | undefined {
-        return undefined;
+    private __createStates() {}
+    private __createStatesList(statePattern: string, managerName: string) {
+        if(!this.__statesList[statePattern]) {
+            this.__statesList[statePattern] = {};
+        }
+        if(!this.__statesList[statePattern][managerName]) {
+            this.__statesList[statePattern][managerName] = {
+                active: [],
+                inactive: [],
+                askChange: []
+            };
+        }
+    }
+    private __inactiveDefaultState() {
+        if(this.__isDefaultState) {
+            this.__isDefaultState = false;
+            for(let fct of this.__defaultInactiveState) {
+                fct.bind(this)();
+            }
+        }
+    }
+    private __activeDefaultState(nextStep: string, managerName: string) {
+        if(!this.__isDefaultState) {
+            for(let pattern in this.__statesList) {
+                if(StateManager.canBeActivate(pattern, nextStep)){
+                    if(this.__statesList[pattern][managerName]){
+                        return;
+                    }
+                }
+            }
+            this.__isDefaultState = true;
+            for(let fct of this.__defaultActiveState) {
+                fct.bind(this)();
+            }
+        }
     }
     private __subscribeState() {
-        var currentState = StateManager.getInstance(this.getStateManagerName()).getActiveState() || "";
-        var currentSlug = StateManager.getInstance(this.getStateManagerName()).getActiveSlug() || "*";
-        var stateSlugged = currentState.replace("*", currentSlug);
-        if(this.statesList.hasOwnProperty(stateSlugged)) {
-            this.statesList[stateSlugged].active(stateSlugged);
+        for(let route in this.__statesList) {
+            for(let managerName in this.__statesList[route]) {
+                StateManager.getInstance(managerName).subscribe(route, this.__statesList[route][managerName]);
+            }
         }
-        else {
-            this.statesList["default"].active("default");
-        }
-
-        for(let route in this.statesList) {
-            StateManager.getInstance(this.getStateManagerName()).subscribe(route, this.statesList[route]);
+    }
+    private __unsubscribeState() {
+        for(let route in this.__statesList) {
+            for(let managerName in this.__statesList[route]) {
+                StateManager.getInstance(managerName).unsubscribe(route, this.__statesList[route][managerName]);
+            }
         }
     }
 
@@ -284,13 +311,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
 
     protected postCreation() { }
 
-    protected _unsubscribeState() {
-        if(this.statesList) {
-            for(let key in this.statesList) {
-                StateManager.getInstance(this.getStateManagerName()).unsubscribe(key, this.statesList[key]);
-            }
-        }
-    }
+    
 
 }
 
