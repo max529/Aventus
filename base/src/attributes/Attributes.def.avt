@@ -32,9 +32,13 @@ declare global {
     function StateChange(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, nextState: State, slugs: StateSlug) => boolean | Promise<boolean>)>) => void;
 
     /**
-     * Clear parent view and use yours 
+     * Clear parent view and use your
      */
     function OverrideView(config?: OverrideViewConfig): (<T extends Constructor<Aventus.WebComponent>> (constructor: T) => T);
+    /**
+     * use a custom TagName
+     */
+    function TagName(name: string): (<T extends Constructor<Aventus.WebComponent>> (constructor: T) => T);
     /**
      * Add debbuger action function for your component
      */

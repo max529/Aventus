@@ -281,6 +281,17 @@ export class AventusWebcomponentCompiler {
 
                 }
             }
+            else if (decorator.name == "TagName") {
+                if (decorator.arguments.length > 0) {
+                    let tagName: string = decorator.arguments[0];
+                    if (tagName.indexOf("-") == -1 || tagName.toLowerCase() != tagName) {
+                        this.result.diagnostics.push(createErrorTsPos(this.document, "tag name must be in lower case and have a - inside", decorator.start, decorator.end));
+                    }
+                    else {
+                        this.tagName = decorator.arguments[0];
+                    }
+                }
+            }
         }
 
         if (classInfo.extends[0]?.typeName == "WebComponent" || classInfo.extends[0]?.typeName == "Aventus.WebComponent") {
@@ -312,7 +323,9 @@ export class AventusWebcomponentCompiler {
                 // no special tag => add one
                 splittedName.splice(0, 0, componentPrefix.toLowerCase());
             }
-            this.tagName = splittedName.join("-").toLowerCase();
+            if (this.tagName == "") {
+                this.tagName = splittedName.join("-").toLowerCase();
+            }
             this.className = classInfo.name;
             this.parentClassName = 'Aventus.WebComponent';
             if (classInfo.extends.length > 0) {

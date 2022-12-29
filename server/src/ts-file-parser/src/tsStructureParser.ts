@@ -649,9 +649,11 @@ function buildDecorator(e: ts.Expression): Decorator {
     if (e.kind === ts.SyntaxKind.CallExpression) {
         var call: ts.CallExpression = <ts.CallExpression>e;
         var name = parseName(call.expression);
-        var a: { name: string, arguments: any[] } = {
+        var a: { name: string, arguments: any[], start: number, end: number } = {
             name: name,
-            arguments: []
+            arguments: [],
+            start: e.getStart(),
+            end: e.getEnd(),
         };
         call.arguments.forEach(x => {
             a.arguments.push(parseArg(x));
@@ -660,7 +662,9 @@ function buildDecorator(e: ts.Expression): Decorator {
     } else if (e.kind === ts.SyntaxKind.Identifier) {
         return {
             name: String((e as any).escapedText),
-            arguments: []
+            arguments: [],
+            start: e.getStart(),
+            end: e.getEnd(),
         };
     } else {
         throw new Error("Only call expressions may be annotations");

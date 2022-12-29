@@ -125,6 +125,8 @@ export interface Annotation {
 
 export interface Decorator {
     name: string;
+    start: number,
+    end: number;
     arguments: (Arg | Arg[])[];
 }
 
