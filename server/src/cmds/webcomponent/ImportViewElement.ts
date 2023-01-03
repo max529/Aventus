@@ -21,6 +21,7 @@ export class ImportViewElement {
 	private async run(uri: string, position: number) {
 		let file = FilesManager.getInstance().getByUri(uri);
 		if (file) {
+			let oldEnd = file.document.positionAt(file.content.length);
 			let builds = FilesManager.getInstance().getBuild(file.document);
 			if (builds.length > 0) {
 				let fileTs = builds[0].tsFiles[uri]
@@ -42,19 +43,17 @@ export class ImportViewElement {
 							insertSpaces: true,
 							tabSize: 4
 						});
-						let result: TextEdit[][] = [];
-						result.push([
-							{
-								newText: info.text,
-								range: {
-									start: file.document.positionAt(position),
-									end: file.document.positionAt(position)
-								}
-							}
-						])
-						result.push(textEdits);
+						await (file as InternalAventusFile).applyTextEdits(textEdits);
 
-						EditFile.send(uri, result)
+						let result: TextEdit[] = [{
+							newText: file.content,
+							range: {
+								start: file.document.positionAt(0),
+								end: oldEnd
+							}
+						}];
+
+						EditFile.send(uri, [result])
 					}
 				}
 			}

@@ -35,7 +35,6 @@ export class CreateAttribute {
 			});
 			await (file as InternalAventusFile).applyTextEdits(textEdits);
 
-			// TODO check if make sense
 			let result: TextEdit[] = [{
 				newText: file.content,
 				range: {
@@ -44,17 +43,6 @@ export class CreateAttribute {
 				}
 			}];
 
-			// let result: TextEdit[][] = [];
-			// result.push([
-			// 	{
-			// 		newText: newTxt,
-			// 		range: {
-			// 			start: file.document.positionAt(position),
-			// 			end: file.document.positionAt(position)
-			// 		}
-			// 	}
-			// ])
-			// result.push(textEdits);
 			EditFile.send(uri, [result])
 
 		}

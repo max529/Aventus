@@ -25,7 +25,7 @@ declare global {
      */
     function ViewElement(config?: ViewElementConfig);
 
-    function StateActive(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, slugs: StateSlug) => void)>) => void;
+    function StateActive(stateName: string, manager: typeof Aventus.StateManager): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, slugs: StateSlug) => void)>) => void;
     function DefaultStateActive(managerName?: string);
     function StateInactive(stateName: string, managerName?: string): (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<((state: State, nextState: State, slugs: StateSlug) => void)>) => void;
     function DefaultStateInactive(managerName?: string);

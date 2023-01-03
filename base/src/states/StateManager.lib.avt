@@ -22,10 +22,10 @@ type Subscriber = {
 };
 
 export class StateManager {
-    private constructor() { }
+    protected constructor() { }
     private static __instances: { [key: string]: StateManager; } = {};
-    private subscribers: { [statePattern: string]: Subscriber; } = {};
-    public static getInstance(name?: string) {
+    protected subscribers: { [statePattern: string]: Subscriber; } = {};
+    public static getInstance(name?: string): StateManager {
         if(!name) {
             name = "";
         }
@@ -40,7 +40,7 @@ export class StateManager {
         return stateInfo.regex.test(stateName);
     }
 
-    private activeState: State;
+    protected activeState: State;
 
     /**
      * Subscribe actions for a state or a state list
@@ -162,7 +162,7 @@ export class StateManager {
             }
         }
     }
-    private static _prepareStateString(stateName: string) {
+    protected static _prepareStateString(stateName: string) {
         let params: { name: string, type: "number" | "string", position: number; }[] = [];
         let i = 0;
         let regexState = stateName.replace(/{.*?}/g, (group, position) => {
@@ -304,7 +304,7 @@ export class StateManager {
     public getActiveState() {
         return this.activeState;
     }
-    private getInternalStateSlugs(subscriber: Subscriber, stateName: string) {
+    protected getInternalStateSlugs(subscriber: Subscriber, stateName: string) {
         let matches = subscriber.regex.exec(stateName);
         if(matches) {
             let slugs: StateSlug = {};

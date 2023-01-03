@@ -71,7 +71,6 @@ export abstract class AvRouter extends WebComponent implements DefaultComponent 
     private initRoute(path: string) {
         let element: AvPage = undefined;
         let allRoutes = this.allRoutes;
-        let namespace = this.getNamespace();
         StateManager.getInstance("navigation").subscribe(path, {
             active: async (currentState) => {
                 if(!element) {

@@ -65,7 +65,7 @@ export class AventusWebcomponentCompiler {
     private otherDocInvisible: string = "";
     private otherDebugTxt: string = "";
     //#region variable to use for preparation
-    private variablesIdInView: { [name: string]: { id: string, type: string } } = {};
+    private variablesIdInView: { [name: string]: { id: string, type: string }[] } = {};
     private eventsPerso: { componentId: string, value: string, event: string }[] = [];
     private pressEvents: { [id: string]: {} } = {};
     private allFields: { [fieldName: string]: CustomFieldModel } = {};
@@ -135,7 +135,6 @@ export class AventusWebcomponentCompiler {
         this.jsTxt = this.file.content;
         this.result.diagnostics = build.tsLanguageService.doValidation(this.file);
         this.jQuery = cheerio.load(this.htmlTxt);
-
         this.template = AventusWebcomponentTemplate();
         this.document = logicalFile.file.document;
         this.build = build;
@@ -496,9 +495,11 @@ export class AventusWebcomponentCompiler {
     private prepareViewRecu(el: cheerio.AnyNode) {
         if (el.hasOwnProperty("attribs")) {
             let element = el as cheerio.Element;
+
             this.prepareViewCheckAttribute(element);
             this.prepareViewCheckHTML(element);
         }
+
         if (el["children"]) {
             for (var i = 0; i < el["children"].length; i++) {
                 if (el["children"][i].type != ElementType.Text) {
@@ -530,18 +531,18 @@ export class AventusWebcomponentCompiler {
                 let varName = value[0];
 
                 if (!this.variablesIdInView.hasOwnProperty(varName)) {
-
-                    if (value.length == 1) {
-                        this.variablesIdInView[varName] = {
-                            id: _id,
-                            type: el.name
-                        }
-                    } else {
-                        this.variablesIdInView[varName] = {
-                            id: '',
-                            type: el.name
-                        }
-                    }
+                    this.variablesIdInView[varName] = [];
+                }
+                if (value.length == 1) {
+                    this.variablesIdInView[varName].push({
+                        id: _id,
+                        type: el.name
+                    })
+                } else {
+                    this.variablesIdInView[varName].push({
+                        id: '',
+                        type: el.name
+                    })
                 }
                 this.jQuery(el).removeAttr(key);
             }
@@ -601,41 +602,52 @@ export class AventusWebcomponentCompiler {
         if (el.name == "for") {
             return;
         }
-
+        let allTextChild = true;
+        let oneTextChild = false;
         let elHTML = this.jQuery(el);
-        let htmlTxt = elHTML.html();
-        if (!htmlTxt) {
-            htmlTxt = "";
-        }
-        let containsElement = htmlTxt.match(/<(\s|\S)*>(\s|\S)*<\/(\s|\S)*>/);
-        // si la balise contient une autre balise on ne fait rien
-        if (!containsElement || containsElement.length == 0) {
-            // on regarde si le text contient une variable
-            let matches = htmlTxt.match(/\{\{(.*?)\}\}/g);
-            if (matches && matches.length > 0) {
-                let variables: string[] = [];
-                // pour chaque variable
-                for (let i = 0; i < matches.length; i++) {
-                    let variableName = matches[i].replace(/\{\{|\}\}/g, '').trim();
-                    variables.push(variableName);
-                    // on la normalize (on enleve les espaces)
-                    elHTML.html(htmlTxt.replace(matches[i], '{{' + variableName + '}}'));
+        let variablesError: string[] = [];
+        for (let child of el.children) {
+            if (child.type == "text") {
+                let htmlTxt = child.data;
+                if (!htmlTxt) {
+                    htmlTxt = "";
                 }
-
-                let _id = this.prepareViewGetId(el);
-                for (let i = 0; i < variables.length; i++) {
-                    let variableName = variables[i];
-                    if (!this.actionByComponent.hasOwnProperty(variableName)) {
-                        this.actionByComponent[variableName] = [];
+                let matches = htmlTxt.match(/\{\{(.*?)\}\}/g);
+                if (matches && matches.length > 0) {
+                    oneTextChild = true;
+                    let variables: string[] = [];
+                    // pour chaque variable
+                    for (let i = 0; i < matches.length; i++) {
+                        let variableName = matches[i].replace(/\{\{|\}\}/g, '').trim();
+                        variables.push(variableName);
+                        if (variablesError.indexOf(variableName) == -1) {
+                            variablesError.push(variableName);
+                        }
+                        // on la normalize (on enleve les espaces)
+                        elHTML.html(htmlTxt.replace(matches[i], '{{' + variableName + '}}'));
                     }
 
-                    this.actionByComponent[variableName].push({
-                        componentId: _id,
-                        value: htmlTxt
-                    });
+                    let _id = this.prepareViewGetId(el);
+                    for (let i = 0; i < variables.length; i++) {
+                        let variableName = variables[i];
+                        if (!this.actionByComponent.hasOwnProperty(variableName)) {
+                            this.actionByComponent[variableName] = [];
+                        }
+
+                        this.actionByComponent[variableName].push({
+                            componentId: _id,
+                            value: htmlTxt
+                        });
+                    }
+                    elHTML.html('')
                 }
-                elHTML.html('')
             }
+            else {
+                allTextChild = false;
+            }
+        }
+        if (oneTextChild && !allTextChild) {
+            this.result.diagnostics.push(createErrorTs(this.document, `You can't use property (${variablesError.join(", ")}) interpolation outside tag`));
         }
     }
     private prepareViewCheckLoop(el: cheerio.Element) {
@@ -664,7 +676,7 @@ export class AventusWebcomponentCompiler {
                 else if (key == "in") {
                     inFound = true;
                     if (dependances.length == 0) {
-                        this.variablesIdInView[el.attribs[key].split(".")[0]].id = '';
+                        this.variablesIdInView[el.attribs[key].split(".")[0]] = [];
                     }
                     inName = el.attribs[key];
                 }
@@ -984,10 +996,10 @@ export class AventusWebcomponentCompiler {
         }
         if (this.result.missingViewElements.position != -1) {
             if (this.variablesIdInView[missingVar]) {
-                let type = this.variablesIdInView[missingVar].type;
+                let type = this.variablesIdInView[missingVar][0].type;
                 let finalType = "";
                 if (type == "div") { finalType = "HTMLDivElement"; }
-                else if (type == "div") { finalType = "HTMLSpanElement"; }
+                else if (type == "span") { finalType = "HTMLSpanElement"; }
                 else if (type.indexOf('-') != -1) {
                     let splitted = type.split('-');
                     for (let split of splitted) {
@@ -996,6 +1008,9 @@ export class AventusWebcomponentCompiler {
                 }
                 else {
                     finalType = "HTMLElement";
+                }
+                if (this.variablesIdInView[missingVar].length > 1) {
+                    finalType += "[]";
                 }
                 this.result.missingViewElements.elements[missingVar] = finalType;
             }
@@ -1479,8 +1494,14 @@ this.clearWatchHistory = () => {
                 }
             }
             else {
-                let id = this.variablesIdInView[field.name].id;
-                if (id != "") {
+                let querySelectorTxtArr: string[] = [];
+                for (let info of this.variablesIdInView[field.name]) {
+                    if (info.id != "") {
+                        querySelectorTxtArr.push(`[_id="${info.id}"]`);
+                    }
+                }
+                if (querySelectorTxtArr.length > 0) {
+                    let querySelectorTxt = querySelectorTxtArr.join(",");
                     let isArray: boolean = false;
                     if (field.type?.typeKind == TypeKind.ARRAY) {
                         isArray = true;
@@ -1489,23 +1510,22 @@ this.clearWatchHistory = () => {
                         if (field.arguments && field.arguments[0] && field.arguments[0]["useLive"]) {
                             if (isArray) {
                                 variablesInViewDynamic += `get ${field.name} () {
-                                    var list = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));
+                                    var list = Array.from(this.shadowRoot.querySelectorAll('${querySelectorTxt}'));
                                     return list;
                                 }`+ EOL
                             }
                             else {
                                 variablesInViewDynamic += `get ${field.name} () {
-                                    return this.shadowRoot.querySelector('[_id="${id}"]');
+                                    return this.shadowRoot.querySelector('${querySelectorTxt}');
                                 }`+ EOL
                             }
-                            return;
                         }
                         else {
                             if (isArray) {
-                                variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('[_id="${id}"]'));` + EOL
+                                variablesInViewStatic += `this.${field.name} = Array.from(this.shadowRoot.querySelectorAll('${querySelectorTxt}'));` + EOL
                             }
                             else {
-                                variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('[_id="${id}"]');` + EOL
+                                variablesInViewStatic += `this.${field.name} = this.shadowRoot.querySelector('${querySelectorTxt}');` + EOL
                             }
                         }
                     }

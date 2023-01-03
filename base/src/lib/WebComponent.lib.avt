@@ -300,7 +300,7 @@ export abstract class WebComponent extends HTMLElement implements DefaultCompone
 
 
     private attributeChangedCallback(name, oldValue, newValue) {
-        if(oldValue !== newValue) {
+        if(oldValue !== newValue || !this.isReady) {
             if(this.__onChangeFct.hasOwnProperty(name)) {
                 for(let fct of this.__onChangeFct[name]) {
                     fct('');
